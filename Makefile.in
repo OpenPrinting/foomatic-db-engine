@@ -151,7 +151,8 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
 	foomatic-combo-xml foomatic-perl-data \
-	foomatic-ppdfile foomatic-compiledb
+	foomatic-ppdfile foomatic-compiledb \
+	foomatic-ppd-options
 
 # Administrative commands, only useful for admins
 SBINFILES:=foomatic-kitload \
