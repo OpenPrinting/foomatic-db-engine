@@ -1,7 +1,8 @@
 2003-06-25  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Remove "," and "+" from the "*NickName" and
-	  "*ShortNickName" to make the PostScript drivers of Windows happy.
+	  "*ShortNickName" to make the PostScript drivers of Windows happy,
+	  fix on auto-abbreviation of "*ShortNickName".
 
 2003-05-09  Till Kamppeter <till.kamppeter@gmx.net>
 
