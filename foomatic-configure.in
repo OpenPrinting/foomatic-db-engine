@@ -1,4 +1,5 @@
-#!@PERL@
+#!@PERL@ -w
+use strict;
 
 # This is foomatic-configure, a program to establish and configure
 # print queues, drivers, spoolers, etc using the foomatic database and
@@ -12,6 +13,7 @@
 
 use Foomatic::Defaults;
 use Foomatic::DB;
+use Data::Dumper;
 
 # Connect syntax:
 #
@@ -44,11 +46,15 @@ use Foomatic::DB;
 # Read out the program name with which we were called, but discard the path
 
 $0 =~ m!/([^/]+)\s*$!;
-$progname = $1;
+my $progname = ($1 || $0);
+my $debug = 0;
 
 # We use the library Getopt::Long here, so that we can have more than
 # one "-o" option on one command line.
 
+my( $opt_q, $opt_f, $opt_w, $opt_n, $opt_N, $opt_L, $opt_ppd,
+$opt_d, $opt_p, $opt_s, $opt_C, $opt_R, $opt_D, $opt_Q, $opt_P,
+$opt_O, $opt_X, $opt_c, @opt_o, $opt_r, $opt_h );
 use Getopt::Long;
 Getopt::Long::Configure("no_ignore_case");
 GetOptions("q"   => \$opt_q,         # Quiet, non-interactive operation
@@ -74,19 +80,19 @@ GetOptions("q"   => \$opt_q,         # Quiet, non-interactive operation
 	   "o=s" => \@opt_o,         # default printing Options
 	   "r"   => \$opt_r,         # list Remote queues
 	   "h"   => \$opt_h,         # Help!
-	   "help"=> \$opt_h);        # HELP!
+	   "help"=> \$opt_h) || help();
 
 help() if $opt_h;
 
-$db = new Foomatic::DB;
+my $db = new Foomatic::DB;
 
 overview() if $opt_O;
 
 get_xml() if $opt_X;
 
-$force = ($opt_f ? 1 : 0); 
+my $force = ($opt_f ? 1 : 0); 
 
-$shortgui = ($opt_w ? 1 : 0); 
+my $shortgui = ($opt_w ? 1 : 0); 
 
 my $in_config = {'queue'    => $opt_n,
 		 'desc'     => $opt_N,
@@ -143,7 +149,9 @@ my $procs = { 'lpd' => { 'delete'    => \&delete_lpd,
 
 if (!($opt_Q or $opt_P or defined($in_config->{'queue'}))) {
     # No queue manipulation without knowing the name of the queue
-    die "You must specify a queue name with -n!\n";
+    print STDERR "You must specify a queue name with -n!\n";
+	help();
+	exit 1;
 }
 
 if (!defined($in_config->{'spooler'})) {
@@ -151,6 +159,7 @@ if (!defined($in_config->{'spooler'})) {
     my $takenfromconfigfile = 0;
 
     # Personal default spooler
+    my $s;
     if (($> != 0) && (-f "$ENV{'HOME'}/.defaultspooler")) {
         $s = `cat $ENV{'HOME'}/.defaultspooler`;
         chomp $s;
@@ -196,8 +205,8 @@ exit(0);
 sub getoldqueuedata {
 
     my ($config, $reconf) = @_;
+	my( $sourcespooler, $sourcequeue, $olddatablob );
 
-    my $olddatablob;
     # Copy a queue
     if ($opt_C) {
 	if ($#ARGV == 0) {  # 1 argument -> queue from same spooler
@@ -285,6 +294,9 @@ sub getoldqueuedata {
     # and the queue did not exist before we assume that he wants to set up a
     # raw queue. To make a raw queue out of a formerly filtered one, one
     # has to use the driver name "raw".
+    $config->{'driver'} = "" if not defined $config->{'driver'};
+    $config->{'printer'} = "" if not defined $config->{'printer'};
+    $config->{'ppdfile'} = "" if not defined $config->{'ppdfile'};
     my $nodriver = (((!$config->{'driver'}) && (!$config->{'printer'}) &&
 		     (!$config->{'ppdfile'})) ||
 		    ($config->{'driver'} eq "raw"));
@@ -382,7 +394,7 @@ sub writeppdfile {
     if ($rawqueue) {
 	# Raw queue with $postpipe, use a "PPD" only containing the
 	# $postpipe (LPRng, LPD, and no spooler only)
-	if ((($db->{'dat'}{'postpipe'} ne "") &&
+	if (((defined $db->{'dat'}{'postpipe'} && $db->{'dat'}{'postpipe'} ne "") &&
 	     (($config->{'spooler'} eq 'lprng') ||
 	      ($config->{'spooler'} eq 'lpd'))) ||
 	    ($config->{'spooler'} eq 'direct')) {
@@ -438,22 +450,20 @@ sub setup_lpd {
     # Read the previous /etc/printcap
     my $pcap = load_lpd_printcap();
 
-    my ($entry, $reconf, $p);
+    my ($ppdfile, $entry, $reconf, $p);
     for $p (@{$pcap}) {
 	if ($p->{'names'}[0] eq $config->{'queue'}) {
 	    $entry = $p;
 	    $reconf = 1;
+	    print "Reconfigure of ", Dumper($p) if $debug;
 	    last;
-
-	    use Data::Dumper;
-	    print "Reconfigure of ", Dumper($p);
 	}
     }
 
     # PPD file name
-    my $ppdfile = sprintf('%s/lpd/%s.ppd',
+    $ppdfile = sprintf('%s/lpd/%s.ppd',
 			      $sysdeps->{'foo-etc'},
-			      $config->{'queue'});
+			      $config->{'queue'}) if !$ppdfile;
 
     # Get the data from the former queue if we reconfigure or copy a queue
     # do also some checking of the user-supplied parameters
@@ -501,16 +511,20 @@ sub setup_lpd {
 
     # Lines depending on the printer/spooler
     if (!$rawqueue) {
-	$entry->{'str'}{'if'} = $sysdeps->{'foomatic-rip'};
-	$entry->{'str'}{'ppdfile'} = $ppdfile; # For the GPR printing GUI
 	if ($config->{'spooler'} eq "lpd") {
+	    $entry->{'str'}{'ppdfile'} = $ppdfile; # For the GPR printing GUI
+	    delete $entry->{'str'}{'ppd'};
+	    $entry->{'str'}{'if'} = $sysdeps->{'foomatic-rip'};
 	    $entry->{'str'}{'af'} = $ppdfile;
 	    delete $entry->{'bool'}{'force_localhost'};
 	    delete $entry->{'str'}{'filter_options'};
 	} elsif ($config->{'spooler'} eq "lprng") {
+	    $entry->{'str'}{'ppd'} = $ppdfile; # for LPRng PPD support
+	    $entry->{'str'}{'if'} = $sysdeps->{'foomatic-rip'};
 	    $entry->{'bool'}{'force_localhost'} = 1;
-	    $entry->{'str'}{'filter_options'} = " --lprng \$J \$Z $ppdfile";
+	    delete $entry->{'str'}{'ppdfile'};
 	    delete $entry->{'str'}{'af'};
+	    delete $entry->{'str'}{'filter_options'};
 	} else {
 	    die "The spooler $config->{'spooler'} is not supported " .
 		"by this function!\n";
@@ -519,7 +533,7 @@ sub setup_lpd {
 	delete $entry->{'str'}{'if'};
 	delete $entry->{'str'}{'af'};
 	delete $entry->{'str'}{'filter_options'};
-	delete $entry->{'str'}{'ppdfile'};
+	delete $entry->{'str'}{'ppd'};
 	if ($config->{'spooler'} eq "lpd") {
 	    delete $entry->{'bool'}{'force_localhost'};
 	} elsif ($config->{'spooler'} eq "lprng") {
@@ -544,9 +558,10 @@ sub setup_lpd {
 
 	# All URIs ("-c" option) have the same syntax as URIs in CUPS ("-v"
 	# option of "lpadmin").
+	my $file;
 	if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)!) {
 	    # Local printer or printing to a file
-	    my $file = $2;
+	    $file = $2;
 	    if ($config->{'connect'} =~ m!^usb://!) {
 		# Queue with printer-bound USB URI transferred from CUPS,
 		# as LPD/LPRng does not support these URIs, translate it
@@ -585,8 +600,13 @@ sub setup_lpd {
 	    if (($rawqueue) && ($config->{'spooler'} eq "lpd")) {
 		$entry->{'str'}{'rm'} = $remhost;
 		$entry->{'str'}{'rp'} = $remqueue;
+		delete $entry->{'str'}{'lp'};
+	    } elsif( ($config->{'spooler'} eq "lprng")) {
+		delete $entry->{'str'}{'rm'};
+		delete $entry->{'str'}{'rp'};
+		$entry->{'str'}{'lp'} = "$remqueue\@$remhost";
 	    } else {
-		# LPD does not support sending jobs to a server with the
+		# classic LPD does not support sending jobs to a server with the
 		# "rm" and "rp" tags in /etc/printcap and filtering it
 		# before ("if" tag). So when we do not set up a raw queue,
 		# we do not
@@ -599,15 +619,19 @@ sub setup_lpd {
 		# be SUID "root".
 		$postpipe = "$sysdeps->{'rlpr'} -q -h -P " .
 		    "$remqueue\@$remhost";
-	    }
 	    $entry->{'str'}{'lp'} = "/dev/null";
+	    }
 	} elsif ($config->{'connect'} =~
 		 m!^socket://([^/:]+):([0-9]+)/?$!) {
 	    # Socket (AppSocket/HP JetDirect)
 	    my $remhost = $1;
 	    my $remport = $2;
+	    if( ($config->{'spooler'} eq "lprng")) {
+		$entry->{'str'}{'lp'} = "$remhost\%$remport";
+	    } else {
 	    $postpipe = "$sysdeps->{'nc'} -w 1 $remhost $remport";
 	    $entry->{'str'}{'lp'} = "/dev/null";
+	    }
 	} elsif ($config->{'connect'} =~ m!^smb://(.*)$!) {
 	    # SMB (Printer on Windows server)
 	    my $parameters = $1;
@@ -645,12 +669,14 @@ sub setup_lpd {
 		    "server name and the share name!\n";
 	    }
 	    # Set up the command line for printing on the SMB server
-	    $postpipe = "(\n  echo 'print -'\n  cat\n) | " .
-		"$sysdeps->{'smbclient'} '//$smbserver/$smbshare'";
-	    if ($smbpassword ne "") {$postpipe .= " '$smbpassword'";}
+	    $postpipe = "$sysdeps->{'smbclient'} '//$smbserver/$smbshare'";
+	    if ($smbpassword ne "") {
+		warn("WARNING: smbclient password is visible in PPD file\n");
+		$postpipe .= " '$smbpassword'";
+	    }
 	    if ($smbuser ne "") {$postpipe .= " -U '$smbuser'";}
 	    if ($workgroup ne "") {$postpipe .= " -W '$workgroup'";}
-	    $postpipe .= " -N -P";
+	    $postpipe .= " -N -P -c 'print -' ";
 	    $entry->{'str'}{'lp'} = "/dev/null";
 	} elsif ($config->{'connect'} =~ m!^ncp://(.*)$!) {
 	    my $parameters = $1;
@@ -686,6 +712,7 @@ sub setup_lpd {
 	    if ($ncpuser ne "") {
 		$postpipe .= " -U $ncpuser";
 		if ($ncppassword ne "") {
+		    warn("WARNING: ncp password is visible in PPD file\n");
 		    $postpipe .= " -P $ncppassword";
 		} else {
 		    $postpipe .= " -n";
@@ -702,7 +729,9 @@ sub setup_lpd {
 	    die ("The URI \"$config->{'connect'}\" is not supported " .
 		 "for LPD/LPRng or you have\nmistyped.\n");
 	} else {
-	    die "You must specify a connection with -c.\n";
+	    print STDERR "You must specify a connection with -c.\n";
+		help();
+		exit(1);
 	}
 	# Put $postpipe into the data structure, so that it will be
 	# inserted into the PPD file
@@ -723,12 +752,13 @@ sub setup_lpd {
     # When we have a $postpipe we never write to a device
     if ($postpipe ne "") {
 	$entry->{'str'}{'lp'} = '/dev/null';
-	$entry->{'str'}{'if'} = $sysdeps->{'foomatic-rip'};
 	if ($config->{'spooler'} eq "lpd") {
+	    $entry->{'str'}{'if'} = $sysdeps->{'foomatic-rip'};
 	    $entry->{'str'}{'af'} = $ppdfile;
 	} elsif ($config->{'spooler'} eq "lprng") {
+	    $entry->{'str'}{'if'} = $sysdeps->{'foomatic-rip'};
+	    $entry->{'str'}{'ppd'} = $ppdfile;
 	    $entry->{'bool'}{'force_localhost'} = 1;
-	    $entry->{'str'}{'filter_options'} = " --lprng \$J \$Z $ppdfile";
 	} else {
 	    die "The spooler $config->{'spooler'} is not supported " .
 		"by this function!\n";
@@ -762,23 +792,26 @@ sub setup_lpd {
     system "touch $sysdeps->{'lpd-log'}";
     chmod 0600, $sysdeps->{'lpd-log'};
     my ($lpuid, $lpgid) = (-1, -1);
-    $lpuid = getpwnam("lp");
-    $lpgid = getgrnam("lp");
+    my $l;
+    $l = getpwnam("lp"); $lpuid = $l if defined($l);
+    $l = getgrnam("lp"); $lpgid = $l if defined($l);
     chown $lpuid, $lpgid, $sysdeps->{'lpd-log'};
 
     # Write back /etc/printcap
     my $printcap = $sysdeps->{'lpd-pcap'};
     rename $printcap, "$printcap.old" or die "Cannot backup $printcap!\n";
     open PRINTCAP, "> $printcap" or die "Cannot write $printcap!\n";
-    print PRINTCAP dump_lpd_printcap($pcap);
+    print PRINTCAP dump_lpd_printcap($config, $pcap);
     close PRINTCAP;
     chmod 0644, $printcap;
 
     # In case of LPRng, give SIGHUP to the daemon, LPRng needs this to 
     # recognize a new queue
     if ($config->{'spooler'} eq "lprng") {
-	system("$sysdeps->{'lpd-lpc'} reread > /dev/null 2>&1");
+	# first check configuration
 	system("$sysdeps->{'lprng-checkpc'} -f > /dev/null 2>&1");
+	# now signal to use it
+	system("$sysdeps->{'lpd-lpc'} reread > /dev/null 2>&1");
     }
 
     return 1;
@@ -838,11 +871,11 @@ sub default_lpd {
 		$newname = "lp$i";
 
 		# Old PPD file name
-		$ppdfile = sprintf('%s/lpd/lp.ppd',
+		my $ppdfile = sprintf('%s/lpd/lp.ppd',
 				   $sysdeps->{'foo-etc'});
 		
 		# New PPD file name
-		$nppdfile = sprintf('%s/lpd/%s.ppd',
+		my $nppdfile = sprintf('%s/lpd/%s.ppd',
 				    $sysdeps->{'foo-etc'},
 				    $newname);
 		
@@ -878,7 +911,7 @@ sub default_lpd {
 	push (@newcap, $p);
     }
 
-    my @newprintcap = dump_lpd_printcap(\@newcap);
+    my @newprintcap = dump_lpd_printcap($config, \@newcap);
 
     my $printcap = $sysdeps->{'lpd-pcap'};
     rename $printcap, "$printcap.old" or die "Cannot backup $printcap!\n";
@@ -910,7 +943,7 @@ sub default_lprng {
 	    unless ($_->{'names'}[0] eq $name);
     }
 
-    my @newprintcap = dump_lpd_printcap(\@newcap);
+    my @newprintcap = dump_lpd_printcap($config, \@newcap);
 
     my $printcap = $sysdeps->{'lpd-pcap'};
     rename $printcap, "$printcap.old" or die "Cannot backup $printcap!\n";
@@ -942,7 +975,7 @@ sub delete_lpd {
 	    unless ($_->{'names'}[0] eq $name);
     }
 
-    my @newprintcap = dump_lpd_printcap(\@newcap);
+    my @newprintcap = dump_lpd_printcap($config, \@newcap);
 
     my $printcap = $sysdeps->{'lpd-pcap'};
     rename $printcap, "$printcap.old" or die "Cannot backup $printcap!\n";
@@ -1361,7 +1394,7 @@ sub setup_pdq {
     # Read the previous /usr/lib/pdq/printrc
     my $printrc = load_pdq_printrc();
 
-    my ($entry, $reconf, $p);
+    my ($ppdfile, $driverfile, $entry, $reconf, $p);
     $reconf = 0;
     for $p (@{$printrc}) {
 	if ((defined($p->{'name'})) &&
@@ -1376,10 +1409,10 @@ sub setup_pdq {
     }
 
     # Config file names
-    my $ppdfile = sprintf('%s/pdq/%s.ppd',
+    $ppdfile = sprintf('%s/pdq/%s.ppd',
 			      $sysdeps->{'foo-etc'},
 			      $config->{'queue'});
-    my $driverfile = sprintf('%s/pdq/driverdescr/%s.pdq',
+    $driverfile = sprintf('%s/pdq/driverdescr/%s.pdq',
 			      $sysdeps->{'foo-etc'},
 			      $config->{'queue'});
 
@@ -1439,7 +1472,7 @@ sub setup_pdq {
     # Driver fields
 
     # Extract driver name
-    $driverdesc = `cat $driverfile`;
+    my $driverdesc = `cat $driverfile`;
     $driverdesc =~ m!^\s*driver\s*(\"\S*\-\d+\")!m;
 
     # Driver-specific entries
@@ -1685,7 +1718,7 @@ sub setup_ppr {
     # Read the previous configuration
     my $printrc = load_ppr_printers_conf();
 
-    my ($entry, $reconf, $p);
+    my ($ppdfile, $entry, $reconf, $p);
     $reconf = 0;
     for $p (@{$printrc}) {
 	if ((defined($p->{'name'})) &&
@@ -1700,7 +1733,7 @@ sub setup_ppr {
     }
 
     # PPD file name
-    my $ppdfile = sprintf('%s/ppr/%s.ppd',
+    $ppdfile = sprintf('%s/ppr/%s.ppd',
 			      $sysdeps->{'foo-etc'},
 			      $config->{'queue'});
 
@@ -1924,6 +1957,7 @@ sub setup_ppr {
 
     # Use manufacturer and model as description when no description is
     # provided
+	my($comment, $olddesc);
     if (defined($config->{'desc'})) {
 	$comment = $config->{'desc'};
     } else {
@@ -2290,6 +2324,7 @@ sub setup_direct {
     } else {
 	# Before we overwrite the description field with manufacturer
 	# and model, check if there is some old contents
+	my( $olddesc );
 	if (($reconf) && ($entry->{'desc'})) {
 	    $olddesc = $entry->{'desc'};
 	}
@@ -2393,12 +2428,14 @@ sub setup_direct {
 		    "server name and the share name!\n";
 	    }
 	    # Set up the command line for printing on the SMB server
-	    $postpipe = "(\n  echo \"print -\"\n  cat\n) " .
-		"| $sysdeps->{'smbclient'} \"//$smbserver/$smbshare\"";
-	    if ($smbpassword ne "") {$postpipe .= " $smbpassword";}
+	    $postpipe = "$sysdeps->{'smbclient'} \"//$smbserver/$smbshare\"";
+	    if ($smbpassword ne "") {
+		warn("WARNING: smbclient password is visible in PPD file\n");
+		$postpipe .= " $smbpassword";
+	    }
 	    if ($smbuser ne "") {$postpipe .= " -U $smbuser";}
 	    if ($workgroup ne "") {$postpipe .= " -W $workgroup";}
-	    $postpipe .= " -N -P";
+	    $postpipe .= " -N -P -c 'print -' ";
 	} elsif ($config->{'connect'} =~ m!^ncp://(.*)$!) {
 	    my $parameters = $1;
 	    # Get the user's login and password from the URI
@@ -2433,6 +2470,7 @@ sub setup_direct {
 	    if ($ncpuser ne "") {
 		$postpipe .= " -U $ncpuser";
 		if ($ncppassword ne "") {
+		    warn("WARNING: ncp password is visible in PPD file\n");
 		    $postpipe .= " -P $ncppassword";
 		} else {
 		    $postpipe .= " -n";
@@ -2484,7 +2522,7 @@ sub setup_direct {
     open PCONFIG, "> $pconfigname" or die "Cannot write $pconfigname!\n";
     print PCONFIG dump_direct_config($pconfig);
     close PCONFIG;
-    chmod 0644, $printcap;
+    chmod 0644, $pconfigname;
 
     return 1;
 }
@@ -2662,35 +2700,41 @@ sub _tag {
 }
 
 sub dump_lpd_printcap {
-    my $pcap = $_[0];
+    my ($config, $pcap )= @_;
 
     my @retval;
 
     my $item;
+    my $backslash = "\\";
+    $backslash = "" if $config->{'spooler'} eq 'lprng';
     for $item (@{$pcap}) {
 	for (@{$item->{'comments'}}) {
 	    push (@retval, "$_\n");
 	}
 	if (defined($item->{'names'})) {
-	    push (@retval, (join('|', @{$item->{'names'}}) . ":\\\n"));
+	    map { $_ = '' if not defined $_; } @{$item->{'names'}};
+	    push (@retval, (join('|', @{$item->{'names'}}) . ":${backslash}\n"));
 	}
 	for (keys(%{$item->{'str'}})) {
 	    push (@retval, 
-		  sprintf("    :$_=%s:\\\n", $item->{'str'}{$_}));
+		  sprintf("    :$_=%s:${backslash}\n", $item->{'str'}{$_}));
 	}
 	for (keys(%{$item->{'bool'}})) {
 	    if ($item->{'bool'}{$_}) {
-		push (@retval, "    :$_:\\\n");
+		push (@retval, "    :$_:${backslash}\n");
 	    }
 	}
 	for (keys(%{$item->{'num'}})) {
 	    push (@retval, 
-		  sprintf("    :$_#%s:\\\n", $item->{'num'}{$_}));
+		  sprintf("    :$_#%s:${backslash}\n", $item->{'num'}{$_}));
 	}
+	if( $backslash ){
 	my $lastline = pop(@retval);
-	$lastline =~ s!:\\$!:!;
+		$lastline =~ s!:\\!:!;
 	push (@retval, $lastline);
     }
+    }
+	print "PRINTCAP (spooler '" . $config->{'spooler'} . "') " . Dumper(\@retval) . "\n" if $debug;
 
     return @retval;
 }
@@ -2702,38 +2746,68 @@ sub load_lpd_printcap {
     open PCAP, $sysdeps->{'lpd-pcap'} or die "Cannot read printcap file!\n";
     my $pcap = join('', <PCAP>);
     close PCAP;
+	print "PC '$pcap'\n" if $debug;
 
-    die( "Cannot currently parse lprng style printcaps created by " .
-	 "lprngtool!\n" .
-	 "See the BUGS section in the manpage for details.\n")
-      if $pcap =~ m/\n\s*(:.*[^\\]\n\s*:)/m;
+#    die( "Cannot currently parse lprng style printcaps created by " .
+#	 "lprngtool!\n" .
+#	 "See the BUGS section in the manpage for details.\n")
+#      if $pcap =~ m/\n\s*(:.*[^\\]\n\s*:)/m;
 
+	# watch out for comments with \ at end of line - ignore \
     $pcap =~ s!^(\s*\#.*\\)$!${1}MEMEMEM!gm;
+	# now we join lines with \ at end
     $pcap =~ s!\\\n!!gms;
-    $pcap =~ s!^\s*$!!gs;
+	# remove \ in comment lines
     $pcap =~ s!\\MEMEMEM!\\!g;
+	print "AFTER '$pcap'\n" if $debug;
 
-    my (@comments, @items);
+    my (@comment, @items, @comments_in_pc_entry);
 
-    my $pline;
+    my ($pline, $pcentry);
+    $pcentry = "";
     for $pline (split('\n',$pcap)) {
-	if ($pline =~ m!^\s*\#!) {
+	$pline =~ s/^\s+//;
+	print "LINE '$pline', pcentry '$pcentry'\n" if $debug;
+	next if $pline eq "";
+	if ($pline =~ m!^\#!) {
+	    if( $pcentry ){
+	    	push (@comments_in_pc_entry, $pline);
+	    } else {
 	    push (@comment, $pline);
-	} elsif ($pline =~ m!^\s*$!) {
-	    push (@comment, $pline);
+	    }
+	} elsif ($pline =~ m!^:!) {
+	    push( @comment, @comments_in_pc_entry );
+	    @comments_in_pc_entry = ();
+	    if( $pcentry ne "" ){
+		$pcentry .= $pline;
 	} else {
-	    push (@items, { 'itemstr' => $pline,
+		die( "bad printcap entry at '$pline'" );
+	    }
+	} elsif( $pcentry ne "" ){
+	    push (@items, { 'itemstr' => $pcentry,
 			    'comments' => [ @comment ] });
-	    @comment = ();
+	    @comment = @comments_in_pc_entry;
+	    @comments_in_pc_entry = ();
+	    $pcentry = $pline;
+	} else {
+	    $pcentry = $pline;
 	}	
     }
+    if( $pcentry ){
+	    push( @comment, @comments_in_pc_entry );
+	    @comments_in_pc_entry = ();
+	    push (@items, { 'itemstr' => $pcentry,
+			    'comments' => [ @comment ] });
+	    @comment = ();
+    }
     # Trailing comments get stuck on as empty item later...
+    print "Printcap:\n" . Dumper(\@items ) if $debug;
 
     my $p;
     for $p (@items) {
 	my $item;
 	my $first = 1;
-	for $item (split(':', $p->{'itemstr'})) {
+	for $item (split(/:\s*/, $p->{'itemstr'})) {
 	    next if $item =~ m!^\s*$!;
 	    if ($first) {
 		my $name;
@@ -3017,6 +3091,7 @@ sub load_ppr_printers_conf {
 	# "root"
 	opendir PCONFDIR, "$sysdeps->{'ppr-etc'}/printers" or
 	    die "Cannot read $sysdeps->{'ppr-etc'}/printers directory!\n";
+	my $name;
 	while ($name = readdir(PCONFDIR)) {
 	    # Do not consider "." and ".." as a printer queue
 	    next if ($name =~ /^\./);
@@ -3077,7 +3152,7 @@ sub load_ppr_printers_conf {
 	    if (($line !~ m!^\s*-+\s*$!) && 
 		($line !~ m!^\s*Destination\s+Type\s+Status\s+Charge\s*$!)){
 		if ($line =~ m!^\s*(\S+)\s+printer!) {
-		    $name = $1;
+		    my $name = $1;
 		    open PPAD_SHOW,"$sysdeps->{'ppr-ppad'} show $name |" or 
 			die "Cannot execute \"ppad\".\n";
 		    my $lcount = 0;
@@ -3121,7 +3196,7 @@ sub load_ppr_printers_conf {
 				}
 			    } else {
 				warn "Line $lcount in \"ppad show " .
-				    "$queuename\" corrupted:\n    $line\n";
+				    "$name\" corrupted:\n    $line\n";
 			    }
 			}
 		    }
@@ -3170,6 +3245,7 @@ sub load_direct_config {
     # Configured printers are represented by PPD files in /etc/foomatic/
     opendir PCONFDIR, "$sysdeps->{'foo-etc'}/direct" or
 	die "Cannot read $sysdeps->{'foo-etc'}/direct directory!\n";
+	my $name;
     while ($name = readdir(PCONFDIR)) {
 	# Files beginning with a dot or ending with a tilde are never
 	# printers
@@ -3223,7 +3299,7 @@ sub cups_correct_ptal_uri {
 	my $d = quotemeta($device);
 	if ($line =~ m!(ptal://?$d)$!) {
 	    my $realdevice = $1;
-	    close f;
+	    close F;
 	    return $realdevice;
 	}
     }
@@ -3354,7 +3430,7 @@ sub load_lpd_datablob {
 	$c->{'desc'} = $p->{'names'}[1] if $p->{'names'}[1];
 	$c->{'loc'} = $p->{'names'}[3] if $p->{'names'}[3];
 	$c->{'foomatic'} = 0;
-	my $if = $p->{'str'}{'if'};
+	my $if = ($p->{'str'}{'if'} || "");
 	if ($if =~ m!foomatic-rip$!) {
 	    $c->{'foomatic'} = 1;
 	    $c->{'printer'} = $dat->{'id'};
@@ -3368,19 +3444,19 @@ sub load_lpd_datablob {
 	    $c->{'spooler'} = 'lprng';
 	}
 	# TODO Raw queue for LPD
-	if (0 and $p->{'str'}{'if'} eq $file) {  # Raw queue with $postpipe
-	    if (open FILE, "$file") {
-		# The first line is #!/bin/sh
-		$line = <FILE>;
-		# The second line is a comment
-		$line = <FILE>;
-		# The remaining line(s) are the $postpipe
-		$line = join('', <FILE>);
-		chomp $line;
-		$postpipe = "| $line";
-		close FILE;
-	    }
-	}
+#	if (0 and $p->{'str'}{'if'} eq $file) {  # Raw queue with $postpipe
+#	    if (open FILE, "$file") {
+#		# The first line is #!/bin/sh
+#		$line = <FILE>;
+#		# The second line is a comment
+#		$line = <FILE>;
+#		# The remaining line(s) are the $postpipe
+#		$line = join('', <FILE>);
+#		chomp $line;
+#		$postpipe = "| $line";
+#		close FILE;
+#	    }
+#	}
 	if (defined($postpipe)) {
 	    if ($postpipe =~ 
 		m!^\s*\|\s*($sysdeps->{'cat'}|cat)\s+-?\s*>\s*([^\s]+)\s*$!) {
@@ -3482,7 +3558,7 @@ sub load_lpd_datablob {
 		    $identity = "$username:$password\@";
 		}
 		$c->{'connect'} = "ncp://$identity$server/$queue";
-	    } else {
+	    } elsif( $postpipe ){
 		$postpipe =~ m!\s*\|\s*(\S.*)$!;
 		$c->{'connect'} = "postpipe:\"$1\"";
 	    }
@@ -3501,12 +3577,8 @@ sub load_lpd_datablob {
 			 ($lp =~ m!^/var/mtink/(.+)$!)) {
 		    # Translate device for mtinkd to mtink URI
 		    $c->{'connect'} = "mtink:/$1";
-		} elsif ($file =~ m!usb!i) {
-		    $c->{'connect'} = "usb:$file";
-		} elsif ($file =~ m!(tty|serial)!i) {
-		    $c->{'connect'} = "serial:$file";
-		} elsif ($file =~ m!(lp[0-9]|parallel)!i) {
-		    $c->{'connect'} = "parallel:$file";
+		} elsif ($lp =~ m!^\w+:!i) {
+		    $c->{'connect'} = $lp;
 		} else {
 		    $c->{'connect'} = "file:$lp";
 		}
@@ -3604,7 +3676,7 @@ sub load_pdq_datablob {
 	
 	my $c;
 	@{$c->{'options'}} = ();
-	for $option (@printrcdefaults) {
+	for my $option (@printrcdefaults) {
 	    if ($option =~
 		m!^\s*\{?\s*\"(OPT_|)(.+?)\"\s*=\s*\"(.*)\"\s*\}?\s*$!) {
 		push (@{$c->{'options'}}, "$2=$3");
@@ -3774,12 +3846,8 @@ sub load_ppr_datablob {
 		     ($address =~ m!^/var/mtink/(.+)$!)) {
 		# Translate device for mtinkd to mtink URI
 		$uri = "mtink:/$1";
-	    } elsif ($file =~ m!usb!i) {
-		$c->{'connect'} = "usb:$file";
-	    } elsif ($file =~ m!(tty|serial)!i) {
-		$c->{'connect'} = "serial:$file";
-	    } elsif ($file =~ m!(lp[0-9]|parallel)!i) {
-		$c->{'connect'} = "parallel:$file";
+	    } elsif ($address =~ m!^\w+:!i) {
+		$c->{'connect'} = $address;
 	    } else {
 		$uri = "file:$address";
 	    }
@@ -3988,7 +4056,7 @@ sub overtake_defaults {
     my ($olddatablob) = $_[0];
     my $c;
     @{$c->{'options'}} = ();
-    for $opt (@{$olddatablob->{'args'}}) {
+    for my $opt (@{$olddatablob->{'args'}}) {
 	push (@{$c->{'options'}}, "$opt->{'name'}=$opt->{'default'}");
     }
     set_default_options($c, $db->{'dat'});
@@ -4094,7 +4162,7 @@ sub print_perl_combo_data {
 	# composite options)
 	my $ppd = $db->getppd($config->{'shortgui'});
 	delete ($db->{'dat'});
-	$db->{'dat'} = ppdfromvartoperl(split(/\n/, $ppd));
+	$db->{'dat'} = ppdfromvartoperl([split(/\n/, $ppd)]);
     }
 
     # The data can be viewed with the option defaults of an existing
@@ -4102,7 +4170,7 @@ sub print_perl_combo_data {
     if ($olddatablob) {
 	my $c;
 	@{$c->{'options'}} = ();
-	for $opt (@{$olddatablob->{'args'}}) {
+	for my $opt (@{$olddatablob->{'args'}}) {
 	    push (@{$c->{'options'}}, "$opt->{'name'}=$opt->{'default'}");
 	}
 	set_default_options($c, $db->{'dat'});
@@ -4125,7 +4193,7 @@ sub detect_spooler {
     # If tcp/localhost:631 opens, cups CUPS is the most sophisticated
     # spooler, if it is running, it is usually the primary printing
     # system
-    my $page = $db->getpage('http://localhost:631/', 1);
+    my $page = ($db->getpage('http://localhost:631/', 1) || "");
     if ($page =~ m!Common UNIX Printing System!) {
 	return 'cups';
     }

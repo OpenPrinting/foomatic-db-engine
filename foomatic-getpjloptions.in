@@ -15,53 +15,60 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
+#   Modifed by Patrick Powell <papowell at astart.com>
+#   - error messages, fixed problem with netcat
+#   - increased timeout, added a job end to sequence
+#     as this was needed by a couple of printers
 
-NC=/usr/bin/nc
-CAT=/bin/cat
-PERL=/usr/bin/perl
+NC=@NC@
+CAT=@CAT@
+PRINTF=@PRINTF@
+PERL=@PERL@
 
-if [ ${1:-X} != X ] ; then
+usage(){
+    cat <<EOF ;
+usage: foomatic-getpjloptions <device>
+	   foomatic-getpjloptions <hostname> <port>
+
+   <device>:   Device where a local printer is connected to
+			   examples: /dev/lp0, /dev/usb/lp0
+			   Have your parallel port in EPP/bi-directional mode
+			   (see your BIOS settings).
+   <hostname>: Host name or IP of a network printer (HP JetDirect,
+			   Socket, ...)
+   <port>:     Port of your network printer.
+echo
+   Uni-directional protocols as remote LPD are not supported.
+
+   The option list is sent to standard output.
+EOF
+	exit 1;
+}
+
+case "$1" in
+	-* ) usage;;
+	""	) usage;;
+esac
+
     # We have at least one argument, so do the work
     (
 	# PJL commands to request the printer information
-	echo -en "\033%-12345X"
-	echo -en "@PJL\r\n"
-	echo -en "@PJL INFO VARIABLES\r\n"
-	echo -en "@PJL INFO ID\r\n"
-	echo -en "@PJL INFO CONFIG\r\n"
+	$PRINTF "\033%%-12345X"
+	$PRINTF "@PJL\r\n"
+	$PRINTF "@PJL INFO VARIABLES\r\n"
+	$PRINTF "@PJL INFO ID\r\n"
+	$PRINTF "@PJL INFO CONFIG\r\n"
+	$PRINTF "\033%%-12345X"
     ) | if [ ${2:-X} != X ]; then
 	# We have two arguments, do ethernet printer request
-	# Send commands to remote printer
-	${NC} -q 0 ${1} ${2} 2>/dev/null
-	# Wait one second for the printer to process the request
-        sleep 1
 	# Poll the printer's answer and filter out the newpage characters
-	${NC} -w 1 ${1} ${2} 2>/dev/null | ${PERL} -p -e "s/\014//"
+	${NC} -w 3 ${1} ${2} 2>/dev/null | ${PERL} -p -e "s/\014//"
     else
 	# We have one argument, do local printer request
 	# Send commands to printer port
 	${CAT} > ${1}
-	# Wait one second for the printer to process the request
-	sleep 1
-	# Poll the printer's answer and filter out the newpage characters
-	${CAT} < ${1} | ${PERL} -p -e "s/\014//"
+	# Wait ten seconds for the printer to process the request
+	sleep 10
+	# Poll the printer's answer and filter out the newpage and CR characters
+	${CAT} < ${1} | ${PERL} -p -e "s/[\015\014]//"
     fi
-else
-    # No argument, show the help message
-    echo ""
-    echo "usage: foomatic-getpjloptions <device>"
-    echo "       foomatic-getpjloptions <hostname> <port>"
-    echo ""
-    echo "   <device>:   Device where a local printer is connected to"
-    echo "               examples: /dev/lp0, /dev/usb/lp0"
-    echo "               Have your parallel port in EPP/bi-directional mode"
-    echo "               (see your BIOS settings)."
-    echo "   <hostname>: Host name or IP of a network printer (HP JetDirect,"
-    echo "               Socket, ...)"
-    echo "   <port>:     Port of your network printer."
-    echo
-    echo "   Uni-directional protocols as remote LPD are not supported."
-    echo ""
-    echo "   The option list is sent to standard output."
-    echo ""
-fi

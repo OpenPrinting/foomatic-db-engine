@@ -1,0 +1,6 @@
+%!
+/Courier
+findfont 200 scalefont setfont
+72 300 moveto
+(1) show
+showpage

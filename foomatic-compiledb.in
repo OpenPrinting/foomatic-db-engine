@@ -2,54 +2,62 @@
 
 use Foomatic::Defaults;
 use Foomatic::DB;
+use Cwd;
 
 my ($db) = new Foomatic::DB;
 
 use Getopt::Std;
-getopts('ft:j:h');
+getopts('ft:j:hd:') || help();
 my $force = ($opt_f ? 1 : 0);
+my $debug = 0;
 
 # Do the whole world
 
-if ($opt_h) {
+sub help {
     print STDERR <<EOF;
-compile_db [ -f ] [ -t type ] [ -j n ] [driver1] [driver2] ...
+compile_db [ -f ] [ -t type ] [ -d destdir] [ -j n ] [driver1] [driver2] ...
  -f       force: proceed even if the destination directory exists
  -t type  output file type: ppd or xml
  -j n     n==number of work processes to run at the same time
+ -d destdir  put PPD files in this directory
  driver1 driver2 ...  
           only compile the database for these drivers
 EOF
 
-    exit 0;
+    exit 1;
 }
+
+help() if ($opt_h);
 
 # Default file type are PPD files
 if (!$opt_t) {
     $opt_t = "ppd";
 }
+my $destdir;
+if( $opt_d ){
+    $destdir = $destdir;
+}
 
 print STDERR "\n";
+# Destination directory
+my $pwd = cwd;
 
 if (($opt_t eq "ppd") || ($opt_t eq "cups") || ($opt_t eq "ppr")) {
     # Generic PPDs
     $filetype = "ppd";
-    $destdir = "ppd";
+    $destdir = "$pwd/ppd" if not defined( $destdir );
     $suffix = ".ppd";
     print STDERR "Generating Foomatic PPD files ...\n";
 } elsif ($opt_t eq "xml") {
     $filetype = "xml";
-    $destdir = "combo-xml";
+    $destdir = "$pwd/combo-xml" if not defined( $destdir );
     $suffix = ".xml";
     print STDERR "Generating Foomatic printer/driver combo XML files ...\n";
 } else {
     die "Unknown file type: $opt_t!\n";
 }
 
-# Destination directory
-my $pwd = `pwd`;
-chomp $pwd;
-print STDERR "\nStoring files in directory $pwd/$destdir.\n";
+print STDERR "\nStoring files in directory $destdir.\n";
 mkdir $destdir, 0777 or $force or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
 
 # Compute the overview
@@ -83,29 +91,52 @@ if (open COMB, '-|') {
 }
 
 # OK, spawn n manager processes
-if ($opt_j > 1) {
-    while ($opt_j-- > 1) {
-	if (!fork()) {
+# create lists to process
+$opt_j = 0 if( not defined $opt_j );
+$opt_j += 0;
+$opt_j = 1 if( not $opt_j or $opt_j < 0 );
+
+my $n = 0;
+my $rcombos = [];
+my @rcombos;
+for( $n = 0; $n < $opt_j; ++$n ){
+    $rcombos->[$n] = [];
+}
+$n = 0;
+while( @combos ){
+	my $pos = int(rand(scalar(@combos)));
+	my $j = $n % $opt_j;
+	print "$n: combos " . scalar(@combos) . ", pos $pos, id $j\n" if $debug;
+	push( @{$rcombos->[$n % $opt_j]}, splice( @combos, $pos, 1 ) );
+	++$n;
+}
+my (@pids, $pid );
+for( $n = 0; $n < $opt_j; ++$n ){
+    $pid = fork();
+    if( ! defined( $pid ) ){
+	warn( "cannot fork child process" );
+	break;
+    } elsif( ! $pid ){
 	    # Child, go on immediately
+	@rcombos = @{$rcombos->[$n]};
 	    last;
 	}
-    }
+    print "process $pid\n" if $debug;
+}
+if( $pid ){
+	# we wait for the processes
+	while( ($pid = wait()) > 0 ){ print "DONE $pid\n" if $debug };
+	print "ALL DONE" if $debug;
 }
 
-# Reorder combos randomly:
-my $ct = scalar(@combos);
-my @rcombos;
-while ($ct) {
-    my $idx = int(rand($ct--));
-    my $next = splice(@combos, $idx, 1);
-    push (@rcombos, $next);
-}
+print "Monitor process $$\n";
 
 # Now, the processing loop:
 my $combo;
 my $pcount=0;
 my $fileh=spawn_child();
 while($combo=pop(@rcombos)) {
+    print "PROCESS $n - $$, $combo" if $debug;;
     print $fileh $combo;
     if ($pcount++ > 25) {
 	close $fileh or die "\nError in child...\n";
@@ -144,10 +175,10 @@ sub spawn_child {
 	    # which does not exist in the Foomatic database)
 	    next if !defined($db->get_printer($printer));
 
-	    # Skip entirely if we can
-	    next if (-f $filename);
+	    ## Skip entirely if we can
+	    #next if (-f $filename);
 	    
-	    print STDERR "  ...printer $printer, driver $driver\n";
+	    print STDERR "  Worker $$ ...printer $printer, driver $driver\n";
 	    
 	    # Generate the file ...
 	    if ($filetype eq 'xml') {

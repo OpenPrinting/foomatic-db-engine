@@ -13,6 +13,7 @@ use Exporter;
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
 use Data::Dumper;
 use POSIX;                      # for rounding integers
+use strict;
 
 my $ver = '$Revision$ ';
 
@@ -95,7 +96,7 @@ sub get_combo_data_xml {
     my $options = "";
     if (($withoptions) && (defined($this->{'dat'}))) {
 	my $dat = $this->{'dat'};
-	for $arg (@{$dat->{'args'}}) {
+	for my $arg (@{$dat->{'args'}}) {
 	    my $name = $arg->{'name'};
 	    my $default = $arg->{'default'};
 	    if (($name) && ($default)) {
@@ -499,7 +500,7 @@ sub sortvals {
 # they get presented more nicely on frontends which do not sort by
 # themselves
 
-sub getdat {
+sub getdat ($ $ $) {
     my ($this, $drv, $poid) = @_;
 
     my %dat;			# Our purpose in life...
@@ -525,7 +526,7 @@ sub getdat {
     return \%dat;
 }
 
-sub getdatfromppd {
+sub getdatfromppd ($ $) {
 
     my ($this, $ppdfile) = @_;
 
@@ -539,7 +540,10 @@ sub getdatfromppd {
 
 }
 
-sub ppdtoperl {
+sub ppdfromvartoperl ($);
+sub ppdtoperl($);
+
+sub ppdtoperl($) {
 
     # Build a Perl data structure of the printer/driver options
 
@@ -550,12 +554,12 @@ sub ppdtoperl {
 	       "$sysdeps->{'gzip'} -cd $ppdfile |") or return undef;
     my @ppd = <PPD>;
     close PPD;
-    return ppdfromvartoperl(@ppd);
+    return ppdfromvartoperl(\@ppd);
 }
 
-sub ppdfromvartoperl {
+sub ppdfromvartoperl ($) {
 
-    my (@ppd) = @_;
+    my ($ppd) = @_;
 
     # Build a data structure for the renderer's command line and the
     # options
@@ -574,8 +578,8 @@ sub ppdfromvartoperl {
     my @datablob;
     
     # Parse the PPD file
-    for (my $i; $i <= $#ppd; $i ++) {
-	$_ = $ppd[$i];
+    for (my $i = 0; $i < @{$ppd}; $i ++) {
+	$_ = $ppd->[$i];
 	# Foomatic should also work with PPD files downloaded under
 	# Windows.
 	$_ = undossify($_);
@@ -596,7 +600,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -635,7 +639,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -657,7 +661,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -693,7 +697,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -812,7 +816,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -856,7 +860,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -883,7 +887,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -934,6 +938,7 @@ sub ppdfromvartoperl {
 	    my $settingtrans = $1;
 	    my $line = $2;
 	    my $translation = "";
+	    my $setting = "";
 	    if ($settingtrans =~ m!^([^:/\s]+)/([^:]*)$!) {
 		$setting = $1;
 		$translation = $2;
@@ -944,7 +949,7 @@ sub ppdfromvartoperl {
 	    checkarg ($dat, $currentargument);
 	    # This option has a non-Foomatic keyword, so this is not
 	    # a hidden option
-	    undef $dat->{'args_byname'}{$argname}{'hidden'};
+	    undef $dat->{'args_byname'}{$currentargument}{'hidden'};
 	    # Make sure that the setting is in the data structure (enum
 	    # options)
 	    my $bool =
@@ -966,8 +971,8 @@ sub ppdfromvartoperl {
 		$dat->{'args_byname'}{$currentargument}{'vals_byname'}{$setting}{'comment'} = $translation;
 		# Make sure that this argument has a default setting, even
 		# if none is defined in this PPD file
-		if (!$dat->{'args_byname'}{$argname}{'default'}) {
-		    $dat->{'args_byname'}{$argname}{'default'} = $setting;
+		if (!$dat->{'args_byname'}{$currentargument}{'default'}) {
+		    $dat->{'args_byname'}{$currentargument}{'default'} = $setting;
 		}
 	    }
 	    # Store the value
@@ -983,7 +988,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -1038,7 +1043,7 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -1053,8 +1058,8 @@ sub ppdfromvartoperl {
 	    # The printer supports PJL/JCL when there is such a line 
 	    $dat->{'jcl'} = 1;
 	    $dat->{'pjl'} = 1;
-	    $item = $1;
-	    $line = $2;
+	    my $item = $1;
+	    my $line = $2;
 	    # Store the value
 	    # Code string can have multiple lines, read all of them
 	    my $code = "";
@@ -1068,17 +1073,17 @@ sub ppdfromvartoperl {
 		}
 		# Read next line
 		$i ++;
-		$line = $ppd[$i];
+		$line = $ppd->[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
 	    $code .= $1;
 	    if ($item eq 'Begin') {
-		$jclbegin = unhexify($code);
+		$dat->{'jclbegin'} = unhexify($code);
 	    } elsif ($item eq 'ToPSInterpreter') {
-		$jcltointerpreter = unhexify($code);
+		$dat->{'jcltointerpreter'} = unhexify($code);
 	    } elsif ($item eq 'End') {
-		$jclend = unhexify($code);
+		$dat->{'jclend'} = unhexify($code);
 	    }
 	} elsif (m!^\*\% COMDATA \#(.*)$!) {
 	    # If we have an old Foomatic 2.0.x PPD file, collect its Perl 
@@ -1086,7 +1091,6 @@ sub ppdfromvartoperl {
 	    push (@datablob, $1);
 	}
     }
-    close PPD;
 
     # If we have an old Foomatic 2.0.x PPD file use its Perl data structure
     if ($#datablob >= 0) {
@@ -1194,7 +1198,8 @@ sub ppdgetdefaults {
 
     # Set the defaults for the numerical options, taking into account
     # the "*FoomaticRIPDefault<option>: <value>" if they apply
-    numericaldefaults($dat);
+    #  similar to other places in the code
+    numericaldefaults($this->{'dat'}); 
 
 }
 
@@ -1263,7 +1268,7 @@ sub ppdsetdefaults {
 		    $def = $arg->{'cdefault'};
 		    undef $arg->{'cdefault'};
 		}
-		$fdef = $arg->{'default'};
+		my $fdef = $arg->{'default'};
 		$fdef = checkoptionvalue($this->{'dat'}, $name, $fdef, 1);
 		$ppd =~ s!^(\*FoomaticRIPDefault$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$fdef$3!m;
 		$def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
@@ -1331,9 +1336,9 @@ sub ppdsetdefaults {
 			    ($fchoicedef ? "\n$fchoicedef" : "");
 			for my $l ("Default$name:.*",
 				   "OrderDependency.*$name",
-				   "FoomaticRIPOptionMaxLength\s+$name:.*",
-				   "FoomaticRIPOptionPrototype\s+$name:.*",
-				   "FoomaticRIPOption\s+$name:.*") {
+				   "FoomaticRIPOptionMaxLength\\s+$name:.*",
+				   "FoomaticRIPOptionPrototype\\s+$name:.*",
+				   "FoomaticRIPOption\\s+$name:.*") {
 			    $ppd =~ s!^(\*$l)$!$1$entrystr!m and last;
 			}
 		    }
@@ -1415,6 +1420,7 @@ sub unhexify {
 sub undossify {
     # Remove "dossy" line ends ("\r\n") from a string
     my ($str) = @_;
+    $str = "" if( !defined($str) );
     $str =~ s/\r\n/\n/gs;
     $str =~ s/\r$//s;
     return $str;
@@ -1578,7 +1584,7 @@ sub checkoptionvalue {
 	    my $sprintfproto = $arg->{'proto'};
 	    $sprintfproto =~ s/\%(?!s)/\%\%/g;
 	    my $driverval = sprintf($sprintfproto, $value);
-	    for $val (@{$arg->{'vals'}}) {
+	    for my $val (@{$arg->{'vals'}}) {
 		if (($val->{'driverval'} eq $driverval) ||
 		    ($val->{'driverval'} eq $value)) {
 		    return $val->{value};
@@ -1645,7 +1651,7 @@ sub checkoptions {
     # Option set to be examined
     my ($dat, $optionset) = @_;
 
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 	if (defined($arg->{$optionset})) {
 	    $arg->{$optionset} =
 		checkoptionvalue
@@ -1692,10 +1698,11 @@ sub syncpagesize {
     }
     
     # Do it!
-    if (my $val=valbyname($dat->{'args_byname'}{$dest}, $value)) {
+	my $val;
+    if ($val=valbyname($dat->{'args_byname'}{$dest}, $value)) {
 	# Standard paper size
 	$dat->{'args_byname'}{$dest}{$optionset} = $val->{'value'};
-    } elsif (my $val=valbyname($dat->{'args_byname'}{$dest}, "Custom")) {
+    } elsif ($val=valbyname($dat->{'args_byname'}{$dest}, "Custom")) {
 	# Custom paper size
 	$dat->{'args_byname'}{$dest}{$optionset} = $value;
     }
@@ -1761,7 +1768,7 @@ sub numericaldefaults {
 		    }
 		    my $mindiff = abs($arg->{'max'} - $arg->{'min'});
 		    my $closestvalue;
-		    for $val (@{$arg->{'vals'}}) {
+		    for my $val (@{$arg->{'vals'}}) {
 			if (abs($arg->{'fdefault'} - $val->{'value'}) <
 			    $mindiff) {
 			    $mindiff = 
@@ -1786,7 +1793,7 @@ sub setnumericaldefaults {
 
     my ($dat) = @_;
 
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 	if ($arg->{'default'}) {
 	    if ($arg->{'type'} =~ /^(int|float)$/) {
 		if ($arg->{'default'} < $arg->{'min'}) {
@@ -1800,7 +1807,7 @@ sub setnumericaldefaults {
 		} else {
 		    my $mindiff = abs($arg->{'max'} - $arg->{'min'});
 		    my $closestvalue;
-		    for $val (@{$arg->{'vals'}}) {
+		    for my $val (@{$arg->{'vals'}}) {
 			if (abs($arg->{'default'} - $val->{'value'}) <
 			    $mindiff) {
 			    $mindiff = 
@@ -1949,7 +1956,7 @@ sub setgroupandorder {
 # Return a generic Adobe-compliant PPD for the "foomatic-rip" filter script
 # for all spoolers.  Built from the standard data; you must call getdat()
 # first.
-sub getppd {
+sub getppd (  $ $ $ ) {
 
     # If $shortgui is set, all GUI strings ("translations" in PPD files) will
     # be cut to a maximum length of 39 characters. This is needed by the
@@ -1984,7 +1991,7 @@ sub getppd {
 
     # Search for composite options and prepare the member options
     # of the found composite options
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 	# Here we are only interested in composite options, skip the others
 	next if $arg->{'style'} ne 'X';
 	my $name = $arg->{'name'};
@@ -2117,7 +2124,7 @@ sub getppd {
 
     # Now recursively set the groups and the order sections and numbers
     # for all composite options and their members.
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 	# The recursion should only be started in composite options
 	# which are not member of another composite option.
 	$db->setgroupandorder($arg, $members_in_subgroup) 
@@ -2133,7 +2140,7 @@ sub getppd {
 
     my @groupstack; # In which group are we currently
 
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 	my $name = $arg->{'name'};
 	my $type = $arg->{'type'};
 	my $com  = $arg->{'comment'};
@@ -2264,7 +2271,7 @@ sub getppd {
 		my $header = sprintf
 		    ("*FoomaticRIPOptionPrototype %s",
 		     $name);
-		$foomaticstr = ripdirective($header, $cmd) . "\n";
+		my $foomaticstr = ripdirective($header, $cmd) . "\n";
 		$stringextralines1 .= $foomaticstr;
 		# Stuff to insert into command line/job is more than one
 		# line? Let an "*End" line follow
@@ -2388,8 +2395,7 @@ sub getppd {
 			 "*DefaultPaperDimension: $dat->{'args_byname'}{'PageSize'}{'default'}");
 		}
 
-		my $v;
-		for $v (@{$arg->{'vals'}}) {
+		for my $v (@{$arg->{'vals'}}) {
 		    my $psstr = "";
 
 		    if ($name eq "PageSize") {
@@ -2680,7 +2686,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    ("%%%% FoomaticRIPOptionSetting: %s", $name);
 		$psstr = "$header=True";
 		$psstrf = "$header=False";
-		my $header = sprintf
+		$header = sprintf
 		    ("*FoomaticRIPOptionSetting %s", $name);
 		my $foomaticstr = ripdirective($header, $cmd) . "\n";
 		# For non-PostScript options insert line with option
@@ -2798,7 +2804,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		my $header = sprintf
 		    ("*FoomaticRIPOptionPrototype %s",
 		     $name);
-		$foomaticstr = ripdirective($header, $cmd) . "\n";
+		my $foomaticstr = ripdirective($header, $cmd) . "\n";
 		push(@optionblob, $foomaticstr);
 		# Stuff to insert into command line/job is more than one
 		# line? Let an "*End" line follow
@@ -2827,8 +2833,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    warn "undefined default for $idx/$name on a $whr\n";
 		}
 	    
-		my $v;
-		for $v (@choicelist) {
+		for my $v (@choicelist) {
 		    my $psstr = "";
 		    
 		    if ($arg->{'style'} eq 'G') {
@@ -2889,7 +2894,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		$numvalues = $rangesize/$trialstepsize;
 	    }
 	    # Try to find a finer stepping
-	    $stepsize = $trialstepsize;
+	    my $stepsize = $trialstepsize;
 	    my $stepsizeorig = $stepsize;
 	    $trialstepsize = $stepsizeorig / 2;
 	    $numvalues = $rangesize/$trialstepsize;
@@ -2917,7 +2922,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    # We have the step size. Now we must find an appropriate
 	    # second value for the value list, so that it contains
 	    # the integer multiples of 10, 100, 1000, ...
-	    $second = $stepsize * POSIX::ceil($min / $stepsize);
+	    my $second = $stepsize * POSIX::ceil($min / $stepsize);
 	    if ($second <= $min) {$second += $stepsize};
 	    # Generate the choice list
 	    my @choicelist;
@@ -2980,7 +2985,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		my $header = sprintf
 		    ("*FoomaticRIPOptionPrototype %s",
 		     $name);
-		$foomaticstr = ripdirective($header, $cmd) . "\n";
+		my $foomaticstr = ripdirective($header, $cmd) . "\n";
 		push(@optionblob, $foomaticstr);
 		# Stuff to insert into command line/job is more than one
 		# line? Let an "*End" line follow
@@ -3011,8 +3016,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    warn "undefined default for $idx/$name on a $whr\n";
 		}
 
-		my $v;
-		for $v (@choicelist) {
+		for my $v (@choicelist) {
 		    my $psstr = "";
 		    if ($arg->{'style'} eq 'G') {
 			# Ghostscript argument; offer up ps for insertion
@@ -3335,7 +3339,7 @@ sub getpage {
 	if ($dontdie) {
 	    return undef;
 	} else {
-	    die ("http error: " . $request->status_line . "\n");
+	    die ("http error: " . $url . "\n");
 	}
     }
 
@@ -3354,7 +3358,7 @@ sub getmarginsformarginrecord {
     my $absolute = 0;
     my ($left, $right, $top, $bottom) = (0, $width, $height, 0);
     # Check the general margins and then the particular paper size
-    for $i ('_general', $pagesize) {
+    for my $i ('_general', $pagesize) {
 	# Skip a section if it is not defined
 	next if (!defined($margins->{$i}));
 	# Determine the factor to calculate the margin in points (pt)
@@ -3503,7 +3507,7 @@ sub ripdirective {
     }
     $content .= "\"";
     # Go through every line of the $content
-    for $l (split ("\n", $content)) {
+    for my $l (split ("\n", $content)) {
 	while ($l) {
 	    # Take off $maxlength portions until the string is used up
 	    if (length($l) < $freelength) {
@@ -3833,7 +3837,7 @@ sub getpapersize {
     $papersize =~ s/form_//;
 
     # Check whether the paper size name is in the list above
-    for $item (@sizetable) {
+    for my $item (@sizetable) {
 	if ($papersize =~ /@{$item}[0]/) {
 	    return @{$item}[1];
 	}
@@ -3881,9 +3885,8 @@ sub getexecdocs {
     if ($commandline eq "") {return ();}
 
     my @letters = qw/A B C D E F G H I J K L M Z/;
-    my $spot;
     
-    for $spot (@letters) {
+    for my $spot (@letters) {
 	
 	if($commandline =~ m!\%$spot!) {
 
@@ -4085,7 +4088,7 @@ sub getexecdocs {
 	     #"<TT>%-12345X\@PJL JOB NAME=\"</TT>",
 	     #"<I>&lt;A job name&gt;</I>",
 	     #"<TT>\"</TT><BR>");
-	for $command (@pjlcommands) {
+	for my $command (@pjlcommands) {
 	    push(@pjltmp,
 		 "<TT>$command</TT><BR>");
 	}
@@ -4130,7 +4133,7 @@ sub get_summarydocs {
 
     my @docs;
 
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 
 	# Make sure that the longname/translation exists
 	if (!$arg->{'comment'}) {
@@ -4213,7 +4216,7 @@ sub getdocs {
 
     my @docs;
 
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 
 	# Make sure that the longname/translation exists
 	if (!$arg->{'comment'}) {
@@ -4293,7 +4296,7 @@ sub valbyname {
     my ($arg,$name) = @_;
 
     my $val;
-    for $val (@{$arg->{'vals'}}) {
+    for my $val (@{$arg->{'vals'}}) {
 	return $val if (lc($name) eq lc($val->{'value'}));
     }
 
@@ -4518,7 +4521,7 @@ sub comment_filter {
     }
 
     # extract all the A tail tags
-    my $replace = "ANCHORTAIL$fake$num";
+    $replace = "ANCHORTAIL$fake$num";
     while ($text =~ 
 	   s!(<\s*/\s*a\s*>)!$replace!i) {
 	$replacements{$replace} = $1;

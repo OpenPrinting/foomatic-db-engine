@@ -4,28 +4,60 @@
 .SH NAME
 foomatic-ppdfile \- Generate a PPD file for a given printer/driver combo
 .SH SYNOPSIS
-.B foomatic-ppdfile \-d <driver> \-p <printerid>
-
-
+.B foomatic-ppdfile [-w] [\-d <driver>] \-p <printerid>
+.br
+.B foomatic-ppdfile [-A] [-P pattern]
+.br
+.B foomatic-ppdfile -h
 
 .SH DESCRIPTION
+The first form of the
 .B foomatic-ppdfile
-will compute the spooler-independent Foomatic PPD file for any valid
+to compute the spooler-independent Foomatic PPD file for any valid
 printer/driver combo available in the Foomatic database, both for
 printing with \fBfoomatic-rip(1)\fR and for applications/clients being
 able to access the printer's options.  The PPD file is returned on
 standard ouput.
+If the driver is not specified, the default driver is used.
 
+.PP
+The second form of the
+.B foomatic-ppdfile
+program will search the printer database and return either all
+printer entries or those whose name and/or model information
+match a regular expression.
+
+.pp
+The last form prints a help message and exits.
 
 .SS Options
-.TP 10
-.BI \-d
-driver name
+.TP 5
+.BI \-d " drivername"
+The (optional) driver name to use.
+If the driver name is not supplied, the default or first driver in the printers
+compatible driver list is used.
 
-.TP 10
+.TP 5
 .BI \-p
 printer id
+The printer id.
 
+.TP 5
+.B \-w
+Return a PPD file that conforms to the Microsoft Windows format
+limitations.
+
+.TP 5
+.B \-A
+Return all printer entries in the database.
+
+.TP 5
+.BI \-P pattern
+Return all printer entries in the database which match
+the regular expression.
+
+
+.TP 5
 .SH SEE ALSO
 .IR foomatic-rip (1)
 
@@ -36,6 +68,8 @@ returns 0 on success, 1 otherwise.
 .SH AUTHOR
 Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
 project using output from the associated binary.
+
+Modified and updated by Patrick Powell <\fIpapowell at astart.com\fF>.
 
 .SH BUGS
 None so far.

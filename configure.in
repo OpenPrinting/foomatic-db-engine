@@ -24,6 +24,7 @@ fi
 dnl CFLAGS="$CFLAGS $XML_CFLAGS"
 dnl LIBS="$LIBS $XML_LIBS"
 
+
 dnl Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
@@ -47,6 +48,13 @@ LIBSEARCHPATH=/usr/lib:/lib:/usr/local/lib:/usr/local/libexec:/opt
 PTALPIPESSEARCHPATH=/var/run:/var:/var/ptal:/usr/var/run:/usr/var:/usr/var/ptal:/usr/local/var/run:/usr/local/var:/usr/local/var/ptal:/dev:/dev/ptal
 MTINKPIPESSEARCHPATH=/var:/var/run:/usr/var/:/usr/var/run:/usr/local/var:/usr/local/var/run:/dev
 
+# There is a bug in some versions of autoconf that causes
+# bad expansion of paths in the AC_PATH_* macros.  This is very annoying
+
+BSB=$BINSEARCHPATH:$SBINSEARCHPATH
+SBB=$SBINSEARCHPATH:$BINSEARCHPATH
+SYS_LIB_PATH=$SYSCONFSEARCHPATH:$LIBSEARCHPATH
+
 dnl Get the operating system and version number...
 uname=`uname`
 uversion=`uname -r | sed -e '1,$s/[[^0-9]]//g'`
@@ -65,6 +73,89 @@ if test x$uname = xIRIX; then
   PTALPIPESSEARCHPATH="/usr/freeware/var/run:$PTALPIPESSEARCHPATH"
   MTINKPIPESSEARCHPATH="/usr/freeware/var/run:$MTINKPIPESSEARCHPATH"
 fi
+
+v="cannot open";
+AC_PATH_PROG(FILEUTIL,file,FILE_UTILITY_NOT_FOUND,$BSB)dnl
+if test "$FILEUTIL" != "FILE_UTILITY_NOT_FOUND" ; then
+	v=`${FILEUTIL} - </etc/passwd 2>/dev/null`;
+fi
+if expr "$v" : ".*cannot open.*" >/dev/null;  then
+	echo "Please use a file utility that handles 'file - 'correctly";
+	echo "You can obtain one from: ftp://ftp.astron.com/pub/file/";
+	echo " or ftp://ftp.lprng.com/pub/LPRng/UNIXTOOLS/file/";
+	echo "if necessary, use the FILEUTIL environment variable to specify the path"
+	exit 1
+fi
+
+AC_PATH_PROG(CAT,cat,CAT_NOT_FOUND,$BSB)
+AC_PATH_PROG(GS,gs,GHOSTSCRIPT_NOT_FOUND,$BSB)
+AC_PATH_PROG(A2PS,a2ps,A2PS_NOT_FOUND,$BSB)
+AC_PATH_PROG(WGET,wget,$BSB)
+AC_PATH_PROG(CURL,curl,$BSB)
+if test -z "$CURL" -a -z "$CURL" ; then
+	AC_MSG_ERROR("cannot find wget and curl.  You need to install at least one");
+fi
+AC_PATH_PROG(PRINTF,printf,$BSB)dnl
+
+dnl dislabel ghostscript check
+AC_MSG_CHECKING(GhostScript check)
+AC_ARG_ENABLE( gscheck,
+[  --disable-gscheck      disable checking GhostScript for security flaw],
+[
+if test "$enableval" = "yes" ; then
+	GSCHECK=yes;
+else
+	GSCHECK=no;
+fi
+],
+[
+	GSCHECK=no;
+],
+)
+AC_MSG_RESULT($GSCHECK)
+AC_SUBST(GSCHECK)
+
+echo GS "$GS"
+if test "$GS" != "GHOSTSCRIPT_NOT_FOUND" -a "$GSCHECK" != "no" ; then
+  AC_MSG_CHECKING(GhostScript -dSAFER and -dPARANOIDSAFER option)
+  if $GS -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=nullpage -sOutputFile=- $srcdir/gsQuit ; then
+    if $GS -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=nullpage -sOutputFile=- $srcdir/gsTest 1>/dev/null 2>/dev/null ; then
+  	  AC_MSG_WARN( [
+WARNING: '($GS) -dSAFER -dPARANOIDSAFER ' allows files to be read
+Please read README.GhostScriptSecurityProblem
+and fix your distribution of GhostScript
+OR use:
+configure --disable-gscheck
+] )
+      AC_MSG_ERROR(GhostScript security hole found!)
+    else
+      AC_MSG_RESULT(no GhostScript security hole found)
+    fi
+  else
+    AC_MSG_ERROR(Error with: $GS -q -dSAFER -dPARANOIDSAFER -sDEVICE=nullpage -sOutputFile=- )
+  fi
+fi
+
+
+AC_MSG_CHECKING(how to redirect GhostScript output to fd 3)
+if test "$DEVFD3" = "" ; then
+	v=`( if test -d /dev/fd ; then echo 3 >/dev/fd/3; fi) 3>&1 1>&2`
+	if test "$v" != "" ; then
+		DEVFD3=/dev/fd/3
+		DEVFD0=/dev/fd/0
+	else
+		DEVFD3="|$CAT >&3"
+		DEVFD0=-
+	fi
+	rm -f gs_out
+	gs -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=laserjet "-sOutputFile=$DEVFD3" ${srcdir}/gsPrint 3>gs_out
+	if test "!" -s gs_out ; then
+		AC_MSG_ERROR("ERROR - gs cannot handle -sOutputFile=$OUT" )
+	fi
+fi
+AC_MSG_RESULT(using $DEVFD3)
+AC_SUBST(DEVFD3)
+AC_SUBST(DEVFD0)
 
 dnl Check for Perl
 AC_PATH_PROGS(PERL,perl,/usr/bin/perl,$BINSEARCHPATH)
@@ -117,7 +208,7 @@ AC_PATH_PROGS(LPRNG_CONF,lpd.conf,/etc/lpd.conf,$SYSCONFSEARCHPATH)
 AC_PATH_PROGS(LPD_LPR,lpr-lpd lpr-lprng lpr-lpr lpr,/usr/bin/lpr,$BINSEARCHPATH)
 AC_PATH_PROGS(LPD_LPQ,lpq-lpd lpq-lprng lpq-lpr lpq,/usr/bin/lpq,$BINSEARCHPATH)
 AC_PATH_PROGS(LPD_LPRM,lprm-lpd lprm-lprng lprm-lpr lprm,/usr/bin/lprm,$BINSEARCHPATH)
-AC_PATH_PROGS(LPD_LPC,lpc-lpd lpc-lprng lpc-lpr lpc,/usr/sbin/lpc,$SBINSEARCHPATH:$BINSEARCHPATH)
+AC_PATH_PROGS(LPD_LPC,lpc-lpd lpc-lprng lpc-lpr lpc,/usr/sbin/lpc,SBB)
 AC_PATH_PROGS(LPRNG_CHECKPC,checkpc,/usr/sbin/checkpc,$SBINSEARCHPATH)
 
 dnl Paths and other settings for CUPS
@@ -131,20 +222,20 @@ AC_PATH_PROGS(CUPS_PCONF,cups/printers.conf,$CUPS_ETC/printers.conf,$SYSCONFSEAR
 AC_PATH_PROGS(CUPS_LPR,lpr-cups lpr,/usr/bin/lpr,$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPQ,lpq-cups lpq,/usr/bin/lpq,$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPRM,lprm-cups lprm,/usr/bin/lprm,$BINSEARCHPATH)
-AC_PATH_PROGS(CUPS_LPC,lpc-cups lpc,/usr/sbin/lpc,$SBINSEARCHPATH:$BINSEARCHPATH)
+AC_PATH_PROGS(CUPS_LPC,lpc-cups lpc,/usr/sbin/lpc,SBB)
 AC_PATH_PROGS(CUPS_LP,lp-cups lp,/usr/bin/lp,$BINSEARCHPATH)
-AC_PATH_PROGS(CUPS_CANCEL,cancel-cups cancel,/usr/bin/cancel,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(CUPS_ENABLE,enable-cups enable,/usr/bin/enable,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(CUPS_DISABLE,disable-cups disable,/usr/bin/disable,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(CUPS_ACCEPT,accept-cups accept,/usr/sbin/accept,$SBINSEARCHPATH:$BINSEARCHPATH)
-AC_PATH_PROGS(CUPS_REJECT,reject-cups reject,/usr/sbin/reject,$SBINSEARCHPATH:$BINSEARCHPATH)
-AC_PATH_PROGS(CUPS_LPMOVE,lpmove,/usr/sbin/lpmove,$SBINSEARCHPATH:$BINSEARCHPATH)
+AC_PATH_PROGS(CUPS_CANCEL,cancel-cups cancel,/usr/bin/cancel,$BSB)
+AC_PATH_PROGS(CUPS_ENABLE,enable-cups enable,/usr/bin/enable,$BSB)
+AC_PATH_PROGS(CUPS_DISABLE,disable-cups disable,/usr/bin/disable,$BSB)
+AC_PATH_PROGS(CUPS_ACCEPT,accept-cups accept,/usr/sbin/accept,SBB)
+AC_PATH_PROGS(CUPS_REJECT,reject-cups reject,/usr/sbin/reject,SBB)
+AC_PATH_PROGS(CUPS_LPMOVE,lpmove,/usr/sbin/lpmove,SBB)
 AC_PATH_PROGS(CUPS_LPOPTIONS,lpoptions,/usr/bin/lpoptions,$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPINFO,lpinfo,/usr/sbin/lpinfo,$SBINSEARCHPATH)
 
 dnl Paths for PDQ
-AC_PATH_DIRS(PDQ_CONF,pdq,/usr/lib/pdq,$SYSCONFSEARCHPATH:$LIBSEARCHPATH)
-AC_PATH_PROGS(PDQ_PRINTRC,pdq/printrc,$PDQ_CONF/printrc,$SYSCONFSEARCHPATH:$LIBSEARCHPATH)
+AC_PATH_DIRS(PDQ_CONF,pdq,/usr/lib/pdq,$SYS_LIB_PATH)
+AC_PATH_PROGS(PDQ_PRINTRC,pdq/printrc,$PDQ_CONF/printrc,$SYS_LIB_PATH)
 dnl PDQ_FOOMATIC=$PDQ_CONF/drivers/foomatic
 AC_PATH_PROGS(PDQ_PRINT,pdq lpr-pdq,/usr/bin/pdq,$BINSEARCHPATH)
 dnl PDQ_JOBDIR=~/.printjobs
@@ -155,25 +246,22 @@ AC_PATH_DIRS(PPR_INTERFACES,ppr/interfaces,/usr/lib/ppr/interfaces,$LIBSEARCHPAT
 AC_PATH_DIRS(PPR_PPDFILES,ppr/PPDFiles,/usr/share/ppr/PPDFiles,$DATASEARCHPATH)
 AC_PATH_DIRS(PPR_ETC,ppr,/etc/ppr,$SYSCONFSEARCHPATH)
 AC_PATH_PROGS(PPR_PPR,ppr lpr-ppr,/usr/bin/ppr,$BINSEARCHPATH)
-AC_PATH_PROGS(PPR_PPAD,ppad,/usr/bin/ppad,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(PPR_PPOP,ppop,/usr/bin/ppop,$BINSEARCHPATH:$SBINSEARCHPATH)
+AC_PATH_PROGS(PPR_PPAD,ppad,/usr/bin/ppad,$BSB)
+AC_PATH_PROGS(PPR_PPOP,ppop,/usr/bin/ppop,$BSB)
 
 dnl Paths for direct, spoolerless printing
 dnl DIRECT_ETC=/etc/foomatic/direct
 dnl DIRECT_CONFIG=$(DIRECT_ETC)/.config
 
 dnl Other paths
-AC_PATH_PROGS(NC,nc netcat,/usr/bin/nc,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(RLPR,rlpr,/usr/bin/rlpr,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(SMBCLIENT,smbclient,/usr/bin/smbclient,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(NPRINT,nprint,/usr/bin/nprint,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(PTAL_CONNECT,ptal-connect,/usr/bin/ptal-connect,$BINSEARCHPATH:$SBINSEARCHPATH)
+AC_PATH_PROGS(NC,nc netcat,/usr/bin/nc,$BSB)
+AC_PATH_PROGS(RLPR,rlpr,/usr/bin/rlpr,$BSB)
+AC_PATH_PROGS(SMBCLIENT,smbclient,/usr/bin/smbclient,$BSB)
+AC_PATH_PROGS(NPRINT,nprint,/usr/bin/nprint,$BSB)
+AC_PATH_PROGS(PTAL_CONNECT,ptal-connect,/usr/bin/ptal-connect,$BSB)
 AC_PATH_DIRS(PTAL_PIPES,ptal-printd,/var/run/ptal-printd,$PTALPIPESSEARCHPATH)
 AC_PATH_DIRS(MTINK_PIPES,mtink,/var/mtink,$MTINKPIPESSEARCHPATH)
-AC_PATH_PROGS(CAT,cat,/bin/cat,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(GZIP,gzip,/bin/gzip,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(WGET,wget,/usr/bin/wget,$BINSEARCHPATH:$SBINSEARCHPATH)
-AC_PATH_PROGS(CURL,curl,/usr/bin/curl,$BINSEARCHPATH:$SBINSEARCHPATH)
+AC_PATH_PROGS(GZIP,gzip,/bin/gzip,$BSB)
 
 dnl Path for Foomatic XML database (foomatic-db)
 AC_PATH_DIRS(LIBDIR,foomatic/db/source,/usr/share/foomatic/db/source,$DATASEARCHPATH)
@@ -182,7 +270,7 @@ AC_PATH_DIRS(LOCAL_LIBDIR,db/source,../foomatic-db/db/source,.:./foomatic-db:./f
 LOCAL_LIBDIR=`echo $LOCAL_LIBDIR | sed -e "s:/db/source$::"`
 
 dnl Path for foomatic-rip (from foomatic-filters)
-AC_PATH_PROGS(FOOMATIC_RIP,foomatic-rip,/usr/bin/foomatic-rip,$BINSEARCHPATH:$SBINSEARCHPATH)
+AC_PATH_PROGS(FOOMATIC_RIP,foomatic-rip,/usr/bin/foomatic-rip,$BSB)
 AC_PATH_PROGS(LOCAL_FOOMATIC_RIP,foomatic-rip,../foomatic-filters/foomatic-rip,.:./foomatic-filters:./foomatic-filters*:../foomatic-filters:../foomatic-filters*)
 
 dnl AC_OUTPUT(Makefile src/Makefile)
@@ -191,7 +279,9 @@ foomatic-configure foomatic-printjob foomatic-kitload
 foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
 foomatic-getpjloptions foomatic-addpjloptions
 foomatic-compiledb foomatic-fix-xml
-foomatic-nonumericalids foomatic-replaceoldprinterids)
+foomatic-nonumericalids foomatic-replaceoldprinterids
+foomatic-ppd-options
+)
 
 dnl Finished
 echo "Finished configuring."

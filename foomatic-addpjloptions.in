@@ -19,50 +19,239 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
  
+use strict;
+use FileHandle;
+
+my $dir = "./foomatic-db/opt";
+
+sub usage(){
+    print STDERR <<EOF;
+Usage: foomatic-addpjloptions [-dafis][-o option_dir] -p printer_ID [<pjl option file>]
+       foomatic-addpjloptions [-dqaf] [<pjl option file>]
+       foomatic-addpjloptions -h
+
+   -a                 Include all options
+   -d                 enable debugging output
+   -f                 Do not ask user whether he really wants to add the
+                      PJL options
+   -i                 Include only important options
+   -s                 Create a single option file
+   -q                 Summary format
+   -h                 This help message
+   -p printer_ID      Printer where to add the PJL options
+   -o option_dir      directory for saving option files (default $dir)
+   <pjl option file>  File with the PJL options returned by the printer,
+                      if this filename is not provided, the PJL options are
+                      taken from standard input.
+EOF
+
+    exit(1);
+}
+
+# ignore the following entries by default
+my $opt = {};
+my $debug = 0;
+my $exclusions =
+	{ 'PAPER'=>1,  # already handled by GhostScript/PS
+	  'RESOLUTION'=>1, # already handled by GhostScript/PS
+	  'LANG'=>1,       # only affects printer display
+	  'PERSONALITY'=>1,# the page description language
+			# is set by the driver
+	  'PAGECOUNT'=>1,  # printer-internal counters,
+	  'LPAGECOUNT'=>1, # no influence on print job
+	  'PAGES'=>1,
+	  'MAINTINTERVAL'=>1,
+	  'FORMLINES'=>1,  # only for text printing
+	  'AUTOCRLF'=>1,   # but Foomatic prints text as
+	  'AUTOLFCR'=>1,   # PostScript
+	  'FONTSOURCE'=>1,
+	  'FONTNUMBER'=>1,
+	  'PITCH'=>1,
+	  'PTSIZE'=>1,
+	  'SYMSET'=>1,
+	  'LFONTPRIORITY'=>1,
+	  'POWERSAVE'=>1,  # not a per-job setting
+	  'TIMEOUT'=>1,
+	  'USERNAME'=>1,   # String options
+	  'JOBNAME'=>1,
+	  };
+
+# important options
+    my $longsubs = { 
+	'copies' => 'Number of Copies',
+	'orientation' => 'Orientation',
+	'ret' => 'Resolution Enhancement',
+	'manualfeed' => 'Manual Feed of Paper',
+	'pageprotect' => 'Page Protection',
+	'mptray' => 'Multi-Purpose Tray',
+	'density' => 'Toner Density',
+	'lowtoner' => 'Behaviour when Toner Low',
+	'outbin' => 'Output Bin',
+	'joboffset' => 'Job Offset',
+	'economode' => 'Toner Saving',
+	'ecoprint' => 'Toner Saving',
+	'intray1size' => 'Paper Size in Tray 1',
+	'intray2size' => 'Paper Size in Tray 2',
+	'intray3size' => 'Paper Size in Tray 3',
+	'intray4size' => 'Paper Size in Tray 4',
+	'intray5size' => 'Paper Size in Tray 5',
+	'intray6size' => 'Paper Size in Tray 6',
+	'intray7size' => 'Paper Size in Tray 7',
+	'intray8size' => 'Paper Size in Tray 8',
+	'intray9size' => 'Paper Size in Tray 9',
+	'intray10size' => 'Paper Size in Tray 10',
+	'widea4' => 'Wide A4',
+	'bitsperpixel' => 'Bits Per Pixel',
+	'holdtype' => 'Hold Job Type',
+	'hold' => 'Hold Job',
+	'pr1200speed' => 'Speed at 1200 dpi',
+	'outbinprocess' => 'Output Bin Process',
+	'finish' => 'Finisher',
+	'stapleoption' => 'Stapling Mode',
+	'extendedprintarea' => 'Extended Print Area',
+	'heldjobtimeout' => 'Timeout for Held Jobs',
+	'imageadapt' => 'Image Adaptation',
+	'autocont' => 'Autocont',
+	'fastraster' => 'Fast Raster',
+	'intray1' => 'Input Tray 1',
+	'intray2' => 'Input Tray 2',
+	'intray3' => 'Input Tray 3',
+	'intray4' => 'Input Tray 4',
+	'intray5' => 'Input Tray 5',
+	'intray6' => 'Input Tray 6',
+	'intray7' => 'Input Tray 7',
+	'intray8' => 'Input Tray 8',
+	'intray9' => 'Input Tray 9',
+	'intray10' => 'Input Tray 10',
+	'duplex' => 'Double-Sided Printing',
+	'binding' => 'Binding',
+	'holdkey' => 'Key for Held Jobs',
+	'lparm_postscript_prtpserrs' => 'Print PostScript Errors',
+	'limageenhance' => 'Image Enhancement',
+	'limageenhancetype' => 'Image Enhancement Type',
+	'lblankpages' => 'Blank Pages',
+	'lcollation' => 'Collation',
+	'limagerotation' => 'Image Rotation',
+	'linmpfeedersize' => 'Paper Size in MP Feeder',
+	'lsubstitutesize' => 'Substitute Paper Size',
+	'lpicturegrade' => 'Picture Grade',
+	'ljamrecovery' => 'Jam Recovery',
+	'lpagemode' => 'Page Mode',
+	'lmultipageborder' => 'Border for N-up Printing',
+	'lmultipageorder' => 'Order for N-up Printing',
+	'lmultipageprint' => 'Pages per Sheet (N-up Printing)',
+	'lmultipageview' => 'Orientation for N-up Printing',
+	'lparm_pcl_lbitmaprounding' => 'Bitmap Rounding',
+	'lparm_pcl_lcolorextensiond' => 'Colour Extensions',
+	'lseparatorsheets' => 'Separator Sheets',
+	'lseparatorsource' => 'Take Separator Sheets From',
+	'econolevel' => 'Toner Saving Level',
+	'mediatype' => 'Media Type',
+	'mediasource' => 'Media Source',
+	'sourcetray' => 'Media Source',
+	'kintrayselect' => 'Media Source',
+	'okipaperfeed' => 'Media Source',
+	'lpapersource' => 'Media Source',
+	'errorprint' => 'Print Error Messages',
+	'lcolormodel' => 'Colour Model',
+	'lcolorcorrection' => 'Colour Correction',
+	'limagebrightness' => 'Image Brightness',
+	'limagecontrast' => 'Image Contrast',
+	'limagesmoothing' => 'Image Smoothing',
+	'lprintquality' => 'Printout Quality',
+	'okipapersizecheck' => 'Paper Size Checking'
+	#'papersize' => 'Media Size',
+	#'paper' => 'Media Size',
+	#'lang' => 'Language',
+	#'resolution' => 'Resolution',
+	#'personality' => 'Personality',
+	#'timeout' => 'Timeout',
+	#'cplock' => 'CP Lock',
+	#'powersave' => 'Power Saving',
+	#'powersavetime' => 'Power Saving Timeout',
+	#'iobuffer' => 'I/O Buffer',
+	#'iosize' => 'I/O Size',
+	#'resourcesave' => 'Resource Saving',
+	#'disklock' => 'Disk Lock',
+	#'qty' => 'Quantity',
+	#'courier' => 'Courier',
+	#'formlines' => 'Form Lines',
+	#'reprint' => 'Reprint',
+	#'password' => 'Password',
+	#'username' => 'User Name',
+	#'jobname' => 'Job Name',
+	#'testpage' => 'Test Page',
+	#'planesinuse' => 'Planes in Use',
+	#'outlinepointsize' => 'Outline Point Size',
+	#'maintinterval' => 'Maintenance Interval',
+	#'finishertype' => 'Finisher Type',
+	#'finisheroption' => 'Finisher Option',
+	#'hitransfer' => 'Hi Transfer',
+	#'parallel' => 'Parallel Port Mode',
+	#'xoffset' => 'X Offset',
+	#'yoffset' => 'Y Offset',
+	#'lpowersaver' => 'Power Saver',
+	#'ladvancedstatus' => 'Advanced Status',
+	#'lalarmcontrol' => 'Alarm Control',
+	#'lcancel' => 'Cancel',
+	#'lresourcesave' => 'Resource Saving',
+	#'lleftmarginoffset' => 'Left Margin Offset',
+	#'ltopmarginoffset' => 'Top Margin Offset',
+	#'okieurosign' => 'Euro Character',	
+	};
+
 # Read command line options
 use Getopt::Std;
 # Printer ID, force (no printer ID confirmation)
-getopts("p:fih");
+getopts("p:o:afisqh",$opt) || usage();
  
 # Show usage info
-if ($opt_h) {
-    print STDERR "\n";
-    print STDERR "Usage: foomatic-addpjloptions [-f] [-i] -p <printer ID> [<pjl option file>]\n";
-    print STDERR "       foomatic-addpjloptions -h\n";
-    print STDERR "\n";
-    print STDERR "   -p <printer ID>:   Printer where to add the PJL options\n";
-    print STDERR "   <pjl option file>: File with the PJL options returned by the printer,\n";
-    print STDERR "                      if this filename is not provided, the PJL options are\n";
-    print STDERR "                      taken from standard input.\n";
-    print STDERR "   -f:                Do not ask user whether he really wants to add the\n";
-    print STDERR "                      PJL options\n";
-    print STDERR "   -h:                This help message\n";
-    print STDERR "\n";
-
-    exit(0);
+if ($opt->{h}) {
+	usage();
 }
+$debug = $opt->{d} if $opt->{d};
+if( $opt->{a} ){
+	$opt->{i} = 0;
+	$exclusions = {};
+}
+
+$dir = $opt->{o} if $opt->{o};
+
 
 my $libdir = ".";
 
-my $printer;
+my($printer,$manufacturer,$model,$templatename);
 # Check presence of a printer ID
-if ($opt_p) {
-    $printer = $opt_p;
-} else {
-    die "No printer ID given! Use the \"-p <Foomatic printer ID>\" option.";
+if ($opt->{p}) {
+    $printer = $opt->{p};
+} elsif( not $opt->{q} ){
+    die "No printer ID given! Use the '-p <Foomatic printer ID>' option.";
 }
-# Does the chosen printer ID exist in the database?
-my $printerdbentryfile = `grep -l printer/$printer $libdir/db/source/printer/*.xml`
-    || die "No printer with the Foomatic ID $printer in the local database";
-my $manufacturer = `grep "<.*make.*>" $printerdbentryfile`;
-$manufacturer =~ m!<\s*make\s*>\s*(.*)\s*<\s*/make\s*>!;
-$manufacturer = $1;
-my $model = `grep "<.*model.*>" $printerdbentryfile`;
-$model =~ m!<\s*model\s*>\s*(.*)\s*<\s*/model\s*>!;
-$model = $1;
+if( $printer ){
+	print "# PRINTER '$printer'\n";
+    # Does the chosen printer ID exist in the database?
+    my $printerdbentryfile = `grep -l printer/$printer $libdir/db/source/printer/*.xml 2>/dev/null`
+		|| die "No printer with the Foomatic ID $printer in the $libdir/db/source/printer/*.xml local database";
+    print "# Printer $printerdbentryfile\n" if $debug;
+    my @p = split(" ", $printerdbentryfile);
+    if( @p != 1 ){
+	    print STDERR <<EOF;
+Multiple matches for $printer
+EOF
+	    print STDERR join("\n  ",@p) . "\n";
+	    exit 1;
+    }
+
+    $manufacturer = `grep "<.*make.*>" $printerdbentryfile`;
+    $manufacturer =~ m!<\s*make\s*>\s*(.*)\s*<\s*/make\s*>!;
+    $manufacturer = $1;
+    $model = `grep "<.*model.*>" $printerdbentryfile`;
+    $model =~ m!<\s*model\s*>\s*(.*)\s*<\s*/model\s*>!;
+    $model = $1;
+}
 
 # Check presence of the PJL option snapshot file
-$snapshotfile = "STDIN";
+my $snapshotfile = "STDIN";
 if ($ARGV[0]) {
     $snapshotfile = $ARGV[0];
 
@@ -72,15 +261,17 @@ if ($ARGV[0]) {
     }
 } else {
     # interactive mode not supported with PJL snapshot from STDIN
-    $opt_f = 1;
+    $opt->{f} = 1;
 }
 
 # Tell the user what we will do
-print "The PJL options from the file $snapshotfile\n";
-print "will be added to the $manufacturer $model.\n\n";
+if( not $opt->{q} ){
+	print "# The PJL options from the file $snapshotfile\n";
+	print "# will be added to the $manufacturer $model.\n\n";
+}
 
 # Ask whether this is correct
-if (!$opt_f) {
+if (!$opt->{f}) {
     print "Is this correct (y/n)? ";
     my $input=<STDIN>;
     if ($input ne "y\n") {exit 0;}
@@ -90,7 +281,7 @@ if (!$opt_f) {
 # Read the PJL snapshot file
 my @snapshot = ();
 if ($snapshotfile ne "STDIN") {
-    open PJLSNAPSHOT, "$snapshotfile" or die "Can't open $snapshotfile!";
+    open PJLSNAPSHOT, "$snapshotfile" or die "Cannot open $snapshotfile!";
     @snapshot = <PJLSNAPSHOT>;
     close PJLSNAPSHOT;
 } else {
@@ -98,13 +289,12 @@ if ($snapshotfile ne "STDIN") {
     @snapshot = <STDIN>;
 }
 
-# OK, make the db hierarchy alongside the templates one...
-mkdir 'foomatic-db', 0755 or die
-    unless -d 'foomatic-db';
-mkdir 'foomatic-db/opt', 0755 or die
-    unless -d 'foomatic-db/opt';
-mkdir 'foomatic-db/driver', 0755 or die
-    unless -d 'foomatic-db/driver';
+if( !$opt->{q} ){
+    # OK, make the db hierarchy alongside the templates one...
+	print "# options in directory $dir\n";
+	print `mkdir -p $dir` . "\n" if (not -d $dir );
+	die "cannot create directory $dir" if ( not -d $dir );
+}
 
 # Read the options and add them to the database
 my $inoptionlisting = 0; # 1 if we are after a line "@PJL INFO VARIABLES"
@@ -115,92 +305,204 @@ my $numchoices = -1;     # Number of choices, -1: not found yet
 my $default = "";        # Default setting
 my @choices = ();        # List of possible choices
 my $choicesfound = 0;    # How many choices were already found
-for $line (@snapshot) {
+my $NEWF;
+my $outputline = "";
+if( $opt->{s} and not $opt->{q} ){
+    my $dbfilename = "foomatic-db/opt/pjl-${manufacturer}-${model}.xml";
+	print "# writing $dbfilename\n";
+	$dbfilename =~ s/\s/_/g;
+	$NEWF = new FileHandle  "> $dbfilename" or die "cannot open $dbfilename";
+}
+for my $line (@snapshot) {
     chomp $line;
-    #print "xxx $line\n";
+    $line =~ s/\015//;
+    print "xxx $line\n" if $debug;
     if ($line !~ m/^\s*$/) { # Ignore blank lines
 	if ($inoptionlisting == 0) { # Start of option block not found yet
 	    if ($line =~ m/^\s*\@PJL\s*INFO\s*VARIABLES\s*$/) {
 		$inoptionlisting = 1; # Start of option block
-                print ">>> OPTION BLOCK FOUND\n";
+                print "# >>> OPTION BLOCK FOUND\n";
 	    }
 	} else { # we are in the option block now
 	    if ($line =~ m/^\s*\@PJL/) {
 		$inoptionlisting = 0; # End of option block
-                print ">>> END OF OPTION BLOCK\n";
-	    } elsif ($line =~ m/^\s*([\w\s:]*)\s*=([\w\.]*)\s*\[([0-9]*)\s+(\w*)\s*(\w*)\]/) { # Option header
+                print "# >>> END OF OPTION BLOCK\n";
+	    } elsif (
+			$line =~ m/^\s*([\w\s:]*)\s*=\s*\"?([\w\.\?]*)\"?\s*\[\s*([0-9]*)\s*(\w*)\s*(\w*)\]/
+			or
+			$line =~ m/^\s*([\w\s:]*)\s*=\s*\"(.*)\"\s*\[\s*(\w*)\s*\]/
+			#              option           default        numchoices
+			) { # Option header
 		if ($numchoices > -1) {
-		    print "WARNING: Choice(s) missing, option ignored!\n";
+		    print "# WARNING: Choice(s) missing, option ignored!\n";
+		}
+		if( $outputline ){
+			print $outputline . "\n";
+			$outputline = "";
 		}
 		my $typestr;
                 my $modifierstr;
 		($option, $default, $numchoices, $typestr, $modifierstr) = 
 		    ($1, $2, $3, $4, $5);
-		print "Option: $option\n";
+		if( $numchoices eq "STRING" ){
+				$typestr = $numchoices;
+				$numchoices = "";
+		}
+		print "# Option: '$option', Default '$default', Numchoices '$numchoices', Typestr '$typestr', Modifier '$modifierstr'\n";
                 if ($modifierstr eq "READONLY") { # Ignore READONLY options
 		    $numchoices = -2;
-		    print "WARNING: Read-only option, ignored!\n";
-		} elsif (($modifierstr eq "STRING") ||
-			 ($typestr eq "STRING")) { 
+		    print "# WARNING: Read-only option, ignored!\n";
+		} elsif (($modifierstr eq "STRING") || ($typestr eq "STRING")) { 
+		    if( defined $exclusions->{$option} ){
 		    $numchoices = -2;
-		    print "WARNING: String options not supported, option ignored!\n";
+			print "# WARNING: Option does not make sense for Foomatic, ignored!\n";
+			    next;
+		    };
+		    if( $opt->{q} ){
+				my $optname = $option;
+				$optname =~ s/\W/_/g;
+				$outputline = $optname;
+				if( $optname ne $option ){
+					$optname = "($option)";
+					$optname =~ s/\s/+/g;
+				} else {
+					$optname = "";
+				}
+				$outputline .= "=${optname}STRING";
+		    }
+		    my $shortoption = $option;
+		    $shortoption =~ tr/A-Z :/a-z__/; # $shortoption is 
+						     # lowercase and without
+						     # spaces
+		    my $longoption = $shortoption;
+		    my $optionid = "pjl-$printer-$shortoption";
+		    # Substitution list to for the menu texts of the options
+		    # ($longoption)
+		    # Only options of major importance are substituted, so 
+		    # one can separate options of lower importance
+		    # ($longoption begins with a lowercase letter) into
+		    # an "advanced options" group. The "-i" (Important)
+		    # option removes these options of low importance
+		    # Do the substitutions
+		    my $substituted = 0;
+		    my ($substr);
+		    for $substr (keys(%$longsubs)) {
+			my $substitution = $longsubs->{$substr};
+			if (($longoption =~ m!^$substr$!) ){
+			    $longoption =~ s!^$substr$!$substitution!g;
+			    # Remove option if not substituted and "-i"
+			    # flag is set (option is not "important"
+			    $substituted = 1;
+				next;
+			} 
+		    }
+		    if( $opt->{i} and not $substituted ){
+			# Reset variables
+			$option = "";
+			$optiontype = -1;
+			$numchoices = -1;
+			$default = "";
+			@choices = ();
+			$choicesfound = 0;
+			next;
+		    }
+			my $numtype = "";
+		    my $optionsubs = 
+		    { 'NUMTYPE' => $numtype,
+			  'OPTIONID' => $optionid,
+			  'SHORTOPTION' => $shortoption,
+			  'LONGOPTION' => $longoption,
+			  'OPTION' => $option,
+			  'MAKE' => $manufacturer,
+			  'MODEL' => $model,
+			  'DEFAULT' => $default,
+			  };
+		    # load template file for the choice entry
+			$templatename = "foomatic-templates/pjl_string_option.xml";
+		    open TMPL, $templatename or die "cannot open $templatename";
+		    my @datafile = <TMPL>;
+		    close TMPL;
+		    my $template = join('',@datafile);
+		    # Do the substitutions
+		    my ($substr);
+		    for $substr (keys(%$optionsubs)) {
+			my $substitution = $optionsubs->{$substr};
+			$template =~ s!\@\@$substr\@\@!$substitution!g;
+		    }
+		    # Anything not substituted?
+		    grep (m!\@\@([^\@]+)\@\@!g
+			  && do { warn "  Unknown substitution $1 in template file '$templatename'!\n"; },
+			  split("\n",$template));
+		    my $dbfilename = "foomatic-db/opt/$optionid.xml";
+			if( $opt->{q} ){
+			    print $outputline."\n" if $outputline;
+				$outputline = "";
+			} else {
+				if( not $opt->{s} ){
+					$NEWF = new FileHandle  "> $dbfilename" or die "cannot open $dbfilename";
+				} else {
+					$dbfilename = "$optionid";
+				}
+				print "# writing $dbfilename...";
+				print $NEWF $template;
+				print " done.\n";
+				if( not $opt->{s} ){
+					close $NEWF;
+				}
+			}
+		    # Reset variables
+		    $option = "";
+		    $optiontype = -1;
+		    $numchoices = -1;
+		    $default = "";
+		    @choices = ();
+		    $choicesfound = 0;
+		    next;
 		} elsif ($numchoices < 2) { 
 		                       # Options with less than two choices 
 		                       # do not make any sense, discard them
 		    $numchoices = -2;
-		    print "WARNING: Less than two choices, option ignored!\n";
+		    print "# WARNING: Less than two choices, option ignored!\n";
 		} else {
-                    # Ignore option type "STRING" because Foomatic does not 
-                    # support it. Option type 2 (float) is determined when
+                    # Option type 2 (float) is determined when
                     # the choices are read.
+			my $optval = $option;
+			
+		    if( $opt->{q} ){
+				my $optname = $option;
+				$optname =~ s/\W/_/g;
+				$outputline = $optname;
+				if( $optname ne $option ){
+					$optname = "($option)";
+					$optname =~ s/\s/+/g;
+				} else {
+					$optname = "";
+				}
+				$outputline .= "=${optname}${typestr};";
+		    }
 		    if ($typestr eq "ENUMERATED") {$optiontype = 0;}
 		    elsif ($typestr eq "RANGE") {
 			$optiontype = 1;
 			# Is the default value really a number?
 			if ($default =~ m/[^0-9\.]/) {
-			    print "WARNING: Default value for numerical option not a number, option ignored!\n";
+			    print "# WARNING: Default value for numerical option not a number, option ignored!\n";
 			    $numchoices = -2;
+				$outputline = "";
 			}
                     } else {
 			$numchoices = -2;
-			print "WARNING: Unsupported option type, option ignored!\n";
+			print "# WARNING: Unsupported option type, option ignored!\n";
 		    }
 		}
 		if ($numchoices > -2) {
 		    # Remove option if it is on exclusion list
 		    # These options do not make sense for PostScript-only
 		    # printing
-		    my @exclusions =
-			( '^PAPER$',  #'# already handled by GhostScript/PS
-			  'RESOLUTION', # already handled by GhostScript/PS
-			  'LANG',       # only affects printer display
-			  'PERSONALITY',# the page description language
-			                # is set by the driver
-			  'PAGECOUNT',  # printer-internal counters,
-			  'LPAGECOUNT', # no influence on print job
-			  'PAGES',
-			  'MAINTINTERVAL',
-			  'FORMLINES',  # only for text printing
-			  'AUTOCRLF',   # but Foomatic prints text as
-			  'AUTOLFCR',   # PostScript
-			  'FONTSOURCE',
-			  'FONTNUMBER',
-			  'PITCH',
-			  'PTSIZE',
-			  'SYMSET',
-			  'LFONTPRIORITY',
-			  'POWERSAVE',  # not a per-job setting
-			  'TIMEOUT',
-			  'USERNAME',   # String options
-			  'JOBNAME'
-			  );
-		    for my $searchstr (@exclusions) {
-			if ($option =~ /$searchstr/) {
+			if( defined $exclusions->{$option} ){
 			    $numchoices = -2;
-			    print "WARNING: Option does not make sense for Foomatic, ignored!\n";
+			    print "# WARNING: Option does not make sense for Foomatic, ignored!\n";
 			};
 		    }
-		}
 	    } elsif ($numchoices > 1) { # We have a valid option header
 		                        # for which not all choices are
 		                        # found yet
@@ -214,20 +516,23 @@ for $line (@snapshot) {
 		if ($optiontype > 0) {
 		    # Is the value really a number?
 		    if ($default =~ m/[^0-9\.]/) {
-			print "WARNING: Value for numerical option not a number, option ignored!\n";
+			print "# WARNING: Value for numerical option not a number, option ignored!\n";
 			$numchoices = -2;
 		    } elsif ($choicesfound == 1) { # Minimum value
 			if ($default < $choice) {
-			    print "WARNING: Default value out of range, option ignored!\n";
+			    print "# WARNING: Default value out of range, option ignored!\n";
 			    $numchoices = -2;
+				$outputline = "";
 			}
 		    } elsif ($choicesfound == 2) { # Maximum value
 			if ($default > $choice) {
-			    print "WARNING: Default value out of range, option ignored!\n";
+			    print "# WARNING: Default value out of range, option ignored!\n";
 			    $numchoices = -2;
+				$outputline = "";
 			} elsif ($choices[0] == $choices[1]) { # Max = Min?
-			    print "WARNING: Maximum and minimum are equal, option ignored!\n";
+			    print "# WARNING: Maximum and minimum are equal, option ignored!\n";
 			    $numchoices = -2;
+				$outputline = "";
 			}
 		    }
 		}
@@ -243,6 +548,9 @@ for $line (@snapshot) {
 		                                         # option read
 		    #print "$option, $default, $numchoices, $optiontype\n";
 		    #print "@choices\n";
+		    if( $opt->{q} ){
+			$outputline .= join(",",@choices);
+		    }
 
 		    # Check, if the default is in the list of choices
 		    if ($optiontype == 0) {
@@ -254,7 +562,7 @@ for $line (@snapshot) {
 			if ($defaultfound == 0) {
 			    # Add default value to the list
 			    push(@choices, $default);
-                            print("WARNING: Default added!\n");
+                            print("# WARNING: Default added!\n");
 			}
 		    }
 		    # We have a complete option now, enter it into the
@@ -281,139 +589,17 @@ for $line (@snapshot) {
 		    # ($longoption begins with a lowercase letter) into
 		    # an "advanced options" group. The "-i" (Important)
 		    # option removes these options of low importance
-		    my $longsubs = { 
-			'copies' => 'Number of Copies',
-			'orientation' => 'Orientation',
-			'ret' => 'Resolution Enhancement',
-			'manualfeed' => 'Manual Feed of Paper',
-			'pageprotect' => 'Page Protection',
-			'mptray' => 'Multi-Purpose Tray',
-			'density' => 'Toner Density',
-			'lowtoner' => 'Behaviour when Toner Low',
-			'outbin' => 'Output Bin',
-			'joboffset' => 'Job Offset',
-			'economode' => 'Toner Saving',
-			'ecoprint' => 'Toner Saving',
-			'intray1size' => 'Paper Size in Tray 1',
-			'intray2size' => 'Paper Size in Tray 2',
-			'intray3size' => 'Paper Size in Tray 3',
-			'intray4size' => 'Paper Size in Tray 4',
-			'intray5size' => 'Paper Size in Tray 5',
-			'intray6size' => 'Paper Size in Tray 6',
-			'intray7size' => 'Paper Size in Tray 7',
-			'intray8size' => 'Paper Size in Tray 8',
-			'intray9size' => 'Paper Size in Tray 9',
-			'intray10size' => 'Paper Size in Tray 10',
-			'widea4' => 'Wide A4',
-			'bitsperpixel' => 'Bits Per Pixel',
-			'holdtype' => 'Hold Job Type',
-			'hold' => 'Hold Job',
-			'pr1200speed' => 'Speed at 1200 dpi',
-			'outbinprocess' => 'Output Bin Process',
-			'finish' => 'Finisher',
-			'stapleoption' => 'Stapling Mode',
-			'extendedprintarea' => 'Extended Print Area',
-			'heldjobtimeout' => 'Timeout for Held Jobs',
-			'imageadapt' => 'Image Adaptation',
-			'autocont' => 'Autocont',
-			'fastraster' => 'Fast Raster',
-			'intray1' => 'Input Tray 1',
-			'intray2' => 'Input Tray 2',
-			'intray3' => 'Input Tray 3',
-			'intray4' => 'Input Tray 4',
-			'intray5' => 'Input Tray 5',
-			'intray6' => 'Input Tray 6',
-			'intray7' => 'Input Tray 7',
-			'intray8' => 'Input Tray 8',
-			'intray9' => 'Input Tray 9',
-			'intray10' => 'Input Tray 10',
-			'duplex' => 'Double-Sided Printing',
-			'binding' => 'Binding',
-			'holdkey' => 'Key for Held Jobs',
-			'lparm_postscript_prtpserrs' => 'Print PostScript Errors',
-			'limageenhance' => 'Image Enhancement',
-			'limageenhancetype' => 'Image Enhancement Type',
-			'lblankpages' => 'Blank Pages',
-			'lcollation' => 'Collation',
-			'limagerotation' => 'Image Rotation',
-			'linmpfeedersize' => 'Paper Size in MP Feeder',
-			'lsubstitutesize' => 'Substitute Paper Size',
-			'lpicturegrade' => 'Picture Grade',
-			'ljamrecovery' => 'Jam Recovery',
-			'lpagemode' => 'Page Mode',
-			'lmultipageborder' => 'Border for N-up Printing',
-			'lmultipageorder' => 'Order for N-up Printing',
-			'lmultipageprint' => 'Pages per Sheet (N-up Printing)',
-			'lmultipageview' => 'Orientation for N-up Printing',
-			'lparm_pcl_lbitmaprounding' => 'Bitmap Rounding',
-			'lparm_pcl_lcolorextensiond' => 'Colour Extensions',
-			'lseparatorsheets' => 'Separator Sheets',
-			'lseparatorsource' => 'Take Separator Sheets From',
-			'econolevel' => 'Toner Saving Level',
-			'mediatype' => 'Media Type',
-			'mediasource' => 'Media Source',
-			'sourcetray' => 'Media Source',
-			'kintrayselect' => 'Media Source',
-			'okipaperfeed' => 'Media Source',
-			'lpapersource' => 'Media Source',
-			'errorprint' => 'Print Error Messages',
-			'lcolormodel' => 'Colour Model',
-			'lcolorcorrection' => 'Colour Correction',
-			'limagebrightness' => 'Image Brightness',
-			'limagecontrast' => 'Image Contrast',
-			'limagesmoothing' => 'Image Smoothing',
-			'lprintquality' => 'Printout Quality',
-			'okipapersizecheck' => 'Paper Size Checking'
-			#'papersize' => 'Media Size',
-			#'paper' => 'Media Size',
-			#'lang' => 'Language',
-			#'resolution' => 'Resolution',
-			#'personality' => 'Personality',
-			#'timeout' => 'Timeout',
-			#'cplock' => 'CP Lock',
-			#'powersave' => 'Power Saving',
-			#'powersavetime' => 'Power Saving Timeout',
-			#'iobuffer' => 'I/O Buffer',
-			#'iosize' => 'I/O Size',
-			#'resourcesave' => 'Resource Saving',
-			#'disklock' => 'Disk Lock',
-			#'qty' => 'Quantity',
-			#'courier' => 'Courier',
-			#'formlines' => 'Form Lines',
-			#'reprint' => 'Reprint',
-			#'password' => 'Password',
-			#'username' => 'User Name',
-			#'jobname' => 'Job Name',
-			#'testpage' => 'Test Page',
-			#'planesinuse' => 'Planes in Use',
-			#'outlinepointsize' => 'Outline Point Size',
-			#'maintinterval' => 'Maintenance Interval',
-			#'finishertype' => 'Finisher Type',
-			#'finisheroption' => 'Finisher Option',
-			#'hitransfer' => 'Hi Transfer',
-			#'parallel' => 'Parallel Port Mode',
-			#'xoffset' => 'X Offset',
-			#'yoffset' => 'Y Offset',
-			#'lpowersaver' => 'Power Saver',
-			#'ladvancedstatus' => 'Advanced Status',
-			#'lalarmcontrol' => 'Alarm Control',
-			#'lcancel' => 'Cancel',
-			#'lresourcesave' => 'Resource Saving',
-			#'lleftmarginoffset' => 'Left Margin Offset',
-			#'ltopmarginoffset' => 'Top Margin Offset',
-			#'okieurosign' => 'Euro Character',	
-			};
 		    # Do the substitutions
 		    my $substituted = 0;
 		    my ($substr);
 		    for $substr (keys(%$longsubs)) {
 			my $substitution = $longsubs->{$substr};
-			if (($longoption =~ m!^$substr$!) && 
-			    ($substituted == 0)) {
+			if (($longoption =~ m!^$substr$!) ){
 			    $longoption =~ s!^$substr$!$substitution!g;
 			    # Remove option if not substituted and "-i"
 			    # flag is set (option is not "important"
 			    $substituted = 1;
+				last;
 			} 
 		    }
 		    # Substitute $shortoption if it is one of the options
@@ -635,7 +821,7 @@ for $line (@snapshot) {
 			      'CHOICEID' => $choiceid
 			      };
 			    # load template file for the choice entry
-			    open TMPL, "foomatic-templates/pjl_enum_choice.xml";
+			    open TMPL, "foomatic-templates/pjl_enum_choice.xml" or die "cannot open foomatic-templates/pjl_enum_choice.xml";
 			    my @datafile = <TMPL>;
 			    close TMPL;
 			    my $template = join('',@datafile);
@@ -681,7 +867,7 @@ for $line (@snapshot) {
 		    } else {
 			$templatename = "pjl_num_option.xml";
 		    }
-		    open TMPL, "foomatic-templates/$templatename";
+		    open TMPL, "foomatic-templates/$templatename" or die "cannot open foomatic-templates/$templatename";
 		    my @datafile = <TMPL>;
 		    close TMPL;
 		    my $template = join('',@datafile);
@@ -693,22 +879,33 @@ for $line (@snapshot) {
 		    }
 		    # Anything not substituted?
 		    grep (m!\@\@([^\@]+)\@\@!g
-			  && do { warn "  Unknown substitution $1 in option template file!\n"; },
+			  && do { warn "  Unknown substitution $1 in option template file '$templatename'!\n"; },
 			  split("\n",$template));
 		    # Finally, write out the new file
 		    # Options are under opt/
 		    # Do not write option when "-i" flag was used and
 		    # option is not in substitution list ("important"
 		    # option)
-                    if (($substituted == 1) || (!$opt_i)) {
+                    if (($substituted == 1) || (!$opt->{i})) {
+			if( $opt->{q} ){
+			    print $outputline . "\n" if $outputline;
+			    $outputline = "";
+			} else {
 			my $dbfilename = "foomatic-db/opt/$optionid.xml";
-			open NEWF, "> $dbfilename" or die;
-			print STDERR "writing $dbfilename...";
-			print NEWF $template;
-			print STDERR " done.\n";
-			close NEWF;
+			    if( not $opt->{s} ){
+				    $NEWF = new FileHandle  "> $dbfilename" or die "cannot open $dbfilename";
+			    } else {
+				    $dbfilename = "$optionid";
+			    }
+			    print "# writing $dbfilename...";
+			    print $NEWF $template;
+			    print " done.\n";
+			    if( not $opt->{s} ){
+				close $NEWF;
+			    }
+			}
 		    } else {
-			print("WARNING: Option of minor importance and \"-i\" set, option ignored!\n");
+			print("# WARNING: Option '$option' of minor importance and \"-i\" set, option ignored!\n");
 		    }
 		    # Reset variables
 		    $option = "";
@@ -721,7 +918,7 @@ for $line (@snapshot) {
 	    } else { # All choices for current header are read but the
 		     # current line is not a new header
 		if ($numchoices > -2) {
-		    print "WARNING: To many choice lines for this option!\n";
+		    print "# WARNING: Too many choice lines for option '$option'!\n";
 		    $numchoices = -2;
 		}
 	    }

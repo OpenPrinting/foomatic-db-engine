@@ -27,6 +27,8 @@ mandir=@mandir@
 datadir=@datadir@
 sysconfdir=@sysconfdir@
 
+SRC=@srcdir@
+INSTALL=@INSTALL@
 PREFIX=$(prefix)
 PERLPREFIX=@PERLPREFIX@
 
@@ -143,7 +145,8 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-kitload foomatic-ppdfile foomatic-preferred-driver \
 	foomatic-cleanupdrivers foomatic-getpjloptions \
 	foomatic-addpjloptions foomatic-compiledb foomatic-fix-xml \
-	foomatic-nonumericalids foomatic-replaceoldprinterids
+	foomatic-nonumericalids foomatic-replaceoldprinterids \
+	foomatic-ppd-options
 
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
@@ -181,26 +184,26 @@ install-bin: check-config lib/Makefile
 	  $(MAKE) PREFIX=$(DESTDIR)$(PERLPREFIX) && \
 	  $(MAKE) PREFIX=$(DESTDIR)$(PERLPREFIX) pure_install \
 	)
-	install -d $(DESTDIR)$(BINDIR)
-	install -d $(DESTDIR)$(SBINDIR)
-	install -d $(DESTDIR)$(ETCDIR)
-	install -d $(DESTDIR)$(LIBDIR)/templates
-	install -m 755 $(BINFILES) $(DESTDIR)$(BINDIR)
-	install -m 755 $(SBINFILES) $(DESTDIR)$(SBINDIR)
+	${SRC}/mkinstalldirs $(DESTDIR)$(BINDIR)
+	${SRC}/mkinstalldirs $(DESTDIR)$(SBINDIR)
+	${SRC}/mkinstalldirs $(DESTDIR)$(ETCDIR)
+	${SRC}/mkinstalldirs $(DESTDIR)$(LIBDIR)/templates
+	${INSTALL} -m 755 $(BINFILES) $(DESTDIR)$(BINDIR)
+	${INSTALL} -m 755 $(SBINFILES) $(DESTDIR)$(SBINDIR)
 	( cd foomatic-templates && \
-	  install -m 644 $(TEMPLATES) $(DESTDIR)$(LIBDIR)/templates \
+	  ${INSTALL} -m 644 $(TEMPLATES) $(DESTDIR)$(LIBDIR)/templates \
 	)
 	$(PERL) -p -i -e "s:foomatic-templates:$(LIBDIR)/templates:g" $(DESTDIR)$(SBINDIR)/foomatic-addpjloptions
 #	Link to allow foomatic-ppdfile be called under the old name
 #	foomatic-datafile
-	ln -sf $(BINDIR)/foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
+	ln -sf $(DESTDIR)$(BINDIR)/foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
 
 install-man: check-config
-	install -d $(DESTDIR)$(MANDIR)
-	install -d $(DESTDIR)$(MANDIR)/man1
-	install -d $(DESTDIR)$(MANDIR)/man8
-	install -m 644 *.1 $(DESTDIR)$(MANDIR)/man1
-	install -m 644 *.8 $(DESTDIR)$(MANDIR)/man8
+	${SRC}/mkinstalldirs $(DESTDIR)$(MANDIR)
+	${SRC}/mkinstalldirs $(DESTDIR)$(MANDIR)/man1
+	${SRC}/mkinstalldirs $(DESTDIR)$(MANDIR)/man8
+	${INSTALL} -m 644 *.1 $(DESTDIR)$(MANDIR)/man1
+	${INSTALL} -m 644 *.8 $(DESTDIR)$(MANDIR)/man8
 
 # If the Perl scripts have "use lib 'lib/';" lines from a former
 # "make testing", we remove them.
@@ -232,7 +235,8 @@ clean: lib/Makefile remove-trash
 	rm -f foomatic-combo-xml
 	rm -f foomatic-perl-data
 	rm -f Foomatic
-	$(RM) $(BINFILES:=.1) $(SBINFILES:=.8)
+	rm -rf foomatic-db
+	rm -f $(BINFILES:=.1) $(SBINFILES:=.8)
 #	Remove links from inplace installation
 	rm -f foomatic-rip foomatic-datafile man
 #       Remove foomatic-filters-ppds-<version>.tar.gz package
@@ -241,7 +245,7 @@ clean: lib/Makefile remove-trash
 
 distclean: clean
 	rm -f $(AC_OUTPUT_FILES) config.log config.status config.cache
-	rm -rf autom*.cache confdefs.h
+	rm -rf autom*.cache confdefs.h ppd foomatic-db db
 
 maintainer-clean: distclean
 	rm -f configure aclocal.m4
@@ -339,16 +343,16 @@ filters-ppds: inplace
 	  rm -f *.ppd || exit 1; \
 	); \
 	mv ppd $${packagename}/share || exit 1; \
-	cp $(LOCAL_FOOMATIC_RIP) $${packagename}/bin || exit 1; \
+	${INSTALL} -m 755 $(LOCAL_FOOMATIC_RIP) $${packagename}/bin || exit 1; \
 	local_foomatic_rip=$(LOCAL_FOOMATIC_RIP); \
 	foomatic_filters_root=$${local_foomatic_rip%/*}; \
-	cp $${foomatic_filters_root}/foomatic-gswrapper \
+	${INSTALL} -m 755 $${foomatic_filters_root}/foomatic-gswrapper \
 	  $${packagename}/bin || exit 1; \
-	cp $${foomatic_filters_root}/*.1 $${packagename}/share/man/man1 \
+	${INSTALL} -m 644 $${foomatic_filters_root}/*.1 $${packagename}/share/man/man1 \
 	   || exit 1; \
-	cp foomatic-filters-ppds-install $${packagename}/install || exit 1; \
-	cp foomatic-filters-ppds-README $${packagename}/README || exit 1; \
-	cp COPYING $${packagename}/COPYING || exit 1; \
+	${INSTALL} -m 755 foomatic-filters-ppds-install $${packagename}/install || exit 1; \
+	${INSTALL} -m 644foomatic-filters-ppds-README $${packagename}/README || exit 1; \
+	${INSTALL} -m 644 COPYING $${packagename}/COPYING || exit 1; \
 	chmod -R a+rX,go-w $${packagename} || exit 1; \
 	rm -f $${packagename}.tar.gz || exit 1; \
 	unset GZIP; \

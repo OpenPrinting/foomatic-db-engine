@@ -1,0 +1,147 @@
+#
+#!@PERL@ -w
+use strict;
+
+# This is foomatic-ppd-options, a program which will print out the
+# options specified by a PPD file.
+#
+# foomatic-ppd-options [file*]
+#  reads one or more PPD files from the specified file or
+#  standard input.  If present, PPD information is separated by
+#  lines starting with Printer: .  This makes it compatible with
+#  the LPRng 'lpc ppd' command:
+#    lpc ppd | foomatic-ppd-options
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+use Data::Dumper;
+use FileHandle;
+
+$0 =~ m!/([^/]+)\s*$!;
+my $progname = ($1 || $0);
+
+sub help {
+    print STDERR <<EOF;
+$progname [-d=debuglevel][files]
+  reads one or more PPD files from the specified file or
+  standard input.  If present, PPD information is separated by
+  lines starting with Printer: .  This makes it compatible with
+  the LPRng 'lpc ppd' command:
+    lpc ppd | foomatic-ppd-options
+  
+ -h            - printes help message
+ -d debuglevel - sets debugging level (0 is 0ff)
+EOF
+    exit 1;
+}
+# Read out the program name with which we were called, but discard the path
+
+my $debug = 0;
+
+# We use the library Getopt::Long here, so that we can have more than
+# one "-o" option on one command line.
+
+my( $opt_h, $opt_d );
+
+use Getopt::Long;
+Getopt::Long::Configure("no_ignore_case");
+GetOptions(
+	   "d=i"   => \$opt_d,         # Help!
+	   "h"   => \$opt_h,         # Help!
+	   "help"=> \$opt_h) || help();
+
+help() if $opt_h;
+$debug = $opt_d if $opt_d;
+
+sub getppdinfo( $ $ );
+if( @ARGV ){
+	while( @ARGV ){
+		my $file = shift @ARGV;
+		print STDERR "file $file\n" if $debug;
+		my $fd = new FileHandle "<$file";
+		if( not $fd ){
+			die( "$progname: cannot open '$file' - $!\n" );
+			next;
+		}
+		getppdinfo($fd, $file);
+		close($fd);
+	}
+} else {
+	getppdinfo( \*STDIN, "STDIN" );
+}
+
+exit 0;
+
+my $key;
+sub order_by_key{$a->{$key} cmp $b->{$key}};
+
+sub getppdinfo( $ $ ){
+	my( $fd, $name ) = @_;
+	my @ppd = <$fd>;
+	close( $fd );
+	print "PPD $name= " . Dumper(\@ppd) if $debug > 1;
+	my ($printer);
+	$printer = shift @ppd if $ppd[0] =~ /^Printer:/;
+	print "$printer\n" if $printer;
+	my $ppd = ppdfromvartoperl( \@ppd );
+	if( not defined $ppd ){
+		die "$progname: bad ppdfile $name\n";
+	}
+	print STDERR "PPD DB " . Dumper( $ppd ) if $debug;
+	my $makemodel = ($ppd->{'makemodel'} or "");
+	print "makemodel = $makemodel\n";
+	my $args = $ppd->{'args'};
+	print STDERR "PPD ARGS " . Dumper( $args ) if $debug;
+	for my $argname ( @{$args} ) {
+		my $name = $argname->{'name'};
+		my $language = "postscript";
+		if( $name =~ /^JCL(.*)$/ ){
+			$argname->{'name'} = $1;
+			$language = "pjl";
+		}
+		$argname->{'language'} = $language;
+	}
+	$key = 'name';
+	for my $argname ( sort order_by_key @{$args} ) {
+		my $name = $argname->{'name'};
+		my $comment = ($argname->{'comment'} or "");
+		my $type = ($argname->{'type'} or "");
+		my $vals = ($argname->{'vals'} or []);
+		my $default = ($argname->{'default'} or "");
+		my $language = ($argname->{'language'} or "postscript");
+		print STDERR "PPD ARG " . $name . "\n" if $debug;
+		print STDERR "PPD VALUES " . Dumper( $vals ) . "\n" if $debug;
+		my $values = "name=$name";
+		$values .= "($comment)" if( $comment );
+		$values .= ";";
+		$values .= " language=$language;";
+		$values .= " type=$type;" if( $type );
+		$values .= " default=$default;" if( $default );
+		$values .= " options=";
+		if( not @{$vals} ){
+			if( $type eq "bool" ){
+				$values .= "True (True), False (False)";
+			}
+		} else {
+			$key = 'value';
+			for my $v ( sort order_by_key @{$vals} ){
+				my $value = $v->{'value'};
+				my $comment = ($v->{'comment'} or "");
+				my $driverval = ($v->{'driverval'} or "");
+				$driverval =~ s/[\s\n]+/ /gm;
+				$driverval =~ s/^ //gm;
+				$driverval =~ s/ $//gm;
+				$driverval =~ s/[\W]/\\$&/gm;
+				$driverval =~ s/\\ / /gm;
+				$comment =~ s/[\W]/\\$&/g;
+				$comment =~ s/\\ / /gm;
+				$values .= "$value";
+				$values .= " ($comment)" if( $comment );
+				$values .= " [$driverval]" if( $driverval );
+				$values .= ", ";
+			}
+			$values =~ s/, $/;/;
+		}
+		print $values . "\n";
+	}
+}

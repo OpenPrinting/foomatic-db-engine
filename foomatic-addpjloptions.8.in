@@ -2,57 +2,81 @@
 .\"
 .TH FOOMATIC-ADDPJLOPTIONS 8 "2001-05-07" "Foomatic Project"
 .SH NAME
-foomatic-addpjloptions \- Edit PJL options into the foomatic database
+foomatic-addpjloptions \- Format PJL option information the for foomatic database
 .SH SYNOPSIS
-.B foomatic-addpjloptions
-[\fIOPTION\fR]...
 
-.BI foomatic-addpjloptions [\ \-f \ ]\ [\ \-i \ ] \-p <printer\ ID>\ [\ <pjl\ option\ file>\ ]
-.BI foomatic-addpjloptions \-h
+.B "foomatic-addpjloptions [-dafis][-o dir] -p printer_ID [pjl_info_file]"
+
+.B "foomatic-addpjloptions [-dafq] [pjl_info_file]"
+
+.B "foomatic-addpjloptions \-h"
 
 .SH Description
 .B foomatic-addpjloptions
-adds the PJL options listed by a printer to the Foomatic database. The
-option list is read from a file if specified or else from standard input. 
+formats the PJL information file (or STDIN) into a format usable by the Foomatic database.
 
-The appropriate printer ID must be provided through option \fB-p\fR. 
 
 .SS Options
-.TP 10
-.BI \-p <printer\ ID>
-Printer where to add the PJL options
+.TP 5
+.B \-a
+Convert all PJL options in the information file.
 
-.B <pjl option file>
-File with PJL options returned by the printer. If this filename is not
+.TP 5
+.BI -d
+Enable debugging information.
+
+.TP 5
+.B \-f
+Do not ask for permission, force conversion.
+
+.TP 5
+.B \-h
+Print a help message and exit.
+
+.TP 5
+.B \-q
+Print a summary of the PJL information.  This output is not compatible with
+the foomatic database, and is useful for debugging.
+
+.TP 5
+.B \-s
+Produce a single option file containing all the option values.
+
+.TP 5
+.BI \-o " dir"
+The directory the option information files are written to.
+
+.TP 5
+.BI \-p " printer_ID"
+Name of the printer in the foomatic database.
+This is used to extract printer manufacturer and model information.
+
+.TP 5
+.B pjl_info_file
+File with PJL information returned by the printer. If this filename is not
 provided, the PJL options are taken from standard input.
 
-.B \-f
-Force adding PJL options, no questions.
-
-.B \-i
-Add the most important PJL options only.
-
-.B \-h
-Print a help message
-
 .SH FILES
-.TP 25
-@$ENV{LIBDIR}@/templates/pjl*.xml
-Necessary for successful operation.
-.PD 0
+.TP 5
+.B @$ENV{LIBDIR}@/templates/pjl*.xml
+Template files for option information.
 
-.\".SH SEE ALSO
-.\".IR foomatic-XXX (1),
+.TP 5
+.B ./foomatic-db/opts
+Option information stored in this directory.
+
+.PD 0
 
 .SH EXIT STATUS
 .B foomatic-addpjloptions
-returns ...
+returns 0 on success, and a nonzero value on failure.
 
 .SH AUTHOR
 Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
 project using output from the associated binary.
 
+Modified by Patrick Powell (<papowell at astart.com>).
+
 .SH BUGS
-The program needs three files 
 
 Please send bug reports to foomatic-devel@linuxprinting.org.

@@ -10,6 +10,71 @@
 	* configure.in, Makefile.in, README.build-foomatic-filters-ppds:
 	  Fixes from Patrick Powell.
 
+2003-09-13  Patrick Powell <papowell@lprng.com>
+
+	* foomatic-configure:
+	  set 'use strict' and perl -w options - cleaned up
+	  compilation and usage errors exposed by adding these
+	  options.
+
+	  modified the LPRng setup to be consistent with the new
+	  or latest version of foomatic-rip and LPRng.
+
+	  fixed several other entries that were using values that
+	  either were not initialized or were the wrong variable
+	  name.  This appears to be the result of a cut-and-paste
+	  where the author did not modify all of the variable names
+	  in the pasted area.
+
+	  Added warnings about security loopholes when using the
+	  smbclient and nmbprint facilities.
+
+	  Fixed up missing $DESTDIR in Makefile.in
+
+	* lib/Foomatic/DB.pm
+	  added 'use strict' to Foomatic::DB.pm and then did
+	  editting for syntax cleanup.  Mostly adding my to
+	  'for $x' loops, i.e. - 'for my $x'
+	  Cleaned up a performance hit by passing reference to
+	  array rather than copying array.
+
+	* foomatic-ppdfile:
+	  Added -A, -P match options to display information
+
+	  If the PPD file does not exist, error message is printed
+	  and exits with nonzero error code.  Also tidied up
+	  error messages and help messages.
+
+	  If the driver (-d driver) is not specified or is blank,
+	  use the default driver for the printer.
+
+	  Sanity check the printer and driver names against the
+	  database.
+
+	  Fixed up the foomatic-ppdfile.1 man page and added the
+	  -A and -P options.
+
+	* Makefile - make dist-clean now removes ppd subdirectory
+
+	* configure - added check for GhostScript and security
+	  loophole in GhostScript.  Modified the uses of
+	  AC_PROG_PATH to avoid a problem with shell variable
+	  expansion.
+
+	* foomatic-getpjloptions:  changed use of 'echo -ne'
+
+	* foomatic-addpjloptions now handles strings, also defaults
+	  with ? characters and string values.  
+	  -s   - writes options to a single file
+	  -i   - does only IMPORTANT options
+	  -a   - does ALL options found in PJL information
+	         (except readonly)
+	  -q   - reads the PJL file and produces a quick summary
+               (debugging)
+	       
+	* man pages - fixed up several of the man pages to agree with
+	  the programs.  More editting is needed.
+
 2003-09-07  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed bug of the getpapersize() function

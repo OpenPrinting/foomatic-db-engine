@@ -1,0 +1,211 @@
+#!/usr/bin/perl
+use strict;
+use FileHandle;
+use Getopt::Std;
+use IO::Select;
+use IO::Socket::INET;
+
+sub usage(){
+print <<EOF;
+ use: $0 [-h host][-p port][-t timeout][pjlsourcefiles]
+ Read the specified input files
+ and produce a PJL summary
+ Or send a PJL sequence to the remote host and port.
+
+  $0 -h host [-p port][-t timeout][-v]
+  $0 [pjlsourcefiles]
+
+   -h host  - remote host
+   -p port  - port
+   -t timeout  - timeout for no input
+   -v       - just show data from remote host
+  
+ PJL commands to request the printer information
+	\\033%-12345X
+	\@PJL
+	\@PJL INFO VARIABLES
+	\@PJL INFO ID
+	\@PJL INFO CONFIG
+	\\033%-12345X
+
+ If there is no additional information after timeout seconds
+ the connection is closed.
+
+ PJL Infomration has format:
+	\@PJL INFO VARIABLES
+	COPIES=1 [2 RANGE]
+		 1
+		 999
+	PAPER=LETTER [19 ENUMERATED]
+		 LETTER
+		 LETTERR
+		 LEGAL
+		 FOOLSCAP
+		 INVOICE
+    ...
+    \@PJL ...  < end of section unless it is \@PJL INFO VARIABLES
+
+    We produce:
+     pjloption=(fixedname)STRING
+     pjloption=(fixedname)RANGE;low,high
+     pjloption=(fixedname)ENUMERATED;v1,v2,...
+
+   From the returned information
+EOF
+	exit(1);
+}
+
+$| = 1;
+
+my(@lines,$line,$inbody,$outputline,$port, $host,$timeout,$verbose);
+my $inoptionlisting = 0; # 1 if we are after a line "\@PJL INFO VARIABLES"
+                         # and no other "\@PJL ..." line appeared
+my $option = "";         # Name of current option
+my $optiontype = -1;     # 0: enum, 1: int, 2: float, -1: not found yet
+my $numchoices = -1;     # Number of choices, -1: not found yet
+my $default = "";        # Default setting
+my @choices = ();        # List of possible choices
+my $choicesfound = 0;    # How many choices were already found
+
+my $opt = {};
+getopts("vdDp:h:t:",$opt) || usage();
+
+$port = 9100;
+$timeout = 3;
+$verbose = 0;
+
+my $debug = 0;
+$debug = 1 if $opt->{d};
+$debug = 2 if $opt->{D};
+$host = $opt->{h} if $opt->{h};
+$port = $opt->{p} if $opt->{p};
+$timeout = $opt->{t} if $opt->{t};
+$verbose = 1 if $opt->{v};
+
+if( $host ){
+	my $socket = IO::Socket::INET->new(
+		PeerAddr=>$host,
+		PeerPort=>$port,
+		Proto=>"tcp",
+		Type=>SOCK_STREAM)
+	or die "could not connect to $host, port $port";
+	print $socket
+	"\033%-12345X" .
+	"\@PJL\r\n" .
+	"\@PJL INFO VARIABLES\r\n" .
+	"\@PJL INFO ID\r\n" .
+	"\@PJL INFO CONFIG\r\n" .
+	"\033%-12345X"
+		or die "write to socket failed";
+	my $s = IO::Select->new();
+	my $in = "";
+	my $input;
+	while(1){
+		$s->add($socket);
+		print "starting wait, timeout $timeout\n" if $debug;
+		my @ready = $s->can_read($timeout);
+		print "ready '" . scalar @ready . "'\n" if $debug;
+		last if( @ready == 0 );
+		my $len =  sysread $socket, $input, 1024;
+		print "Read $len\n" if $debug > 1;
+		last if not $len;
+		$input =~ s/[\015\014]//g;
+		print " INPUT '$input'\n" if $debug > 1;
+		$in .= $input;
+	}
+	close($socket);
+	@lines = map( "$_\n", split("\n",$in ));
+} else {
+	@lines = <> or die "No input";
+}
+print "Input " .  join("", @lines) . "\n" if $debug;
+
+if( $verbose ){
+	print join("", @lines);
+	exit(0);
+}
+
+$inbody = 0;
+$outputline = "";
+foreach (@lines){
+	chomp;
+	s/\015//;
+	$line = $_;
+	print "# INPUT $_ \n" if $debug;
+	if( /^\@PJL/  ){
+		if( /^\@PJL\s+INFO\s+VARIABLES/  ){
+			$inbody = 1;
+		} else {
+			$inbody = 0;
+		}
+	}
+	if( not $inbody and $outputline ){
+		print STDERR "# Unexpected end of information\n";
+		print $outputline . "\n";
+		exit(1);
+	}
+	next if( not $inbody );
+	if ($line =~ m/^\s*([\w\s:]*)\s*=\"?([\w\.]*)\"?\s*\[([0-9]*)\s*(\w*)\s*(\w*)\]/) {
+		# Option header
+		if( $outputline ){
+			print STDERR "# Incomplete option '$outputline'\n";
+			exit(1);
+		}
+		my $typestr;
+		my $modifierstr;
+		($option, $default, $numchoices, $typestr, $modifierstr) = 
+		    ($1, $2, $3, $4, $5);
+		print "# Option: '$option', Default '$default', Numchoices '$numchoices', Typestr '$typestr', Modifier '$modifierstr'\n"
+			if $debug;
+		if ($modifierstr eq "READONLY") { # Ignore READONLY options
+		    $numchoices = -2;
+		    print "# WARNING: Read-only option '$option', ignored!\n";
+			next;
+		}
+		$choicesfound = 0;
+		@choices = ();
+		my $optstr = $option;
+		$optstr =~ s/\W/_/g;
+		$outputline = $optstr . "=";
+		if( $optstr ne $option ){
+			$optstr = "($option)";
+			$optstr =~ s/\s/+/g;
+			$outputline .= $optstr;
+		}
+		if (($modifierstr eq "STRING") || ($typestr eq "STRING")) { 
+			$outputline .= "STRING;";
+			print $outputline . "\n";
+			$outputline = "";
+			$numchoices = -2;
+			next;
+		}
+		if ($numchoices == 1 && $typestr eq "ENUMERATED") { # Ignore enumerated with 1 choice
+		    $numchoices = -2;
+		    print "# WARNING: enumerated option '$option' with one choice, ignored!\n";
+			$outputline = "";
+			$numchoices = -2;
+			next;
+		}
+		$outputline .= "$typestr;";
+	} else {
+		$choicesfound = @choices;
+		print "# option: '$line', numchoices '$numchoices', found '$choicesfound'\n" if $debug>1;
+		next if( $numchoices < 0 );
+		$line =~ s/\s//g;
+		next if( $line eq "" );
+		if( not $numchoices or ($numchoices <= $choicesfound)  ){
+			print "# Unexpected option '$line'\n";
+			next;
+		}
+		push @choices, $line;
+		if( @choices == $numchoices ){
+			print $outputline . join(",",@choices). "\n";
+			$outputline = "";
+		}
+	}
+}
+if( $outputline ){
+	print STDERR "# Unexpected EOF\n";
+	print $outputline . "\n";
+	exit(1);
+}

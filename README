@@ -1063,7 +1063,7 @@ source/opt/2.xml
       <driver>r4081</driver>
       <arg_defval>ev/1</arg_defval>
      </constraint>
-# A gajillion constraings deleted
+# A gajillion constraints deleted
   </constraints>
   <enum_vals>
    <enum_val id="ev/1">
@@ -1341,35 +1341,118 @@ printer/HP-LaserJet_4000.xml
 #
 # for the USB under Linux it is more complicated, easiest is to use a little
 # Perl script, called "getusbprinterid.pl":
+# You need to find the IOCTL call value to pass to the perl ioctl function.
+# Here is a little C program that does this.  This is easier than trying to
+# use p2h and convert the *.h files to perl.
 
 # --------------------------------------------------------------------------
-
-#!/usr/bin/perl
-
-open FILE, "$ARGV[0]" or die;
-
-my $result;
-# Calculation of IOCTL function 0x84005001 (to get device ID string):
-# len = 1024
-# IOCNR_GET_DEVICE_ID = 1
+#  /*
+#       print the IOCTL call value for printer information
+#  */
+#  #include <stdio.h>
+#  #include <sys/ioctl.h>
+#  /* From the /usr/src/linux<version>/drivers/usb/printer.c */
+#  #define DRIVER_VERSION "v0.11"
+#  #define DRIVER_AUTHOR "Michael Gee, Pavel Machek, Vojtech Pavlik, Randy Dunlap, Pete Zaitcev, David Paschal"
+#  #define DRIVER_DESC "USB Printer Device Class driver"
+#  
+#  #define USBLP_BUF_SIZE      8192
+#  #define DEVICE_ID_SIZE      1024
+#  
+#  /* ioctls: */
+#  #define LPGETSTATUS     0x060b      /* same as in drivers/char/lp.c */
+#  #define IOCNR_GET_DEVICE_ID     1
+#  #define IOCNR_GET_PROTOCOLS     2
+#  #define IOCNR_SET_PROTOCOL      3
+#  #define IOCNR_HP_SET_CHANNEL        4
+#  #define IOCNR_GET_BUS_ADDRESS       5
+#  #define IOCNR_GET_VID_PID       6
+#  /* Get device_id string: */
+#  #define LPIOC_GET_DEVICE_ID(len) _IOC(_IOC_READ, 'P', IOCNR_GET_DEVICE_ID, len)
+#  /* The following ioctls were added for http://hpoj.sourceforge.net: */
+#  /* Get two-int array:
+#  * [0]=current protocol (1=7/1/1, 2=7/1/2, 3=7/1/3),
+#  * [1]=supported protocol mask (mask&(1<<n)!=0 means 7/1/n supported): */
+#  #define LPIOC_GET_PROTOCOLS(len) _IOC(_IOC_READ, 'P', IOCNR_GET_PROTOCOLS, len)
+#  /* Set protocol (arg: 1=7/1/1, 2=7/1/2, 3=7/1/3): */
+#  #define LPIOC_SET_PROTOCOL _IOC(_IOC_WRITE, 'P', IOCNR_SET_PROTOCOL, 0)
+#  /* Set channel number (HP Vendor-specific command): */
+#  #define LPIOC_HP_SET_CHANNEL _IOC(_IOC_WRITE, 'P', IOCNR_HP_SET_CHANNEL, 0)
+#  /* Get two-int array: [0]=bus number, [1]=device address: */
+#  #define LPIOC_GET_BUS_ADDRESS(len) _IOC(_IOC_READ, 'P', IOCNR_GET_BUS_ADDRESS, len)
+#  /* Get two-int array: [0]=vendor ID, [1]=product ID: */
+#  #define LPIOC_GET_VID_PID(len) _IOC(_IOC_READ, 'P', IOCNR_GET_VID_PID, len)
+#  
+#  
+#  int main( int argc, char *argv, char *envp[] )
+#  {
+#   int len = 1024;
+#   int v;
+#   /* _IOC(), _IOC_READ as defined in /usr/include/asm/ioctl.h
 # LPIOC_GET_DEVICE_ID(len) = _IOC(_IOC_READ, 'P', IOCNR_GET_DEVICE_ID, len)
-# _IOC(), _IOC_READ as defined in /usr/include/asm/ioctl.h
+#   */
+#   v = LPIOC_GET_DEVICE_ID(len);          printf("$LPIOC_GET_DEVICE_ID = 0x%08x;\n", v );
+#   v = LPIOC_GET_BUS_ADDRESS(len);        printf("$LPIOC_GET_BUS_ADDRESS = 0x%08x;\n", v );
+#   v = LPIOC_GET_VID_PID(len);            printf("$LPIOC_GET_VID_PID = 0x%08x;\n", v );
+#   return(0);
+#  }
+#  
+#     
+# save this to a file, say getv.c, and then use:
+#  make mc       # compiles it
+#  ./mc          # runs it
+#  $LPIOC_GET_DEVICE_ID = 0x84005001;
+#  $LPIOC_GET_BUS_ADDRESS = 0x84005005;
+#  $LPIOC_GET_VID_PID = 0x84005006;
 
-ioctl(FILE, 0x84005001, $result) or die;
-close FILE;
 
-# Cut resulting string to its real length
-my $length = ord(substr($result, 1, 1)) + (ord(substr($result, 0, 1)) << 8);
-$result = substr($result, 2, $length-2);
 
-# Remove non-printable characters
-$result =~ tr/[\x0-\x1f]/\./;
-print "$result\n";
-
+# Here is the getusbprinterid.pl PERL program to get the usb information
+#    
+#	!/usr/bin/perl
+#	open FILE, "$ARGV[0]" or die "cannot open $ARGV[0]";
+#	my $result;
+#	# len = 1024
+#	# LPIOC_GET_DEVICE_ID(len) = _IOC(_IOC_READ, 'P', IOCNR_GET_DEVICE_ID, len)
+#	# _IOC(), _IOC_READ as defined in /usr/include/asm/ioctl.h
+#	$LPIOC_GET_DEVICE_ID = 0x84005001;
+#	$LPIOC_GET_BUS_ADDRESS = 0x84005005;
+#	$LPIOC_GET_VID_PID = 0x84005006;
+#	
+#	ioctl(FILE, $LPIOC_GET_DEVICE_ID , $result) or die;
+#	# Cut resulting string to its real length
+#	my $length = ord(substr($result, 1, 1)) + (ord(substr($result, 0, 1)) << 8);
+#	$result = substr($result, 2, $length-2);
+#	# Remove non-printable characters
+#	$result =~ tr/[\x0-\x1f]/\./;
+#	print "DeviceID $result\n";
+#	
+#	$result = pack("LL",0);
+#	ioctl(FILE, $LPIOC_GET_BUS_ADDRESS , $result) or die;
+#	my( $v1, $v2 ) = unpack("LL", $result );
+#	print "Bus '$v1', Device '$v2'\n";
+#	
+#	$result = pack("LL",0);
+#	ioctl(FILE, $LPIOC_GET_VID_PID, $result) or die;
+#	my( $v1, $v2 ) = unpack("LL", $result );
+#	print "Vendor '$v1', Product '$v2'\n";
+#	
+#	close FILE;
+#	
+#    
 # --------------------------------------------------------------------------
 
-# Running the program with "./getusbprinterid.pl /dev/usb/lp0" returns the
+# Running the program with "perl getusbprinterid.pl /dev/usb/lp0" returns the
 # ID string of the device on /dev/usb/lp0.
+# For example: perl getusbprinter.pl /dev/usb/lp0  
+#  DeviceID MFG:Hewlett-Packard;CMD:PJL,MLC,PCL,PCLXL,POSTSCRIPT;MDL:\
+#    HP LaserJet 2200;CLS:PRINTER;DES:Hewlett-Packard LaserJet 2200;\
+#    MEM:8MB;OPTRAY:250Sheets
+#  Bus '2', Device '2'
+#  Vendor '1008', Product '535'
+#
+# (lines broken for clarity)
+
 
     <!--no known parport probe information-->
   </autodetect>

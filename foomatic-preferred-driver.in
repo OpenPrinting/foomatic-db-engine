@@ -6,16 +6,20 @@
 
 use Foomatic::Defaults;
 use Foomatic::DB qw/get_overview/;
+use Data::Dumper;
+use strict;
 # Needs "get_overview" to be added to the "@EXPORT_OK" list of DB.pm!
 
 # Read out the program name with which we were called, but discard the path
 $0 =~ m!/([^/]+)\s*$!;
-$progname = $1;
+my $progname = $1;
+my $debug = 0;
 
 my $db = new Foomatic::DB;
 
 # Get the printer overview list as a Perl data structure
 $db->get_overview();
+print "DB " . Dumper($db ) if $debug;
 
 my $printer;
 for $printer (@{$db->{'overview'}}) {
@@ -25,7 +29,7 @@ for $printer (@{$db->{'overview'}}) {
 	# If yes, this printer has a correct default driver so we do not
 	# need to set a new default driver
 	my $found = 0;
-	for $d (@{$printer->{'drivers'}}) {
+	for my $d (@{$printer->{'drivers'}}) {
 	    if ($d eq $printer->{'driver'}) {
 		$found = 1;
 		last;
@@ -35,10 +39,10 @@ for $printer (@{$db->{'overview'}}) {
 	    print " (Keeping old default driver): $printer->{'driver'}\n";
 	    next;
 	} else {
-	    print " (Default driver wrong)";
+	    print " (Default driver wrong)\n";
 	}
     } else {
-	print " (No default driver defined)";
+	print " (No default driver defined)\n";
     }
     if ($printer->{'functionality'} eq 'F') {
 	# If the printer is a "Paperweight", do not correct the

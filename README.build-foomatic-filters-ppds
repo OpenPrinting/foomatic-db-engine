@@ -68,13 +68,13 @@ cd ..
 
 Add support for HPIJS (optional):
 
-tar -xvzf foomatic-db-hpijs*.tar.gz
-cd foomatic-db-hpijs*
+tar -xvzf foomatic-db-hoijs*.tar.gz
+cd foomatic-db-hoijs*
 make_configure # (only if you downloaded from CVS)
 ./configure
 make inplace
 cd ../foomatic-db-engine*
-./foomatic-kitload -f -k ../foomatic-db-hpijs*/db/source/
+./foomatic-kitload -f -k ../foomatic-db-hoijs*/db/source/
 cd ..
 
 Add support for GIMP-Print (optional, <...> is the GIMP-Print source
@@ -121,4 +121,3 @@ foomatic-filters-ppds*.tar,gz
 
 This is the ready-to-use package. Read its README file to know how to
 use it.
-
