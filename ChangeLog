@@ -1,3 +1,7 @@
+2003-12-17  Tim Waugh <twaugh@redhat.com>
+ 
+	* Makefile.in: Use relative symlink, not absolute.
+
 2003-11-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged all files of the repository with "foomatic-3_0-bp",

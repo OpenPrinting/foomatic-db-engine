@@ -197,7 +197,7 @@ install-bin: check-config lib/Makefile
 	$(PERL) -p -i -e "s:foomatic-templates:$(LIBDIR)/templates:g" $(DESTDIR)$(SBINDIR)/foomatic-addpjloptions
 #	Link to allow foomatic-ppdfile be called under the old name
 #	foomatic-datafile
-	ln -sf $(DESTDIR)$(BINDIR)/foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
+	ln -sf foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
 
 install-man: check-config
 	${SRC}/mkinstalldirs $(DESTDIR)$(MANDIR)
