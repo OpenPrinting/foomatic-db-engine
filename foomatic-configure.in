@@ -3898,7 +3898,7 @@ sub set_default_options {
     if ($#{$config->{'options'}} >= 0) {
 	for (@{$config->{'options'}}) {
 	    my $option = $_;
-	    if ($option =~ m!^\s*([^=]+)=([^=]+)\s*$!) {
+	    if ($option =~ m!^\s*([^=]+)=([^=]*)\s*$!) {
 		# evaluated or numerical option, boolean option with
 		# value "True", "False", "Yes", "No", "On", "Off", "1", "0" 
 		# given
@@ -3933,6 +3933,12 @@ sub set_default_options {
 			    $dest->{'args_byname'}{$optname}{'default'} = 
 				$optvalue;
 			}
+		    } elsif (($dest->{'args_byname'}{$optname}{'type'} eq
+			      'string') || 
+			     ($dest->{'args_byname'}{$optname}{'type'} eq
+			      'password')) {
+			    $dest->{'args_byname'}{$optname}{'default'} = 
+				$optvalue;
 		    } else {
 			if (defined($dest->{'args_byname'}{$optname}{'vals_byname'}{$optvalue})) {
 			    $dest->{'args_byname'}{$optname}{'default'} = 

@@ -163,6 +163,7 @@ typedef struct arg {
   xmlChar *required;
   xmlChar *min_value;
   xmlChar *max_value;
+  xmlChar *max_length;
   xmlChar *default_value;
   /* Choices for enumerated options */
   int     num_choices;
@@ -1262,6 +1263,7 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
       option->required = NULL;
       option->min_value = NULL;
       option->max_value = NULL;
+      option->max_length = NULL;
       option->default_value = NULL;
       option->num_choices = 0;
       option->choices = NULL;
@@ -1424,6 +1426,13 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	  if (debug) fprintf(stderr,
 			     "    Maximum value: %s\n",
 			     option->max_value);
+	} else if ((!xmlStrcmp(cur2->name,
+			       (const xmlChar *) "arg_maxlength"))) {
+	  option->max_length = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr,
+			     "    Maximum string length: %s\n",
+			     option->max_length);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_defval"))) {
 	  option->default_value = 
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
@@ -2722,17 +2731,27 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     if (combo->args[i]->max_value) {
       printf("      'max' => '%s',\n", combo->args[i]->max_value);
     }
+    if (combo->args[i]->max_length) {
+      printf("      'maxlength' => '%s',\n", combo->args[i]->max_length);
+    }
     if (combo->args[i]->default_value) {
       printf("      'default' => '%s',\n", combo->args[i]->default_value);
+    } else {
+      printf("      'default' => 'None',\n");
     }
     if (combo->args[i]->num_choices > 0) {
       printf("      'vals_byname' => {\n");
       for (j = 0; j < combo->args[i]->num_choices; j ++) {
+	if (combo->args[i]->choices[j]->value == NULL) {
+	  combo->args[i]->choices[j]->value = "None";
+	}
 	printf("        '%s' => {\n", combo->args[i]->choices[j]->value);
 	printf("          'value' => '%s',\n", 
 	       combo->args[i]->choices[j]->value);
-	printf("          'comment' => '%s',\n",
-	       combo->args[i]->choices[j]->comment);
+	if (combo->args[i]->choices[j]->comment) {
+	  printf("          'comment' => '%s',\n",
+		 combo->args[i]->choices[j]->comment);
+	}
 	printf("          'idx' => '%s',\n",
 	       combo->args[i]->choices[j]->idx);
 	if (combo->args[i]->choices[j]->driverval) {

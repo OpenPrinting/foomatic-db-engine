@@ -791,7 +791,7 @@ sub ppdfromvartoperl {
 	    }
 	} elsif (m!^\*FoomaticRIPOptionPrototype\s+([^/:\s]+):\s*\"(.*)$!) {
 	    # "*FoomaticRIPOptionPrototype <option>: <code>"
-	    # Used for numerical options only
+	    # Used for numerical and string options only
 	    my $argname = $1;
 	    my $line = $2;
 	    # Make sure that the argument is in the data structure
@@ -826,6 +826,15 @@ sub ppdfromvartoperl {
 	    # Store the values
 	    $dat->{'args_byname'}{$argname}{'min'} = $min;
 	    $dat->{'args_byname'}{$argname}{'max'} = $max;
+	} elsif (m!^\*FoomaticRIPOptionMaxLength\s+([^/:\s]+):\s*(\S+)\s*$!) {
+	    # "*FoomaticRIPOptionMaxLength <option>: <length>"
+	    # Used for string options only
+	    my $argname = $1;
+	    my $maxlength = $2;
+	    # Make sure that the argument is in the data structure
+	    checkarg ($dat, $argname);
+	    # Store the value
+	    $dat->{'args_byname'}{$argname}{'maxlength'} = $maxlength;
 	} elsif (m!^\*OrderDependency:\s*(\S+)\s+(\S+)\s+\*([^:/\s]+)\s*$!) {
 	    next if !$currentargument;
 	    # "*OrderDependency: <order> <section> *<option>"
@@ -854,6 +863,7 @@ sub ppdfromvartoperl {
 	    $dat->{'args_byname'}{$argname}{'default'} = $default;
 	} elsif (m!^\*FoomaticRIPDefault([^/:\s]+):\s*([^/:\s]+)\s*$!) {
 	    # "*FoomaticRIPDefault<option>: <value>"
+	    # Used for numerical options only
 	    my $argname = $1;
 	    my $default = $2;
 	    # Make sure that the argument is in the data structure
@@ -896,6 +906,11 @@ sub ppdfromvartoperl {
 	    } else {
 		checksetting ($dat, $currentargument, $setting);
 		$dat->{'args_byname'}{$currentargument}{'vals_byname'}{$setting}{'comment'} = $translation;
+		# Make sure that this argument has a default setting, even
+		# if none is defined in this PPD file
+		if (!$dat->{'args_byname'}{$argname}{'default'}) {
+		    $dat->{'args_byname'}{$argname}{'default'} = $setting;
+		}
 	    }
 	    # Store the value
 	    # Code string can have multiple lines, read all of them
@@ -1106,6 +1121,7 @@ sub ppdgetdefaults {
 	    }
 	} elsif (m!^\*FoomaticRIPDefault([^/:\s]+):\s*([^/:\s]+)\s*$!) {
 	    # "*FoomaticRIPDefault<option>: <value>"
+	    # Used for numerical options only
 	    my $argname = $1;
 	    my $default = $2;
 	    if (defined($this->{'dat'}{'args_byname'}{$argname})) {
@@ -1132,7 +1148,6 @@ sub ppdsetdefaults {
     my $ppd;
 
     # Load the complete PPD file into memory but remove the postpipe
-    #system "cat $ppdfile";
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
 	       "$sysdeps->{'gzip'} -cd $ppdfile |") or
 	       die ("Unable to open PPD file $ppdfile\n");
@@ -1190,8 +1205,80 @@ sub ppdsetdefaults {
 		    undef $arg->{'cdefault'};
 		}
 		$fdef = $arg->{'default'};
+		$fdef = checkoptionvalue($this->{'dat'}, $name, $fdef, 1);
 		$ppd =~ s!^(\*FoomaticRIPDefault$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$fdef$3!m;
+	    } elsif ($arg->{'type'} =~ /^(string|password)$/) {
+		$def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
+		# An empty string cannot be an option name in a PPD file,
+		# use "None" in this case, also substitute non-word characters
+		# in the string to get a legal option name
+		my $defcom = $def;
+		my $defstr = $def;
+		if ($def !~ /\S/) {
+		    $def = 'None';
+		    $defcom = '(None)';
+		    $defstr = '';
+		} elsif ($def eq 'None') {
+		    $defcom = '(None)';
+		    $defstr = '';
+		} else {
+		    $def =~ s/\W+/_/g;
+		    $def =~ s/^_+|_+$//g;
+		    $defcom =~ s/:/ /g;
+		    $defcom =~ s/^ +| +$//g;
+		}
+		# The default string is not available as an enumerated choice
+		# ...
+		if (($ppd !~ m!^\s*\*$arg->{name}\s+$def[/:]!m) ||
+		    ($ppd !~ m!^\s*\*FoomaticRIPOptionSetting\s+$arg->{name}=$def:!m)) {
+		    # ... build an appropriate PPD entry ...
+		    my $sprintfproto = $arg->{'proto'};
+		    $sprintfproto =~ s/\%(?!s)/\%\%/g;
+		    my $driverval = sprintf($sprintfproto, $defstr);
+		    my ($choicedef, $fchoicedef);
+		    if ($arg->{'style'} eq 'G') { # PostScript option
+			$choicedef = sprintf("*%s %s/%s: \"%s\"", 
+					     $name, $def, $defcom, $driverval);
+		    } else {
+			my $header = sprintf
+			    ("*FoomaticRIPOptionSetting %s=%s", $name, $def);
+			$fchoicedef = ripdirective($header, $driverval); 
+			if ($#{$arg->{'vals'}} >= 0) { # Visible non-PS option
+			    $choicedef =
+				sprintf("*%s %s/%s: " .
+					"\"%%%% FoomaticRIPOptionSetting " .
+					"%s=%s\"", 
+					$name, $def, $defcom, $name, $def);
+			}
+		    }
+		    if ($choicedef =~ /\n/s) {
+			$choicedef .= "\n*End";
+		    }
+		    if ($fchoicedef =~ /\n/s) {
+			$fchoicedef .= "\n*End";
+		    }
+		    if ($#{$arg->{'vals'}} == 0) {
+			# ... and if there is only one choice, replace the one 
+			# choice
+			$ppd =~ s!^\*$name\s+.*?\".*?\"(\r?\n?\*End)?$!$choicedef!sm;
+			$ppd =~ s!^\*FoomaticRIPOptionSetting\s+$name=.*?\".*?\"(\r?\n?\*End)?$!$fchoicedef!sm;
+		    } else {
+			# ... and if there is no choice or more than one
+			# choice, add a new choice for the default
+			my $entrystr = 
+			    ($choicedef ? "\n$choicedef" : "") .
+			    ($fchoicedef ? "\n$fchoicedef" : "");
+			for my $l ("Default$name:.*",
+				   "OrderDependency.*$name",
+				   "FoomaticRIPOptionMaxLength\s+$name:.*",
+				   "FoomaticRIPOptionPrototype\s+$name:.*",
+				   "FoomaticRIPOption\s+$name:.*") {
+			    $ppd =~ s!^(\*$l)$!$1$entrystr!m and last;
+			}
+		    }
+		}
 	    }
+	    $def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
 	    $ppd =~ s!^(\*Default$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$def$3!m;
 	}
     }
@@ -1274,7 +1361,7 @@ sub undossify {
 }
 
 sub checkarg {
-    # Check if there is already an argument record $argname in $dat, if
+    # Check if there is already an argument record $argname in $dat, if not,
     # create one
     my ($dat, $argname) = @_;
     return if defined($dat->{'args_byname'}{$argname});
@@ -1298,8 +1385,8 @@ sub checkarg {
 }
 
 sub checksetting {
-    # Check if there is already an argument record $argname in $dat, if
-    # create one
+    # Check if there is already an choice record $setting in the $argname
+    # argument in $dat, if not, create one
     my ($dat, $argname, $setting) = @_;
     return if 
 	defined($dat->{'args_byname'}{$argname}{'vals_byname'}{$setting});
@@ -1352,9 +1439,9 @@ sub booltoenum {
 	$arg->{'name_false'} = "no$arg->{'name'}";
     }
     checksetting($dat, $argname, 'false');
-    my $truechoice = $arg->{'vals_byname'}{'false'};
-    $truechoice->{'comment'} = longname($arg->{'name_false'});
-    $truechoice->{'driverval'} = '';
+    my $falsechoice = $arg->{'vals_byname'}{'false'};
+    $falsechoice->{'comment'} = longname($arg->{'name_false'});
+    $falsechoice->{'driverval'} = '';
     # Default value
     if ($arg->{'default'} eq '0') {
 	$arg->{'default'} = 'false';
@@ -1424,6 +1511,27 @@ sub checkoptionvalue {
 		$newvalue = $arg->{'min'}
 	    }
 	    return $newvalue;
+	}
+    } elsif (($arg->{'type'} eq 'string') ||
+	     ($arg->{'type'} eq 'password')) {
+	if (defined($arg->{'vals_byname'}{$value})) {
+	    return $value;
+	} elsif ((!defined($arg->{'maxlength'})) ||
+		 (length($value) <= $arg->{'maxlength'})) {
+	    # Check whether the string is one of the enumerated choices
+	    my $sprintfproto = $arg->{'proto'};
+	    $sprintfproto =~ s/\%(?!s)/\%\%/g;
+	    my $driverval = sprintf($sprintfproto, $value);
+	    for $val (@{$arg->{'vals'}}) {
+		if (($val->{'driverval'} eq $driverval) ||
+		    ($val->{'driverval'} eq $value)) {
+		    return $val->{value};
+		}
+	    }
+	    # No matching choice? Return the original string
+	    return $value;
+	} elsif ($forcevalue) {
+	    return substr($value, 0, $arg->{'maxlength'});
 	}
     }
     return undef;
@@ -1509,6 +1617,7 @@ sub sortoptions {
 
     # Sort values of enumerated options with "sortvals" function
     for my $arg (@{$dat->{'args'}}) {
+	next if $arg->{'type'} !~ /^(enum|string|password)$/;
        	my @sortedvalslist = sort sortvals keys(%{$arg->{'vals_byname'}});
 	@{$arg->{'vals'}} = ();
 	for my $i (@sortedvalslist) {
@@ -1541,34 +1650,37 @@ sub numericaldefaults {
     # priority, the user's change in "*Default<option>: <value>"
     # had no effect.
 
-    for $arg (@{$dat->{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
 	if ($arg->{'fdefault'}) {
 	    if ($arg->{'default'}) {
-		next if $arg->{'type'} !~ /^(int|float)$/;
-		next if ($arg->{'fdefault'} < $arg->{'min'}) ||
-		    ($arg->{'fdefault'} > $arg->{'max'});
-		my $mindiff = abs($arg->{'max'} - $arg->{'min'});
-		my $closestvalue;
-		for $val (@{$arg->{'vals'}}) {
-		    if (abs($arg->{'fdefault'} - $val->{'value'}) <
-			$mindiff) {
-			$mindiff = 
-			    abs($arg->{'fdefault'} - $val->{'value'});
-			$closestvalue = $val->{'value'};
+		if ($arg->{'type'} =~ /^(int|float)$/) {
+		    if ($arg->{'fdefault'} < $arg->{'min'}) {
+			$arg->{'fdefault'} = $arg->{'min'};
 		    }
-		}
-		if (($arg->{'default'} == $closestvalue) ||
-		    (abs($arg->{'default'} - $closestvalue) /
-		     $closestvalue < 0.001)) {
-		    $arg->{'default'} = $arg->{'fdefault'};
+		    if ($arg->{'fdefault'} > $arg->{'max'}) {
+			$arg->{'fdefault'} = $arg->{'max'};
+		    }
+		    my $mindiff = abs($arg->{'max'} - $arg->{'min'});
+		    my $closestvalue;
+		    for $val (@{$arg->{'vals'}}) {
+			if (abs($arg->{'fdefault'} - $val->{'value'}) <
+			    $mindiff) {
+			    $mindiff = 
+				abs($arg->{'fdefault'} - $val->{'value'});
+			    $closestvalue = $val->{'value'};
+			}
+		    }
+		    if (($arg->{'default'} == $closestvalue) ||
+			(abs($arg->{'default'} - $closestvalue) /
+			 $closestvalue < 0.001)) {
+			$arg->{'default'} = $arg->{'fdefault'};
+		    }
 		}
 	    } else {
 		$arg->{'default'} = $arg->{'fdefault'};
 	    }
-	    undef $arg->{'fdefault'};
 	}
     }
-    
 }
 
 sub setnumericaldefaults {
@@ -1577,27 +1689,28 @@ sub setnumericaldefaults {
 
     for $arg (@{$dat->{'args'}}) {
 	if ($arg->{'default'}) {
-	    next if $arg->{'type'} !~ /^(int|float)$/;
-	    if ($arg->{'default'} < $arg->{'min'}) {
-		$arg->{'default'} = $arg->{'min'};
-		$arg->{'cdefault'} = $arg->{'default'};
-	    } elsif ($arg->{'cdefault'} > $arg->{'max'}) {
-		$arg->{'default'} = $arg->{'max'};
-		$arg->{'cdefault'} = $arg->{'default'};
-	    } elsif (defined($arg->{'vals_byname'}{$arg->{'default'}})) {
-		$arg->{'cdefault'} = $arg->{'default'};
-	    } else {
-		my $mindiff = abs($arg->{'max'} - $arg->{'min'});
-		my $closestvalue;
-		for $val (@{$arg->{'vals'}}) {
-		    if (abs($arg->{'default'} - $val->{'value'}) <
-			$mindiff) {
-			$mindiff = 
-			    abs($arg->{'default'} - $val->{'value'});
-			$closestvalue = $val->{'value'};
+	    if ($arg->{'type'} =~ /^(int|float)$/) {
+		if ($arg->{'default'} < $arg->{'min'}) {
+		    $arg->{'default'} = $arg->{'min'};
+		    $arg->{'cdefault'} = $arg->{'default'};
+		} elsif ($arg->{'cdefault'} > $arg->{'max'}) {
+		    $arg->{'default'} = $arg->{'max'};
+		    $arg->{'cdefault'} = $arg->{'default'};
+		} elsif (defined($arg->{'vals_byname'}{$arg->{'default'}})) {
+		    $arg->{'cdefault'} = $arg->{'default'};
+		} else {
+		    my $mindiff = abs($arg->{'max'} - $arg->{'min'});
+		    my $closestvalue;
+		    for $val (@{$arg->{'vals'}}) {
+			if (abs($arg->{'default'} - $val->{'value'}) <
+			    $mindiff) {
+			    $mindiff = 
+				abs($arg->{'default'} - $val->{'value'});
+			    $closestvalue = $val->{'value'};
+			}
 		    }
+		    $arg->{'cdefault'} = $closestvalue;
 		}
-		$arg->{'cdefault'} = $closestvalue;
 	    }
 	}
     }
@@ -1883,14 +1996,59 @@ sub getppd {
 	# Set default for missing tranaslation/longname
 	if (!$com) {$com = longname($name);}
 
+	# If for a string option the default value is not available under
+	# the enumerated choices, add it here. Make the default choice also
+	# the first list entry
+	if ($type =~ /^(string|password)$/) {
+	    $arg->{'default'} =
+		checkoptionvalue($dat, $name, $arg->{'default'}, 1);
+	    # An empty string cannot be an option name in a PPD file,
+	    # use "None" in this case
+	    my $defcom = $arg->{'default'};
+	    my $defstr = $arg->{'default'};
+	    if ($arg->{'default'} !~ /\S/) {
+		$arg->{'default'} = 'None';
+		$defcom = '(None)';
+		$defstr = '';
+	    } elsif ($arg->{'default'} eq 'None') {
+		$defcom = '(None)';
+		$defstr = '';
+	    } else {
+		$arg->{'default'} =~ s/\W+/_/g;
+		$arg->{'default'} =~ s/^_+|_+$//g;
+	        $defcom =~ s/:/ /g;
+		$defcom =~ s/^ +| +$//g;
+	    }
+	    $default = $arg->{'default'};
+	    # Generate a new choice
+	    if (!defined($arg->{'vals_byname'}{$arg->{'default'}})) {
+		checksetting($dat, $name, $arg->{'default'});
+		my $newchoice = $arg->{'vals_byname'}{$arg->{'default'}};
+		$newchoice->{'value'} = $arg->{'default'};
+		$newchoice->{'comment'} = $defcom;
+		$newchoice->{'driverval'} = $defstr;
+	    }
+	    # Bring the default entry to the first position
+	    my $index = 0;
+	    for (my $i = 0; $i <= $#{$arg->{vals}}; $i ++) {
+		if ($arg->{vals}[$i]{'value'} eq $arg->{'default'}) {
+		    $index = $i;
+		    last;
+		}
+	    }
+	    my $def = splice(@{$arg->{vals}}, $index, 1);
+	    unshift(@{$arg->{vals}}, $def);
+	}
+
 	# Do we have to open or close one or more groups here?
 	# No group will be opened more than once, since the options
 	# are sorted to have the members of every group together
 
 	# Only take into account the groups of options which will be
 	# visible user interface options in the PPD.
-	if ((($type ne 'enum') || ($#{$arg->{'vals'}} > 0) ||
-	     ($name eq "PageSize") || ($arg->{'style'} eq 'G')) &&
+	if ((($type !~ /^(enum|string|password)$/) ||
+	     ($#{$arg->{'vals'}} > 0) || ($name eq "PageSize") ||
+	     ($arg->{'style'} eq 'G')) &&
 	    (!$arg->{'hidden'})){
 	    # Find the level on which the group path of the current option
 	    # (@group) differs from the group path of the last option
@@ -1922,7 +2080,33 @@ sub getppd {
 	    }
 	}
 
-	if ($type eq 'enum') {
+	if ($type =~ /^(enum|string|password)$/) {
+	    # Extra information for string options
+	    my ($stringextralines0, $stringextralines1) = 
+		('', '', '');
+	    if ($type =~ /^(string|password)$/) {
+		$stringextralines0 .= sprintf
+		     ("*FoomaticRIPOption %s: %s %s %s\n",
+		      $name, $type, $optstyle, $spot);
+		my $header = sprintf
+		    ("*FoomaticRIPOptionPrototype %s",
+		     $name);
+		$foomaticstr = ripdirective($header, $cmd) . "\n";
+		$stringextralines1 .= $foomaticstr;
+		# Stuff to insert into command line/job is more than one
+		# line? Let an "*End" line follow
+		if ($foomaticstr =~ /\n.*\n/s) {
+		    $stringextralines1 .= "*End\n";
+		}
+
+		if ($arg->{'maxlength'}) {
+		    $stringextralines1 .= sprintf
+			 ("*FoomaticRIPOptionMaxLength %s: %s\n",
+			  $name, $arg->{'maxlength'});
+		}
+
+	    }
+
 	    # Skip zero or one choice arguments. Do not skip "PageSize",
 	    # since a PPD file without "PageSize" will break the CUPS
 	    # environment and also do not skip PostScript options. For
@@ -1941,8 +2125,13 @@ sub getppd {
 		    # For non-PostScript options insert line with option
 		    # properties
 		    push(@optionblob, sprintf
-			 ("*FoomaticRIPOption %s: enum %s %s\n",
-			  $name, $optstyle, $spot));
+			 ("*FoomaticRIPOption %s: %s %s %s\n",
+			  $name, $type, $optstyle, $spot));
+		}
+
+		if ($type =~ /^(string|password)$/) {
+		    # Extra information for string options
+		    push(@optionblob, $stringextralines0, $stringextralines1);
 		}
 
 		push(@optionblob,
@@ -1950,7 +2139,9 @@ sub getppd {
 			     $order, $section, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
-			     (defined($default) ? $default : 'Unknown')));
+			     (defined($default) ? 
+			      checkoptionvalue($dat, $name, $default, 1) :
+			      'Unknown')));
 
 		if (!defined($default)) {
 		    my $whr = sprintf("%s %s driver %s",
@@ -2060,7 +2251,9 @@ sub getppd {
 			($v->{'driverval'} ne "\x01")) {
 			# Ghostscript argument; offer up ps for
 			# insertion
-			$psstr = sprintf($cmd, 
+			my $sprintfcmd = $cmd;
+			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
+			$psstr = sprintf($sprintfcmd, 
 					 (defined($v->{'driverval'})
 					  ? $v->{'driverval'}
 					  : $v->{'value'}));
@@ -2085,9 +2278,10 @@ sub getppd {
 			    my $header = sprintf
 				("*FoomaticRIPOptionSetting %s=%s",
 				 $name, $v->{'value'});
-			    my $cmdval = "";
-			    $cmdval =
-				sprintf($cmd,
+			    my $sprintfcmd = $cmd;
+			    $sprintfcmd =~ s/\%(?!s)/\%\%/g;
+			    my $cmdval =
+				sprintf($sprintfcmd,
 					(defined($v->{'driverval'})
 					 ? $v->{'driverval'}
 					 : $v->{'value'}));
@@ -2097,7 +2291,11 @@ sub getppd {
 		    }
 		    # Make sure that the longname/translation exists
 		    if (!$v->{'comment'}) {
-			$v->{'comment'} = longname($v->{'value'});
+			if ($type !~ /^(string|password)$/) {
+			    $v->{'comment'} = longname($v->{'value'});
+			} else {
+			    $v->{'comment'} = $v->{'value'};
+			}
 		    }
 		    # Code supposed to be inserted into the PostScript
 		    # data when this choice is selected.
@@ -2174,8 +2372,10 @@ sub getppd {
 			    my $header = sprintf
 				("*FoomaticRIPOptionSetting %s=%s",
 				 $name, $a->{'value'});
+			    my $sprintfcmd = $cmd;
+			    $sprintfcmd =~ s/\%(?!s)/\%\%/g;
 			    my $cmdval =
-				sprintf($cmd,
+				sprintf($sprintfcmd,
 					(defined($a->{'driverval'})
 					 ? $a->{'driverval'}
 					 : $a->{'value'}));
@@ -2217,7 +2417,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		      ($arg->{'style'} ne 'G')) ||
 		     ($arg->{'hidden'})) {
 		# non-PostScript enumerated choice option with one single 
-		# choice or hidden memeber option of forced composite
+		# choice or hidden member option of forced composite
 		# option
 
 		# Insert line with option properties
@@ -2230,8 +2430,10 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    # For the "From<Composite>" setting the command line
 		    # value is not made use of, so leave it blank then.
 		    if ($v->{'driverval'} ne "\x01") {
+			my $sprintfcmd = $cmd;
+			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
 			$cmdval =
-			    sprintf($cmd,
+			    sprintf($sprintfcmd,
 				    (defined($v->{'driverval'})
 				     ? $v->{'driverval'}
 				     : $v->{'value'}));
@@ -2245,9 +2447,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    $foomaticstrs .= $foomaticstr;
 		}
 		push(@optionblob, sprintf
-		     ("\n*FoomaticRIPOption %s: enum %s %s %s\n",
-		      $name, $optstyle, $spot, $order),
-		     $foomaticstrs);
+		     ("\n*FoomaticRIPOption %s: %s %s %s %s\n",
+		      $name, $type, $optstyle, $spot, $order),
+		     $stringextralines1, $foomaticstrs);
 	    }
 	} elsif ($type eq 'bool') {
 	    my $name = $arg->{'name'};
@@ -2423,7 +2625,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    
 		    if ($arg->{'style'} eq 'G') {
 			# Ghostscript argument; offer up ps for insertion
-			$psstr = sprintf($cmd, $v);
+			my $sprintfcmd = $cmd;
+			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
+			$psstr = sprintf($sprintfcmd, $v);
 		    } else {
 			# Option setting directive for Foomatic filter
 			# 4 "%" because of the "sprintf" applied to it
@@ -2602,7 +2806,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    my $psstr = "";
 		    if ($arg->{'style'} eq 'G') {
 			# Ghostscript argument; offer up ps for insertion
-			$psstr = sprintf($cmd, $v);
+			my $sprintfcmd = $cmd;
+			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
+			$psstr = sprintf($sprintfcmd, $v);
 		    } else {
 			# Option setting directive for Foomatic filter
 			# 4 "%" because of the "sprintf" applied to it
@@ -3481,7 +3687,9 @@ sub getexecdocs {
 	my $placeholder = "</TT><I>&lt;$name&gt;</I><TT>";
 	if ($arg->{'style'} eq 'J') {
 	    $cmd = "\@PJL $cmd";
-	    push (@pjlcommands, sprintf($cmd, $placeholder));
+	    my $sprintfcmd = $cmd;
+	    $sprintfcmd =~ s/\%(?!s)/\%\%/g;
+	    push (@pjlcommands, sprintf($sprintfcmd, $placeholder));
 	}
 
 	my $default = htmlify($arg->{'default'});
@@ -3504,11 +3712,13 @@ sub getexecdocs {
 	} elsif ($type eq 'int' or $type eq 'float') {
 	    my $max = (defined($arg->{'max'}) ? $arg->{'max'} : "none");
 	    my $min = (defined($arg->{'min'}) ? $arg->{'min'} : "none");
+	    my $sprintfcmd = $cmd;
+	    $sprintfcmd =~ s/\%(?!s)/\%\%/g;
 	    push(@doctmp,
 		 "<DL><DT><I>$name</I></DT>",
 		 "<DD>A$required $type ${pjl}argument.<BR>",
 		 "$comment<BR>",
-		 "Prototype: <TT>", sprintf($cmd, $placeholder),
+		 "Prototype: <TT>", sprintf($sprintfcmd, $placeholder),
 		 "</TT><BR>",
 		 "Default: <TT>$default</TT><BR>",
 		 "Range: <TT>$min &lt;= $placeholder &lt;= $max</TT>",
@@ -3561,11 +3771,13 @@ sub getexecdocs {
 		}
 	    }
 
+	    my $sprintfcmd = $cmd;
+	    $sprintfcmd =~ s/\%(?!s)/\%\%/g;
 	    push(@doctmp,
 		 "<DL><DT><I>$name</I></DT>",
 		 "<DD>A$required enumerated choice ${pjl}argument.<BR>",
 		 "$comment<BR>",
-		 "Prototype: <TT>", sprintf($cmd, $placeholder),
+		 "Prototype: <TT>", sprintf($sprintfcmd, $placeholder),
 		 "</TT><BR>",
 		 "Default: $default",
 		 "<UL>", 
