@@ -228,6 +228,17 @@ typedef struct comboData {
  * Record for a Foomatic printer entry
  */
 
+typedef struct printerLanguage {
+  xmlChar *name;
+  xmlChar *level;
+} printerLanguage, *printerLanguagePtr;
+
+/* Only for XML files in queue of user-contributed printers */
+typedef struct printerDrvEntry {
+  xmlChar *name;
+  xmlChar *comment;
+} printerDrvEntry, *printerDrvEntryPtr;
+
 typedef struct printerEntry {
   xmlChar *id;
   xmlChar *make;
@@ -269,7 +280,14 @@ typedef struct printerEntry {
   xmlChar *unverified;
   xmlChar *url;
   xmlChar *contriburl;
+  xmlChar *ppdurl;
   xmlChar *comment;
+  /* Pgae Description Languages */
+  int     num_languages;
+  printerLanguagePtr  *languages;
+  /* Drivers (for user-contributed printer entries) */
+  int     num_drivers;
+  printerDrvEntryPtr  *drivers;
 } printerEntry, *printerEntryPtr;
   
 /*
@@ -1488,6 +1506,11 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   xmlNodePtr     cur3;  /* Another XML node pointer */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full printer ID, with "printer/" */
+  xmlChar        *dname;  /* Name of a driver supporting this printer */
+  printerLanguagePtr lentry; /* An entry for a language used by this
+				printer */
+  printerDrvEntryPtr dentry; /* An entry for a driver supporting this
+				printer */
 
   /* Initialization of entries */
   ret->id = NULL;
@@ -1528,6 +1551,11 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   ret->url = NULL;
   ret->contriburl = NULL;
   ret->comment = NULL;
+  ret->ppdurl = NULL;
+  ret->num_languages = 0;
+  ret->languages = NULL;
+  ret->num_drivers = 0;
+  ret->drivers = NULL;
 
   /* Get printer ID */
   id = xmlGetProp(node, (const xmlChar *) "id");
@@ -1661,6 +1689,44 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	    }
 	    cur3 = cur3->next;
 	  }
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "postscript"))) {
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ppd"))) {
+	      ret->ppdurl =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr,
+				 "  URL for the PPD for this printer: %s\n",
+				 ret->ppdurl);
+	    }
+	    cur3 = cur3->next;
+	  }
+	}
+	if ((xmlStrcmp(cur2->name, (const xmlChar *) "pjl")) &&
+	    (xmlStrcmp(cur2->name, (const xmlChar *) "text")) &&
+	    (xmlStrcmp(cur2->name, (const xmlChar *) "comment"))) {
+	  ret->num_languages ++;
+	  ret->languages =
+	    (printerLanguagePtr *)
+	    realloc((printerLanguagePtr *)ret->languages, 
+		    sizeof(printerLanguagePtr) * 
+		    ret->num_languages);
+	  lentry = (printerLanguagePtr) malloc(sizeof(printerLanguage));
+	  if (lentry == NULL) {
+	    fprintf(stderr,"Out of memory!\n");
+	    xmlFreeDoc(doc);
+	    exit(1);
+	  }
+	  ret->languages[ret->num_languages-1] = lentry;
+	  memset(lentry, 0, sizeof(printerLanguage));
+	  lentry->name = perlquote((xmlChar *)(cur2->name));
+	  lentry->level =
+	    perlquote(xmlGetProp(cur2, (const xmlChar *) "level"));
+	  if (lentry->level == NULL) lentry->level = (xmlChar *) "";
+	  if (debug)
+	    fprintf(stderr, "  Printer understands PDL: %s Level %s\n",
+		    lentry->name, lentry->level);
 	}
 	cur2 = cur2->next;
       }
@@ -1850,6 +1916,63 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	    if (debug) fprintf(stderr, "  Comment (en):\n\n%s\n\n",
 			     ret->comment);
+	  }
+	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "drivers"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "driver"))) {
+	  ret->num_drivers ++;
+	  ret->drivers =
+	    (printerDrvEntryPtr *)
+	    realloc((printerDrvEntryPtr *)ret->drivers, 
+		    sizeof(printerDrvEntryPtr) * 
+		    ret->num_drivers);
+	  dentry = (printerDrvEntryPtr) malloc(sizeof(printerDrvEntry));
+	  if (dentry == NULL) {
+	    fprintf(stderr,"Out of memory!\n");
+	    xmlFreeDoc(doc);
+	    exit(1);
+	  }
+	  ret->drivers[ret->num_drivers-1] = dentry;
+	  memset(dentry, 0, sizeof(printerDrvEntry));
+	  dentry->name = NULL;
+	  dentry->comment = NULL;
+	  if (debug) fprintf(stderr, "  Printer supported by driver:\n");
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "name"))) {
+	      dname =
+		xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1);
+	      dentry->name = perlquote(dname);
+	      if (debug) fprintf(stderr, "    Name: %s\n",
+				 dentry->name);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
+	      cur4 = cur3->xmlChildrenNode;
+	      while (cur4 != NULL) {
+		if ((!xmlStrcmp(cur4->name, (const xmlChar *) language))) {
+		  dentry->comment =
+		    perlquote(xmlNodeListGetString(doc, 
+						   cur4->xmlChildrenNode,
+						   1));
+		  if (debug) fprintf(stderr, "    Comment (%s): \n%s\n\n",
+				     language, dentry->comment);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "en"))) {
+		  if (!dentry->comment) {
+		    dentry->comment =
+		      perlquote(xmlNodeListGetString(doc, 
+						     cur4->xmlChildrenNode,
+						     1));
+		    if (debug) fprintf(stderr, "    Comment (en): \n%s\n\n",
+				       dentry->comment);
+		  }
+		}
+		cur4 = cur4->next;
+	      }
+	    }
+	    cur3 = cur3->next;
 	  }
 	}
 	cur2 = cur2->next;
@@ -2817,6 +2940,8 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
 						    input */
 			int debug) { /* Debug flag */
 
+  int i; /* loop variable */
+
   printf("$VAR1 = {\n");
   printf("  'id' => '%s',\n", printer->id);
   printf("  'make' => '%s',\n", printer->make);
@@ -2851,6 +2976,21 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   }
   if (printer->pjl) {
     printf("  'pjl' => '%s',\n", printer->pjl);
+  }
+  if (printer->num_languages > 0) {
+    printf("  'languages' => [\n");
+    for (i = 0; i < printer->num_drivers; i ++) {
+      printf("                   {\n");
+      printf("                     'name' => '%s',\n",
+	     printer->languages[i]->name);
+      printf("                     'level' => '%s',\n",
+	     printer->languages[i]->level);
+      printf("                   },\n");
+    }
+    printf("                 ],\n");
+  }
+  if (printer->ppdurl) {
+    printf("  'ppdurl' => '%s',\n", printer->ppdurl);
   }
   if (printer->general_ieee) {
     printf("  'general_ieee' => '%s',\n", printer->general_ieee);
@@ -2917,6 +3057,18 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   }
   if (printer->driver) {
     printf("  'driver' => '%s',\n", printer->driver);
+  }
+  if (printer->num_drivers > 0) {
+    printf("  'drivers' => [\n");
+    for (i = 0; i < printer->num_drivers; i ++) {
+      printf("                 {\n");
+      printf("                   'name' => '%s',\n",
+	     printer->drivers[i]->name);
+      printf("                   'comment' => '%s',\n",
+	     printer->drivers[i]->comment);
+      printf("                 },\n");
+    }
+    printf("               ],\n");
   }
   if (printer->unverified) {
     printf("  'unverified' => '%s',\n", printer->unverified);

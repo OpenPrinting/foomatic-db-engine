@@ -1,3 +1,8 @@
+2003-07-02  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c: Added stuff needed for a web form to enter
+	  printer data.
+
 2003-06-26  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* configure.in, makeMan.in: Support for IRIX.
