@@ -307,6 +307,20 @@ Implemented in 3.0.0:
 
 Implemented in 3.0.1rc1:
 
+ - CUPS raster drivers can now be used with any spooler. This makes a
+   lot of newer commercial or manufacturer-supplied printer drivers
+   available for non-CUPS environments. To use a CUPS raster driver
+   with a spooler other than CUPS, you need to install GhostScript
+   (preferrably ESP GhostScript) with CUPS raster support, the
+   appropriate CUPS raster driver. You do not need to install the
+   complete CUPS package, the CUPS libraries are enough (libcups and
+   libcupsimage, usually in the "libcups" package of your
+   distribution) and to compile CUPS raster drivers you need also the
+   header files of the CUPS library (libcups-devel, cupsys-dev, or
+   similar package of your distro). Then you can set up a print queue
+   with the PPD file of the CUPS driver the same way as if you had a
+   native PostScript printer.
+
  - If a printer/driver combo has Foomatic-defined JCL options and the
    driver already generates a JCL header, the JCL options are merged
    into the header produced by the driver.
