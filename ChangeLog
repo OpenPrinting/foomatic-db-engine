@@ -4,6 +4,9 @@
 	  support drivers with RGB processing and Gimp-Print 5.0.x support
 	  for new CMYRBK (additional red and blue ink) printers.
 
+	* foomatic-perl-data.c, foomatic-combo-xml.c: Compatibility fixes
+	  for newest gcc.
+
 2004-03-04  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Read paper size with unit out of the driverval
