@@ -7,6 +7,9 @@
 	  not entwr as options in the Perl data structure any more. In
 	  addition, the parser puts also information about option groups
 	  into the structure.
+
+	* foomatic-configure.in: Made foomatic-configure handle
+	  "usb://<make>/<model>" URIs correctly.
 	
 2003-01-26  Till Kamppeter <till.kamppeter@gmx.net>
 

@@ -1135,7 +1135,7 @@ sub setup_cups {
 		# 1.1.12 and newer) to URI for the "mtink" CUPS backend
 		# script (if the script is there)
 		$cupsuri = "mtink:/$1";
-	    } elsif (($cupsuri =~ m!usb!) || ($cupsuri =~ m!USB!)) {
+	    } elsif ($config->{'connect'} =~ m!usb!i) {
 		$cupsuri = cups_usb_device_uri_to_printer_uri($cupsuri);
 		$cupsuri = "usb:$cupsuri";
 	    } elsif (($cupsuri =~ m!lp[0-9]!) || ($cupsuri =~ m!LP[0-9]!)|| 
