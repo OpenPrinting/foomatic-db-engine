@@ -1059,6 +1059,7 @@ sub query_lpd {
 	    } else {
 		$db->{'dat'}{'queuedata'}{'default'} = 0;
 	    }
+	    $db->{'dat'}{'queuedata'}{'remote'} = 0;
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -1311,32 +1312,36 @@ sub query_cups {
 		 and $config->{'queue'} ne $p->{'name'});
 
 	# load the queue data
-	if (!$p->{'remote'}) {
-	    $db->{'dat'} = load_cups_datablob($p->{'name'});
+	$db->{'dat'} = load_cups_datablob($p->{'name'});
 
-	    # extract the queue data block
-	    my $c = $db->{'dat'}{'queuedata'};
-	    
-	    if ($opt_P) {
-		if ($p->{'name'} eq $default) {
-		    $db->{'dat'}{'queuedata'}{'default'} = 1;
-		} else {
-		    $db->{'dat'}{'queuedata'}{'default'} = 0;
-		}
-		my $asciidata = $db->getascii();
-		$asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
-		print $asciidata;
-		$i ++;
-	    } else {
-		# and get it to standard output
-		dump_config($c);
-	    }
+	# Enter info for remote queue
+	if ($p->{'remote'}) {
+	    $db->{'dat'}{'queuedata'}{'foomatic'} = 0;
+	    $db->{'dat'}{'queuedata'}{'spooler'} = 'cups';
+	    $db->{'dat'}{'queuedata'}{'queue'} = $p->{'name'};
+	    $db->{'dat'}{'queuedata'}{'connect'} = $p->{'DeviceURI'};
+	    $db->{'dat'}{'queuedata'}{'description'} = $p->{'Info'};
+	    $db->{'dat'}{'queuedata'}{'loc'} = $p->{'Location'};
+	    $db->{'dat'}{'queuedata'}{'remote'} = 1;
 	} else {
-	    $c->{'foomatic'} = 0;
-	    $c->{'spooler'} = 'cups';
-	    $c->{'queue'} = $p->{'name'};
-	    $c->{'connect'} = $p->{'DeviceURI'};
-	    $c->{'description'} = $p->{'Info'};
+	    $db->{'dat'}{'queuedata'}{'remote'} = 0;
+	}
+
+	# extract the queue data block
+	my $c = $db->{'dat'}{'queuedata'};
+
+	if ($opt_P) {
+	    if ($p->{'name'} eq $default) {
+		$db->{'dat'}{'queuedata'}{'default'} = 1;
+	    } else {
+		$db->{'dat'}{'queuedata'}{'default'} = 0;
+	    }
+	    my $asciidata = $db->getascii();
+	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
+	    print $asciidata;
+	    $i ++;
+	} else {
+	    # and get it to standard output
 	    dump_config($c);
 	}
     }
@@ -1654,6 +1659,7 @@ sub query_pdq {
 	    } else {
 		$db->{'dat'}{'queuedata'}{'default'} = 0;
 	    }
+	    $db->{'dat'}{'queuedata'}{'remote'} = 0;
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -2226,6 +2232,7 @@ sub query_ppr {
 	    } else {
 		$db->{'dat'}{'queuedata'}{'default'} = 0;
 	    }
+	    $db->{'dat'}{'queuedata'}{'remote'} = 0;
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -2603,6 +2610,7 @@ sub query_direct {
 	    } else {
 		$db->{'dat'}{'queuedata'}{'default'} = 0;
 	    }
+	    $db->{'dat'}{'queuedata'}{'remote'} = 0;
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -2797,7 +2805,7 @@ sub load_cups_printersconf {
     }
     if (($< != 0) || (($opt_r) && ($opt_Q))) {
 	# Get info with the "lpstat" command, works for normal users and for
-	# remote printers, but does not show the "Location" info.
+	# remote printers.
 	open LPSTAT, "$sysdeps->{'cups-lpstat'} -l -d -p -v |" or 
 	    die "Cannot execute \"lpstat\".\n";
 	my @lpstat = <LPSTAT>;
@@ -2834,6 +2842,11 @@ sub load_cups_printersconf {
 		    # Description field
 		    if ($currentitem != -1) {
 			$items[$currentitem]{'Info'} ||= $1;
+		    }
+		} elsif ($line =~ m!^\s+Location:\s+(\S.*)$!) {
+		    # Location field
+		    if ($currentitem != -1) {
+			$items[$currentitem]{'Location'} ||= $1;
 		    }
 		} elsif ($line =~ m!^\s+Connection:\s+remote!) {
 		    # Remote printer, only keep it when the "-r" option is

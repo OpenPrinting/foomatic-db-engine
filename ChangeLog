@@ -5,7 +5,11 @@
 	  This makes the initial reading of configuration information by a
 	  frontend much faster. The information will by in
 	  $QUEUES[x]->{'queuedata'}{'default'}, which is 1 for the default
-	  queue and 0 for the other queues.
+	  queue and 0 for the other queues. Added support for the "-r"
+	  option with "foomatic-configure -P"
+	  ($QUEUES[x]->{'queuedata'}{'remote'} field indicates remote
+	  queues). Retrieve the "Location" information of remotely defined
+	  CUPS printers.
 
 2003-08-24  Till Kamppeter <till.kamppeter@gmx.net>
 
