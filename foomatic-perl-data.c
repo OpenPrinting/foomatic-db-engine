@@ -2979,7 +2979,7 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   }
   if (printer->num_languages > 0) {
     printf("  'languages' => [\n");
-    for (i = 0; i < printer->num_drivers; i ++) {
+    for (i = 0; i < printer->num_languages; i ++) {
       printf("                   {\n");
       printf("                     'name' => '%s',\n",
 	     printer->languages[i]->name);
