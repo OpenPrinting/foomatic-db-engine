@@ -47,6 +47,25 @@ LIBSEARCHPATH=/usr/lib:/lib:/usr/local/lib:/opt
 PTALPIPESSEARCHPATH=/var/run:/var:/var/ptal:/usr/var/run:/usr/var:/usr/var/ptal:/usr/local/var/run:/usr/local/var:/usr/local/var/ptal:/dev:/dev/ptal
 MTINKPIPESSEARCHPATH=/var:/var/run:/usr/var/:/usr/var/run:/usr/local/var:/usr/local/var/run:/dev
 
+dnl Get the operating system and version number...
+uname=`uname`
+uversion=`uname -r | sed -e '1,$s/[[^0-9]]//g'`
+if test x$uname = xIRIX64; then
+  uname="IRIX"
+fi
+
+if test x$uname = xIRIX; then
+  SPOOLSEARCHPATH="/usr/freeware/var/spool:$SPOOLSEARCHPATH"
+  LOGSEARCHPATH="/usr/freeware/var/log:$LOGSEARCHPATH"
+  SYSCONFSEARCHPATH="/usr/freeware/etc:$SYSCONFSEARCHPATH"
+  BINSEARCHPATH="/usr/freeware/bin:$BINSEARCHPATH"
+  SBINSEARCHPATH="/usr/freeware/sbin:$BINSEARCHPATH"
+  DATASEARCHPATH="/usr/freeware/share:$DATASEARCHPATH"
+  LIBSEARCHPATH="/usr/freeware/lib32:/usr/freeware/lib:$LIBSEARCHPATH"
+  PTALPIPESSEARCHPATH="/usr/freeware/var/run:$PTALPIPESSEARCHPATH"
+  MTINKPIPESSEARCHPATH="/usr/freeware/var/run:$MTINKPIPESSEARCHPATH"
+fi
+
 dnl Check for Perl
 AC_PATH_PROGS(PERL,perl,/usr/bin/perl,$BINSEARCHPATH)
 

@@ -31,7 +31,8 @@ foreach my $file (@files)
 	$append = "discard\n";
 	next unless -f $file and $file =~ /^(.*\.[1-9])\.in$/;
 	my ($man) = $1;
-	next unless `file $file` =~ m/\b[ntg]roff\b/;
+	next unless ((`file $file` =~ m/\b[ntg]roff\b/) or
+		     (`file $file` =~ m/\[nt\]roff/));
 	print STDERR "MATCHED\n" if $VERBOSE;
 	$append = '';
 	open IN, "<$file" or (warn "Can't read input file $file!" and next FILE);
