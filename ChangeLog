@@ -1,3 +1,11 @@
+2003-08-03  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm, foomatic-ppdfile.in, foomatic-configure.in,
+	  USAGE: Added possibility to limit the length of GUI strings
+	  ("translations") in the generated PPD files ton 39 characters,
+	  so that the CUPS PostScript driver for Windows does not choke on
+	  them.
+	
 2003-08-01  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm, README: Made it possible to define nested

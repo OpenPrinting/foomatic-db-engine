@@ -254,7 +254,7 @@ Adding a queue
 To add a printer queue you use the queue administration tool
 foomatic-configure. You call it this way:
 
-   foomatic-configure [-q] [-f] [-s <spooler>] -n <queue> -c <connection> 
+   foomatic-configure [-q] [-f] [-w] [-s <spooler>] -n <queue> -c <connection> 
 		      [-p <printer ID> -d <driver ID>] [ --ppd <ppdfile> ]
 		      [-o <option>=<value> -o <option>=<value> ...]
 
@@ -264,6 +264,14 @@ Options in [...] can be left out. The options mean:
    -f		Force rebuild: If you queue uses a PPD file generated from
 		the Foomatic database, it will be rebuilt when this option
 		is set. Otherwise only the default settings are updated.
+   -w		Generate PPD which is compatible to the CUPS PostScript
+		driver for Windows (GUI strings are limited to 39 characters).
+		If you use Adobe's PostScript driver on your Windows clients,
+		you do not need to supply this option, because Adobe's driver
+		does not have this bug. Usage of Adobe's driver is recommended
+		as you do not need to live with crippled GUI strings then.
+		This applies only to PPDs built from the Foomatic database, it
+		has no influence on PPDs supplied with the "--ppd" option.
    -s <spooler>	The spooler to be used. If this option is left out, the
 		spooler is auto-detected and the user is asked whether
 		the auto-detection is correct (unless -q is given). Possible
@@ -501,7 +509,7 @@ Copying a queue
 
 To copy a queue we have the "-C" option:
 
-   foomatic-configure [-q] [-f] [-s <spooler>] -n <queue> 
+   foomatic-configure [-q] [-f] [-w] [-s <spooler>] -n <queue> 
 		      -C [sourcespooler] sourcequeue
 		      -c <connection> 
 		      [-p <printer ID> -d <driver ID>] [-o <option>=<value>

@@ -4,7 +4,7 @@ use Foomatic::Defaults;
 use Foomatic::DB;
 use Getopt::Std;
 
-getopts("d:p:ht:f");
+getopts("d:p:ht:fw");
 help() if $opt_h;
 my $driver = $opt_d;
 my $poid   = $opt_p;
@@ -21,7 +21,7 @@ if (defined($driver) and defined($poid)) {
 
     my @data;
 
-    @data = $db->getppd();
+    @data = $db->getppd($opt_w);
     
     print @data;
 }
@@ -31,8 +31,11 @@ exit 0;
 sub help {
     print <<HELP;
 foomatic-ppdfile -d <driver> -p <printerid>
- -d: driver name
- -p: printer id
+ -d: Driver name
+ -p: Printer ID
+ -w: Generate PPD which is compatible to the CUPS PostScript
+     driver for Windows (GUI strings are limited to 39 characters).
+
 HELP
 
 }

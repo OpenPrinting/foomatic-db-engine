@@ -1846,7 +1846,19 @@ sub checklongnames {
     }
 }
 
+sub cutguiname {
+    
+    # If $shortgui is set and $str is longer than 39 characters, return the
+    # first 39 characters of $str, otherwise the complete $str. 
 
+    my ($str, $shortgui) = @_;
+
+    if (($shortgui) && (length($str) > 39)) {
+	return substr($str, 0, 39);
+    } else {
+	return $str;
+    }
+}
 
 #####################
 # PPD generation
@@ -1938,10 +1950,16 @@ sub setgroupandorder {
 # first.
 sub getppd {
 
+    # If $shortgui is set, all GUI strings ("translations" in PPD files) will
+    # be cut to a maximum length of 39 characters. This is needed by the
+    # current (as of July 2003) version of the CUPS PostScript driver for
+    # Windows.
+
     # If $members_in_subgroup is set, the member options of a composite
     # option go into a subgroup of the group where the composite option
     # is located. Otherwise the member options go into a new main group
-    my ($db, $members_in_subgroup) = @_;
+
+    my ($db, $shortgui, $members_in_subgroup) = @_;
 
     die "you need to call getdat first!\n" 
 	if (!defined($db->{'dat'}));
@@ -2229,7 +2247,7 @@ sub getppd {
 		push(@optionblob,
 		     sprintf("\n*Open%sGroup: %s/%s\n",
 			     ($i > 0 ? "Sub" : ""), $group[$i], 
-			     longname($group[$i]))
+			     cutguiname(longname($group[$i]), $shortgui))
 		     );
 		push(@groupstack, $group[$i]);
 	    }
@@ -2237,8 +2255,7 @@ sub getppd {
 
 	if ($type =~ /^(enum|string|password)$/) {
 	    # Extra information for string options
-	    my ($stringextralines0, $stringextralines1) = 
-		('', '', '');
+	    my ($stringextralines0, $stringextralines1) = ('', '');
 	    if ($type =~ /^(string|password)$/) {
 		$stringextralines0 .= sprintf
 		     ("*FoomaticRIPOption %s: %s %s %s\n",
@@ -2303,7 +2320,8 @@ sub getppd {
 		(!$arg->{'hidden'})) {
 
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, 
+			     cutguiname($com, $shortgui)));
 
 		if ($arg->{'style'} ne 'G') {
 		    # For non-PostScript options insert line with option
@@ -2485,7 +2503,8 @@ sub getppd {
 		    # data when this choice is selected.
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
-				 $name, $v->{'value'}, $v->{'comment'},
+				 $name, $v->{'value'},
+				 cutguiname($v->{'comment'}, $shortgui),
 				 $psstr));
 		    # PostScript code is more than one line? Let an "*End"
 		    # line follow
@@ -2646,7 +2665,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    my $psstrf = "";
 
 	    push(@optionblob,
-		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, $com));
+		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, 
+			 cutguiname($com, $shortgui)));
 
 	    if ($arg->{'style'} eq 'G') {
 		# Ghostscript argument
@@ -2675,9 +2695,11 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		 sprintf("*OrderDependency: %s AnySetup *%s\n", 
 			 $order, $name),
 		 sprintf("*Default%s: $defstr\n", $name),
-		 sprintf("*%s True/%s: \"%s\"\n", $name, $name, $psstr),
+		 sprintf("*%s True/%s: \"%s\"\n", $name, 
+			 cutguiname($name, $shortgui), $psstr),
 		 ($psstr =~ /\n/s ? "*End\n" : ""),
-		 sprintf("*%s False/%s: \"%s\"\n", $name, $namef, $psstrf),
+		 sprintf("*%s False/%s: \"%s\"\n", $name,
+			 cutguiname($namef, $shortgui), $psstrf),
 		 ($psstrf =~ /\n/s ? "*End\n" : ""),
 		 sprintf("*CloseUI: *%s\n", $name));
 	    
@@ -2759,7 +2781,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    # Skip zero or one choice arguments
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name,
+			     cutguiname($com, $shortgui)));
 
 		# Insert lines with the special properties of a
 		# numerical option. Do this also for PostScript options
@@ -2822,7 +2845,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    }
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
-				 $name, $v, $v, $psstr));
+				 $name, $v, 
+				 cutguiname($v, $shortgui), $psstr));
 		    # PostScript code is more than one line? Let an "*End"
 		    # line follow
 		    if ($psstr =~ /\n/s) {
@@ -2939,7 +2963,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    # Skip zero or one choice arguments
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, 
+			     cutguiname($com, $shortgui)));
 
 		# Insert lines with the special properties of a
 		# numerical option. Do this also for PostScript options
@@ -3003,7 +3028,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    }
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
-				 $name, $v, $v, $psstr));
+				 $name, $v, 
+				 cutguiname($v, $shortgui), $psstr));
 		    # PostScript code is more than one line? Let an "*End"
 		    # line follow
 		    if ($psstr =~ /\n/s) {

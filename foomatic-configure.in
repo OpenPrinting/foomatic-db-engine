@@ -53,6 +53,8 @@ use Getopt::Long;
 Getopt::Long::Configure("no_ignore_case");
 GetOptions("q"   => \$opt_q,         # Quiet, non-interactive operation
 	   "f"   => \$opt_f,         # Force rebuild of PPD from database
+	   "w"   => \$opt_w,         # Cut GUI strings in the PPD to 39
+				     # characters (for CUPS Windows driver)
 	   "n=s" => \$opt_n,         # queue Name
 	   "N=s" => \$opt_N,         # human-readable Name (Model, 
 	                             # Description)
@@ -84,6 +86,8 @@ get_xml() if $opt_X;
 
 $force = ($opt_f ? 1 : 0); 
 
+$shortgui = ($opt_w ? 1 : 0); 
+
 my $in_config = {'queue'    => $opt_n,
 		 'desc'     => $opt_N,
 		 'loc'      => $opt_L,
@@ -94,6 +98,7 @@ my $in_config = {'queue'    => $opt_n,
 		 'connect'  => $opt_c,
 		 'options'  => \@opt_o,
 		 'force'    => $force,
+		 'shortgui' => $shortgui,
 	         'foomatic' => 1};
 
 # If description and location contain only whitespace, use an empty string
@@ -412,7 +417,7 @@ sub writeppdfile {
 	} elsif ($newfoomaticdata) {
 	    # Generate the PPD file from the Foomatic database
 	    open PPDFILE, "> $ppdfile" or die "Cannot write $ppdfile!\n";
-	    print PPDFILE $db->getppd();
+	    print PPDFILE $db->getppd($config->{'shortgui'});
 	    close PPDFILE;
 	} else {
 	    # Keep the previous PPD file, only set the options and the
@@ -3984,7 +3989,7 @@ sub print_perl_combo_data {
 	    if (!$possible);
 	# Generate the PPD and extract it to Perl again (to get in the
 	# composite options)
-	my $ppd = $db->getppd();
+	my $ppd = $db->getppd($config->{'shortgui'});
 	delete ($db->{'dat'});
 	$db->{'dat'} = ppdfromvartoperl(split(/\n/, $ppd));
     }
@@ -4087,14 +4092,16 @@ sub help {
 Usage: $progname [ -s spooler ] -n queuename \
 			  [ -N 'Name/Descr.' ] [ -L 'Location Info' ] \
 			  [ -c connect ] \
-			  [ --ppd ppdfile ] [ -d driver ] [ -p printer ] \
-			  [ -o option1=value1 -o option2 ... ] [ -f ] [ -q ]
+			  [ -d driver ] [ -p printer ] [ -f ] [ -w ] \
+			  [ --ppd ppdfile ] \
+			  [ -o option1=value1 -o option2 ... ] [ -q ]
     or $progname -C [ -s spooler ] -n queuename \
 	                  [ sourcespooler ] sourcequeue \
 	                  [ -N 'Name/Descr.' ] [ -L 'Location Info' ] \
 			  [ -c connect ] \
-			  [ --ppd ppdfile ] [ -d driver ] [ -p printer ] \
-			  [ -o option1=value1 -o option2 ... ] [ -f ] [ -q ]
+			  [ -d driver ] [ -p printer ] [ -f ] [ -w ] \
+			  [ --ppd ppdfile ] \
+			  [ -o option1=value1 -o option2 ... ] [ -q ]
     or $progname -D [ -s spooler ] -n queuename [ -q ]
     or $progname -R [ -s spooler ] -n queuename [ -q ]
     or $progname -Q [ -s spooler ] [ -n queuename ] [ -q ] [ -r ]
@@ -4150,6 +4157,10 @@ Usage: $progname [ -s spooler ] -n queuename \
  -O              Print XML Overview of all known printer/drivers
  -X              Print XML data for -p printer and/or -d driver object
  -f              Force rebuild of PPD file from database
+ -w              Generate PPD which is compatible to the CUPS PostScript
+                 driver for Windows (GUI strings are limited to 39 characters).
+                 This applies only to PPDs built from the Foomatic database, it
+                 has no influence on PPDs supplied with the "--ppd" option.
  -q              Run quietly and non-interactive
  -h  --help      Show this help message
 
