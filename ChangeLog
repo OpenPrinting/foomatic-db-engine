@@ -1,5 +1,8 @@
 2002-11-29  Till Kamppeter <till.kamppeter@gmx.net>
 
+	* *: Tagged CVS for the release of foomatic-db-engine 2.9.0pre1. 
+	  Tag name: "foomatic-db-engine-2_9_0pre1".
+	
 	* README: Added list of implemented and planned features for
 	  Foomatic 3.0.
 
