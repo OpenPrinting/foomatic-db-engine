@@ -522,6 +522,7 @@ sub ppdtoperl {
 
     my $dat = {};              # data structure for the options
     my $currentargument = "";  # We are currently reading this argument
+    my $isfoomatic = 0;        # Do we have a Foomatic PPD?
 
     # If we have an old Foomatic 2.0.x PPD file, read its built-in Perl
     # data structure into @datablob and the default values in %ppddefaults
@@ -557,6 +558,14 @@ sub ppdtoperl {
 	    $line =~ m!^([^\"]*)\"!;
 	    $cmd .= $1;
 	    $dat->{'makemodel'} = unhtmlify($cmd);
+	    $dat->{'makemodel'} =~ s/^([^,]+),.*$/$1/;
+	    # The following fields are only valid for Foomatic PPDs
+	    # they will be deleted when it turns out that this PPD
+	    # is not a Foomatic PPD.
+	    if ($dat->{'makemodel'} =~ /^(\S+)\s+(\S.*)$/) {
+		$dat->{'make'} = $1;
+		$dat->{'model'} = $2;
+	    }
 	} elsif (m!^\*FoomaticIDs:\s*(\S+)\s+(\S+)\s*$!) {
 	    # "*FoomaticIDs: <printer ID> <driver ID>"
 	    my $id = $1;
@@ -564,6 +573,7 @@ sub ppdtoperl {
 	    # Store the values
 	    $dat->{'id'} = $id;
 	    $dat->{'driver'} = $driver;
+	    $isfoomatic = 1;
 	} elsif (m!^\*FoomaticRIPPostPipe:\s*\"(.*)$!) {
 	    # "*FoomaticRIPPostPipe: <code>"
 	    my $line = $1;
@@ -906,6 +916,12 @@ sub ppdtoperl {
 	}
     }
     close PPD;
+
+    # Remove make and model fields when we don't have a Foomatic PPD file
+    if (!$isfoomatic) {
+	$dat->{'make'} = undef;
+	$dat->{'model'} = undef;
+    }
 
     # If we have an old Foomatic 2.0.x PPD file use its Perl data structure
     if ($#datablob >= 0) {
