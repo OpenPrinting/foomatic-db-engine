@@ -1,3 +1,13 @@
+2002-10-29  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Do not add "*VariablePaperSize: False" to
+	  the PPD file when variable page sizes are supported.
+
+	* lib/Foomatic/DB.pm: Encoding of option code: When splitting long
+	  lines, mark the end with "&&" to distinguish between split lines
+	  and newlines. Make colon and opening quotes of a PPD line with
+	  code always being in the same line as the keyword.
+
 2002-10-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-datafile.in: Changed meaning of the "-t" settings:

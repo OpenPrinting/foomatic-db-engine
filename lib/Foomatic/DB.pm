@@ -2071,6 +2071,9 @@ sub getgenericppd {
 ";
 			
 			unshift (@optionblob, $custompagesizeheader);
+		    } else {
+			unshift (@optionblob,
+				 "*VariablePaperSize: False\n\n");
 		    }
 		}
 	    }
@@ -2498,7 +2501,7 @@ sub getppd {
     # Insert the command line prototype right before the option
     # descriptions
     
-    my $header = "*FoomaticRIPCammandLine";
+    my $header = "*FoomaticRIPCommandLine";
     my $cmdline = $dat->{'cmd'};
     my $cmdlinestr = ripdirective($header, $cmdline);
     push(@optionblob, "$cmdlinestr\n");
@@ -2807,6 +2810,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 ";
 			
 			unshift (@optionblob, $custompagesizeheader);
+		    } else {
+			unshift (@optionblob,
+				 "*VariablePaperSize: False\n\n");
 		    }
 		}
 	    } elsif ((1 == scalar(@{$arg->{'vals'}})) &&
@@ -2857,7 +2863,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		$psstr = "$header=True";
 		$psstrf = "$header=False";
 		my $header = sprintf
-		    ("*FoomaticRIPOptionSetting %s=True", $name);
+		    ("*FoomaticRIPOptionSetting %s", $name);
 		my $foomaticstr = ripdirective($header, $cmd) . "\n";
 		# For non-PostScript options insert line with option
 		# properties
@@ -3388,32 +3394,58 @@ sub htmlify {
 # PPD specification does not allow such long lines.
 sub ripdirective {
     my ($header, $content) = ($_[0], htmlify($_[1]));
+    # If possible, make lines of this length
     my $maxlength = 72;
+    # Header of continuation line
     my $continueheader = "";
-    my $continuelineend = "";
+    # Two subsequent ampersands are not possible in an htmlified string,
+    # so we can use them at the line end to mark that the current line
+    # continues on the next line. A newline without this is also a newline
+    # in the decoded string
+    my $continuelineend = "&&";
+    # output string
     my $out;
+    # The colon and the quote after the header must be on the line with
+    # the header
+    $header .= ": \"";
+    # How much of the current line is left?
     my $freelength = $maxlength - length($header) -
 	length($continuelineend) - 3;
+    # Add the header
     if ($freelength < 0) {
+	# header longer than $maxlength, don't break it
 	$out = "$header$continuelineend\n$continueheader";
 	$freelength = $maxlength - length($continueheader) -
 	    length($continuelineend);
     } else {
 	$out = "$header";
     }
-    $out .= ": \"";
     $content .= "\"";
-    while ($content) {
-	if (length($content) < $freelength) {
-	    $freelength = length($content);
+    # Go through every line of the $content
+    for $l (split ("\n", $content)) {
+	while ($l) {
+	    # Take off $maxlength portions until the string is used up
+	    if (length($l) < $freelength) {
+		$freelength = length($l);
+	    }
+	    my $line = substr($l, 0, $freelength, "");
+	    # Add the portion 
+	    $out .= $line;
+	    # Finish the line
+	    if ($l) {
+		# Line conmtinues in next line
+		$freelength = $maxlength - length($continueheader) -
+		    length($continuelineend);
+		$out .= "$continuelineend\n$continueheader";
+	    } else {
+		# line ends
+		$out .= "\n";
+		last;
+	    }
 	}
-	my $line = substr($content, 0, $freelength, "");
-	$out .= $line;
-	last if (!$content);
-	$freelength = $maxlength - length($continueheader) -
-	    length($continuelineend);
-	$out .= "$continuelineend\n$continueheader";
     }
+    # Remove trailing newline
+    $out = substr($out, 0, -1);
     return $out;
 }
 
@@ -3868,7 +3900,6 @@ sub get_tmpl {
 *FileSystem:	False
 *Throughput:	"1"
 *LandscapeOrientation: Plus90
-*VariablePaperSize: False
 *TTRasterizer:	Type42
 \@\@OTHERSTUFF\@\@
  
