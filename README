@@ -217,6 +217,18 @@ Implemented in 3.0.0rc1:
    demands goes to the tab with the member options and makes detailed
    choices.
 
+ - Forced composite options: These are special composite options where
+   the user cannot set the individual member options, but only the
+   composite option (the user is forced to use the composite
+   option). This allows options acting at two or more places, for
+   example a "PageSize" option for a driver which is a filter
+   translating GhostScript bitmap output to the printer's
+   language. One lets one member option be an option inserting
+   PostScript code for the page size into the PostScript input data
+   stream for GhostScript, and another member option insert the
+   correct bitmap size into the filter's command line. The user sees
+   only the composite option and sets the paper size with it as usual.
+
  - URIs (Unified Resource Identifiers, the descriptions for the
    printer connection type used with the "-c" option of
    foomatic-configure) are exactly the same as under CUPS now. The
@@ -1537,11 +1549,11 @@ things, but the two biggies are the prototype and the printers list
 Composite Options
 -----------------
 
-This is a new option type to make it easier for users to choose the
-best settings for a certain printing task, even if the driver has very
-many options. The idea is to have an enumerated choice option which
-does not directly modify something in the driver's command line but
-sets several of the other options.
+This is an option type to make it easier for users to choose the best
+settings for a certain printing task, even if the driver has very many
+options. The idea is to have an enumerated choice option which does
+not directly modify something in the driver's command line but sets
+several of the other options.
 
 One example is the "PrintoutMode" option which will be made available
 for all printer/driver combos which have at least one option regarding
@@ -1732,6 +1744,124 @@ than for a "PrintoutMode" option, for example a finisher could be
 controlled by a composite option (to have the most common finishing
 tasks as "Bound booklet", "Stapled booklet", "Letter in envelope",
 ...).
+
+
+Forced Composite Options
+------------------------
+
+Forced composite options are very similar to composite options, but the
+user cannot set the individual member options, but only the composite
+option (the user is forced to use the composite option). This allows
+options acting at two or more places.
+
+Example: A printer driver is a filter which converts a generic bitmap
+produced by GhostScript to the printer's native format. The command
+line for converting PostScript to the printer's language could look like this
+
+gs -q -dBATCH -dSAFER -dNOPAUSE -sDEVICE=bitcmyk -r600 -sOutputFile=-
+- | filter -size=<width>x<height>
+
+where <width> and <height> is the page size in points (1/72
+inches). In addition, GhostScript needs to no the page size. For this
+one usually puts the following PostScript code into the PostScript
+input file:
+
+<</PageSize[<width> <height>]/ImagingBBox null>>setpagedevice
+
+where <width> and <height> is again the page size in points. So we
+need two options for setting the page size, one PostScript option to
+set the page size for GhostScript and one command line option to set
+the page size for the filter. The user would have to change both when
+he wants to print on another paper size, and it does not make sense to
+have different settings for the two. So one could make the "PageSize"
+option a composite option of the two, but then the GUI exposes an ugly
+"PageSize" option with the two individual options. To avoid this, one
+uses a forced composite option ("Forced" because the user is forced to
+use the composite option, the individual member options are not
+accessible.
+
+Assuming that the name of the PostScript option for the page size is
+"GSPageSize", the name of the page size option for the filter is
+"filterPageSize" and both have the choices "A4", "Letter", and
+"Legal", the forced composite option named "PageSize" would look as
+follows:
+
+--------------------------------------------------------------------------
+<option type="enum" id="opt/filter-PageSize">
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+  <arg_longname>
+   <en>Page Size</en>
+  </arg_longname>
+  <arg_shortname>
+   <en>PageSize</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+  <arg_execution>
+   <arg_order>10</arg_order>
+   <arg_section>AnySetup</arg_section>
+   <arg_spot>A</arg_spot>
+   <arg_forced_composite />
+   <!-- <arg_proto></arg_proto> -->
+  </arg_execution>
+  <constraints>
+     <constraint sense="true">
+      <driver>filter</driver>
+      <arg_defval>ev/filter-PageSize-Letter</arg_defval>
+     </constraint>
+  </constraints>
+  <enum_vals>
+   <enum_val id="ev/filter-PageSize-Letter">
+    <ev_longname>
+     <en>Letter</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Letter</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>GSPageSize=Letter filterPageSize=Letter</ev_driverval>
+   </enum_val>
+   <enum_val id="ev/filter-PageSize-Legal">
+    <ev_longname>
+     <en>Legal</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Legal</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>GSPageSize=Legal filterPageSize=Legal</ev_driverval>
+   </enum_val>
+   <enum_val id="ev/filter-PageSize-A4">
+    <ev_longname>
+     <en>A4</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>A4</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>GSPageSize=A4 filterPageSize=A4</ev_driverval>
+   </enum_val>
+  </enum_vals>
+</option>
+--------------------------------------------------------------------------
+
+This looks exactly like a usual composite option and works also the
+same way. The only difference is that instead of an "<arg_composite
+/>" tag "<arg_forced_composite />" is used. If the PPD generator finds
+such an option, it hides the member options by only using
+"*Foomatic..." keywords to describe them, not any standard PPD
+keywords as "*OpenUI...", "*OrderDependency...", ... This way
+PPD-aware graphical frontends do not see the member options but
+"foomatic-rip" has all information from them to run the driver
+correctly.
 
 
 Option Grouping
