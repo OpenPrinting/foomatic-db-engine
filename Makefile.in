@@ -143,7 +143,6 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-kitload foomatic-ppdfile foomatic-preferred-driver \
 	foomatic-cleanupdrivers foomatic-getpjloptions \
 	foomatic-addpjloptions foomatic-compiledb foomatic-fix-xml \
-	foomatic-ppdload \
 	foomatic-nonumericalids foomatic-replaceoldprinterids
 
 # User programs and helper programs
@@ -152,7 +151,7 @@ BINFILES:=foomatic-printjob foomatic-configure \
 	foomatic-ppdfile foomatic-compiledb
 
 # Administrative commands, only useful for admins
-SBINFILES:=foomatic-kitload foomatic-ppdload \
+SBINFILES:=foomatic-kitload \
 	foomatic-getpjloptions foomatic-addpjloptions \
 	foomatic-preferred-driver foomatic-fix-xml \
 	foomatic-nonumericalids foomatic-replaceoldprinterids
