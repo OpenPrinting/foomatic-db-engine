@@ -37,11 +37,16 @@ This is the development version of Foomatic. See
 
 http://www.linuxprinting.org/contribute.html#programming
 http://www.linuxprinting.org/pipermail/foomatic-devel/2002q3/thread.html
+http://www.linuxprinting.org/pipermail/foomatic-devel/2002q4/thread.html
 http://www.linuxprinting.org/kpfeifle/LinuxKongress2002/Tutorial/IV.Foomatic-Developer/IV.tutorial-handout-foomatic-development.html
 
 Your suggestions, bug reports, patches, ... are welcome on
 
 http://www.linuxprinting.org/newsportal/thread.php3?name=linuxprinting.foomatic.devel
+
+For testing the ongoing development of our web interface, go to
+
+http://www.linuxprinting.org/foomatic2.9/
 
 Do not use this package in production environments, it can contain
 severe bugs or even be non-functional.
@@ -50,8 +55,14 @@ severe bugs or even be non-functional.
 Old roadmap which lead to Foomatic 2.0: 
 http://www.linuxprinting.org/pipermail/foomatic-devel/2001q1/000073.html
 
-This version implements nearly all of what's necessary for Phase 2.  In
-particular:
+This version implements the new foomatic-rip/PPD-based structure of
+the upcoming Foomatic 3.0.
+
+New features in for Foomatic 3.0:
+
+ -
+
+General features:
 
  - The XML database is fully internationalized, with complete support
    for...  well, English.  The backends only accept English, because
@@ -64,40 +75,36 @@ particular:
    a printer overview list which shows all printers and for each printer
    which drivers make this model work and you can also generate an XML file
    with all information needed to use a certain printer with certain driver,
-   which is the basis for the datafiles which are used to configure printer
-   queues under a spooler. These XML can also be transformed into a Perl
-   data structure.
+   which is the basis for the PPD files which are used to configure printer
+   queues under a spooler. These XML files can also be transformed into a 
+   Perl data structure.
 
- - All XML handling is now done by two C programs, one makes use of libxml
+ - All XML handling is done by two C programs, one makes use of libxml
    to do a DOM parsing of all types of XML files appearing in the Foomatic
    system to get Perl data structures out of them, because Foomatic does all
    printer configuration, job manipulation, printing, and filtering with
    Perl scripts. The other one does XML-to-XML operations: the generation
    of the printer overview list, and the generation of the printer/driver
-   combo files. This operations involve reading hundreds of files, cutting
+   combo files. These operations involve reading hundreds of files, cutting
    them apart and assembling them together in another way. To make this as
-   fast as possible and also less memory-consuming, I (Till) didn't use 
+   fast as possible and also less memory-consuming, we do not use 
    libxml, but did the parsing "manually" to keep data moving operations
    low.
 
- - All configuration work, especially the generation of the spooler-specific
-   configuration files is done by Perl code, because it is much easier to
-   implemnent text manipulation operations in Perl. The spooler-specific
-   configuration files are based in the .foo Perl data structure coming from
-   the very beginning of Foomatic, so the filter scripts can be pure
-   standard Perl without needing non-standard Perl libraries or C backends.
-   This makes it easy, to manually set up Foomatic queues with a data file
-   and filter downloaded from linuxprinting.org.
-
- - The API of the Foomatic Perl library has been significantly cleaned up.
+ - All configuration work, especially the generation of the PPD files
+   is done by Perl code, because it is much easier to implemnent text 
+   manipulation operations in Perl. Also the universal, spooler-independent
+   print filter foomatic-rip (in the foomatic-filters package) is written 
+   completely in Perl. foomatic-rip does not use any non-standard Perl
+   libraries.
 
  - A program foomatic-configure is provided which implements complete
    printer configuration for the common spoolers. It is designed to
    support CUPS, PPR, PDQ, LPRng, LPD, GNUlpr, and direct spooler-less
    printing and it is designed to make it easy to write GUI or automagic
    printer configuration tools. It also transfers queues between different
-   spoolers and generates Perl data structures so that frontends can build
-   menues.
+   spoolers and generates Perl data structures or XML files so that
+   frontends can build menues.
 
  - Printing and managing print jobs is done by foomatic-printjob,
    you supply exactly the same command line options for doing the same
@@ -115,23 +122,19 @@ particular:
    printer/driver combo (combo XML file) works in a reasonable time and
    with a reasonable amount of memory. So computing of data can be done
    when the data is needed. Shipping big pre-built data collections or
-   having an on-disk cache is not necessary any more.
+   having an on-disk cache is not necessary.
 
- - One can produce PPD files for PPD-aware applications as Star Office,
+ - The PPD files serve also for PPD-aware applications as Star Office,
    Open Office, the GIMP (for printers not supported by GIMP-Print), GPR,
    Windows/Mac clients using their PostScript driver (and the Linux/Unix
    server using the Linux driver for the printer). They give access to
    all the driver's options in the printing dialogs of said
-   appllications. This works for all spoolers.
+   applications. This works for all spoolers.
 
- - The old Perl-XML/Grove/disk-cache version of the Foomatic Perl
-   library is still available as lib/Foomatic/DB_perl_xml.pm (a copy of 
-   the old lib/Foomatic/DB.pm, not used by a standard Foomatic
-   installation) See the comments in the beginning of 
-   lib/Foomatic/DB_perl_xml.pm to know more about this old system.
 
 The upshot of all this is that you can now make changes easily and run
 the scripts to calculate out whatever your backend needs directly.
+
 
 Programs and important files from this package
 ----------------------------------------------
@@ -140,7 +143,7 @@ Note: The scripts appear as ".in" files in the source tree and CVS, because
 the path for the Perl interpreter/the bourne shell is inserted by the
 "configure" script.
 
-configure.ac
+configure.in
 
   The source from which GNU autoconf generates the "configure" script
 
@@ -161,23 +164,31 @@ install-sh
 
   Helper script for "configure"
 
-foomatic-datafile
+foomatic-ppdfile
 
-  This program will compute the spooler-specific datafile for any
-  spooler/printer/driver tuple, or a spooler-independent PPD file for
-  applications/clients being able to access the printer's options.
+  This program will compute the spooler-independent Foomatic PPD file
+  for any valid printer/driver combo available in the Foomatic database,
+  both for printing with foomatic-rip and for applications/clients being
+  able to access the printer's options.
 
 foomatic-configure
 
   See USAGE for more info.
 
   This is the great-grandady of printer configuration programs.
-  You can invoke this to configure a printer
-  and driver under any spooler with any sort of printer connection.
-  It includes methods to summarize the current configurations, to add
-  new queues, reconfigure existing queues, enumerate the printers
-  known to the world, and return xml data objects describing
-  individual printers and drivers.
+
+  You can invoke this to configure a printer under any spooler with any
+  sort of printer connection.
+
+  The printer can be either one in the Foomatic database, it can be
+  one for which you have a PPD file (for example a PostScript printer
+  with the PPD from the Windows driver) or a printer which you want to
+  use without driver/filter (raw queue).
+
+  It also includes methods to summarize the current configurations, to add
+  new queues, reconfigure existing queues, enumerate the printers known to 
+  the world, and return xml data objects describing individual printers and 
+  drivers.
 
   It should be very straightforward to write interactive printer
   configuration tools around this script:
@@ -199,33 +210,34 @@ foomatic-configure
 
   Regarding item (2), the summary of current config.  It shows each
   queue, giving attributes for spooler, and various settings.  Queues
-  with the foomatic attribute set to zero are not foomatic-configure
-  configured queues (or raw queues). Trying to modify them with
-  foomatic-configure would turn them into raw queues. The summary shows
-  also which is the default queue, if a default queue is defined for the
-  current spooler. The $PRINTER environment variable is not taken into
-  account here.
+  with the foomatic attribute set to zero are neither queues set up with
+  the help of the Foomatic database nor set up with a PPD file (and
+  foomatic-rip in case of LPRng, LPD, GNUlpr, PDQ, or no spooler). These
+  queues cannot be modified by foomatic-configure. Trying to modify them
+  would turn them into raw queues. The summary shows also which is the
+  default queue, if a default queue is defined for the current spooler.
+  The $PRINTER environment variable is not taken into account here.
 
   For all spoolers, foomatic-configure fully groks the configuration
   format. It rewrites the whole thing, preserving ordering, comments,
   etc, and regularizing the syntax on each rewrite.  So it can change
-  entries that are clearly lpdomatic ones, and leave others alone. Also
-  changes of the option default settings done manually (or with KUPS,
-  XPP, XPDQ, KDEPrint, ...) are preserved when modifying a queue.
+  entries that are clearly foomatic-rip/PPD ones, and leave others 
+  alone. Also changes of the option default settings done manually (or 
+  with KUPS, XPP, XPDQ, KDEPrint, ...) are preserved when modifying
+  a queue.
 
   It is wrong to store configuration in a weird place just because foomatic 
   is used: the user should be able to edit the config by hand the
   old-fashioned way...
 
-  When configuring printers, the spooler-specific datafile is put into
-  /etc/foomatic/<spooler>/ (and if needed symlinked to from
-  elsewhere).  The corresponding XML combo file and a PPD file (to be
-  symlinked/used by applications or clients) is put in
-  /etc/foomatic/. They all get a basename taken from the queue name.
+  When configuring printers, the PPD file is put into 
+  /etc/foomatic/<spooler>/ (and if needed symlinked to from elsewhere).
+  The PPD files are Adobe-compliant and can also be symlinked/used by 
+  applications or clients. They get a basename taken from the queue name.
 
   For printer configuration frontends it is necessary to get all info
   about the queue configuration, the options, possible settings, and
-  default settings. This info can be retrived as a Perl data
+  default settings. This info can be retrieved as a Perl data
   structure. The structure produced by
 
      foomatic-configure -q -P > testfile.pl
@@ -271,6 +283,11 @@ foomatic-ppdload
   given ID from the "ppd" driver in the Foomatic database. See the man
   page for more info.
 
+  This program is mostly interesting for developers. If you want to
+  set up a queue with the native PPD file of a PostScript printer,
+  simply use the PPD file directly instead of converting it into XML
+  first.
+
 foomatic-getpjloptions
 
   Reads the PJL options from local (parallel, USB. serial, ...) or remote
@@ -291,19 +308,29 @@ foomatic-addpjloptions
   Note: The program needs the three files foomatic-templates/pjl*.xml
 
   Example for making available the PJL options of the networked HP LaserJet
-  4050 (Foomatic ID: 62304), hostname printer6, port 9100 with CUPS:
+  4050 (Foomatic ID: 62304), hostname printer6, port 9100:
 
   # Remove the "native" PJL options from the database
   rm -f `grep -li "pjl" db/source/opt/*.xml`
   # Remove the options from a former PJL option poll on the same printer
   rm -f foomatic-db/opt/pjl-62304-*
   # Get the PJL options from the printer
-  ./foomatic-getpjloptions printer6 9100 | ./foomatic-addpjloptions -p 62304
+  foomatic-getpjloptions printer6 9100 | foomatic-addpjloptions -p 62304
   # Move the XML files into the database
-  ./foomatic-kitload -k foomatic-db/
-  # Make a PPD file and recompile all needed Foomatic files
-  ./foomatic-datafile -f -t cups -d lj5gray -p 62304 > lj4050.ppd
+  foomatic-kitload -k foomatic-db/
   # Set up printer queue
+  foomatic-configure -n LaserJet4050 -c socket://printer6:9100/ \
+     -d lj5gray -p 62304
+
+  Instead of "foomatic-configure" you can also generate the PPD file: 
+
+  ./foomatic-ppdfile -d lj5gray -p 62304 > lj4050.ppd
+
+  And set up the queue manually as described on
+  http://www.linuxprinting.org/
+
+  For CUPS you can for example do:
+
   lpadmin -p LaserJet4050 -E -v socket://printer6:9100/ -P lj4050.ppd
 
 foomatic-kitload
@@ -334,14 +361,14 @@ foomatic-ipp
 
   This program (not yet written) provides basic IPP export for queues
   accessible to foomatic-printjob and foomatic-configure.  Whee!
+  (Grant, are you still planning to do that?)
 
 foomatic-compiledb
 
   This program will run around and generate combo data for all valid
   printer/driver combinations (or for selected drivers). The data is put
   into one directory and it is generated in a format specified by the user
-  (PPD, LPD/LPRng/GNUlpr, PPR, PDQ, spooler-less printing, old CUPS PPD,
-  or printer/driver combo XML).
+  (PPD files or printer/driver combo XML files).
 
   compile_db takes a -j# flag: it will run that many compute
   processes in parallel.  You should run compile_db with a -j flag to 
@@ -350,7 +377,7 @@ foomatic-compiledb
   another with -f until they all finish).
 
   Generally, compile_db should just not be necessary except for people
-  who want to distribute sets of configuration files. Foomatic-datafile and
+  who want to distribute sets of configuration files. foomatic-ppdfile and
   especially foomatic-configure will automagically compute just what they 
   need at runtime.
 
@@ -425,69 +452,38 @@ foomatic-preferred-driver
   entry from the database which belongs to a driver which is not built
   into your GhostScript).
 
-etc/printcap
-
-  My (Grant) testing printcap and etcdir for foomatic-configure.
-
 
 Filters
 -------
 
-These filter scripts are provided by the "foomatic-filters" packages. It is
-planned to modify them so that they all work with PPD files and even with
-non-Foomatic PPD files as they come with PostScript printers. Then
-spooler-specific printer/driver description files will not be needed any
-more.
+To be able to print with the PPD files and queues made with the stuff
+in this package, you need the foomatic-rip filter provided by the
+"foomatic-filters" package.
 
-lpdomatic
+foomatic-rip
 
-  Runs under LPD, VA's GNUlpr LPD variant, LPRng, and probably others.
-  Currently uses a plain Perl dump of the old-style combo data as
-  input.
+  See the documentation of the "foomatic-filters" package for more info.
 
-cupsomatic
-
-  Runs under CUPS.  The datafile is a Perl dump of the old-style combo
-  data embedded as comments at the end of an automatically generated
-  PPD.  The PPD reflects all the options, numerical options are mapped to
-  enumerated options. Some GUIs (KDE 3.x, XPP 1.1 and newer) show the
-  numerical options as numerical options anyway.
-
-ppromatic
-
-  Runs under PPR.  The datafile is a Perl dump of the old-style combo
-  data embedded as comments at the end of an automatically generated
-  PPD.  The PPD reflects all the options, numerical options are mapped to
-  enumerated options.
-
-pdqomatic
-
-  Not actually a standalone program at this time.  Rather, the
-  Foomatic::DB code directly generates PDQ driver declaration with
-  embedded shell script code to implement everything needed.
-
-mfomatic
-
-  Runs under magicfilter, mainly for LPRng use.  A derivative of this
-  is used by Red Hat (?).  Takes the old-style Perl dump as input.
-  Works together with a slightly modified magicfilter; code here
-  generates magicfilter definitions that process ascii properly and
-  pipe Postgres into mfomatic.  mfomatic is probably broken. I (Till)
-  never tested this, and in reality it is not needed. When one has
-  "a2ps" installed, one can print many different file types on a printer
-  set up with lpdomatic.
-
-directomatic
-
-  Filter for printing directly to the printer, without any spooler,
-  uses the same plain Perl dump as lpdomatic as input.
+  This is a universal print filter which works with all printer spoolers
+  auto-detecting the spooler from which it is called. Its job is to
+  translate the incoming data (PostScript in most cases) to the
+  printer's native language taking into account all option settings,
+  either defaults or job-specific ones. It reads the PPD file assigned
+  to the print queue, either a Foomatic-generated one or a 
+  manufacturer-supplied PPD file of a PostScript printer, uses the
+  information to find the default option settings and to build the
+  renderer's (usually GhostScript, "cat" for PostScript printers)
+  command line, and applies the user-supplied options. Then it builds
+  the renderer's command line and passes the data through it. If the
+  data is not PostScript, a pre-filter ("a2ps", "enscript", "mpage",
+  ...) is added.
 
 foomatic-gswrapper
 
-  This is not really a backend filter, but it is used by all backend filters
+  This is not really a backend filter, but it is used by foomatic-rip
   when it is present. This is a wrapper around Ghostscript. It regularizes 
-  options if they differ between gs flavors. The filter scripts auto-detect
-  the presence of foomatic-gswrapper.
+  options if they differ between gs flavors. foomatic-rip auto-detects the
+  presence of foomatic-gswrapper.
 
 
 
@@ -495,7 +491,7 @@ About the database
 ------------------
 
 The database is provided by the "foomatic-db" package, additional database
-entries are in "foomatic-db-hpijs", other "foomatic-db-..." packages or are
+entries are in "foomatic-db-hpijs", other "foomatic-db-..." packages are
 supplied with the drivers. "foomatic-db" is required for using the programs
 provided by this package.
 
@@ -588,34 +584,26 @@ getdat
   This returns a Perl data structure as used by the filter scripts.
   It takes driver and printer ID arguments; just like get_combo_data_xml
 
-getmfdata
-getpdqdata
-getlpddata
-getcupsppd
-getgenericppd
+getppd
 
-  These return the spooler-specific data file for various spoolers and
-  backends, and also the spooler-independent PPDs for applications and 
-  clients. They take no arguments; instead you must call getdat
-  first, and they'll then magically find that result. For CUPS you should
-  use "getgenericppd", it produces PPD files closer to the Adobe standards,
-  "getcupsppd" is only there for compatibility with KDE 2.x and XPP
-  1.0 and earlier.
+  This returns the spooler-independent PPD file for foomatic-rip and for 
+  applications and clients. They take no arguments; instead you must call 
+  getdat first, and they'll then magically find that result. 
 
 getdocs
 getexecdocs
 get_summarydocs
 
   For some reason there are three functions which return documentation
-  about job options for particular printer/driver pairs.  For that
-  matter, there's a fourth one in the various backends.
+  about job options for particular printer/driver pairs. There's also a 
+  fourth one inside foomatic-rip (invoked by the "docs" option).
 
-  These work the same way as get*data; you call getdat first.
+  These work the same way as getppd; you call getdat first.
 
   Once, these worked if you called getdat with only a driver; in that
-  case it sort of documented it for all printers at once.  This is
+  case it sort of documented it for all printers at once. This is
   sort of incomplete, especially what with PJL arguments in the world.
-  I (Grant) also probably broke it in the xml rewrite. I (Till) have
+  Grant also probably broke it in the xml rewrite. Till has
   rewritten getexecdocs to produce documentation for a given printer
   driver pair, it provides the data presented on the "Execution Details"
   pages of linuxprinting.org.
@@ -634,7 +622,8 @@ need the libxml C library for XML handling and one of the tools
 
 In addition, you need the Foomatic database ("foomatic-db") and the
 Foomatic filters ("foomatic-filters"). It is recommended to install
-these packages before you install this package.
+these packages before you install this package. Then the paths to its
+components get auto-detected during the build of this package.
 
 "wget" (from www.gnu.org) is really a standard tool which nearly every
 distribution includes.
@@ -646,17 +635,17 @@ provide libxml you can get libxml from
 
    http://www.xmlsoft.org/
 
-If your distribution contains libxml, note that besides the "libxml" or
-"libxml2" package you must install also a package with a name "libxml-devel"
-or "libxml2-devel" to be able to compile programs which use libxml. This
-additional package contains the needed header files and "xml(2)-config",
-which tells the C compiler where it finds the header files. If
-"xml(2)-config" or some header files in the packages of your distribution
-are missing, compile libxml from source.
+If your distribution contains libxml, note that besides the "libxml"
+or "libxml2" package you must install also a package with a name
+"libxml-devel" or "libxml2-devel" to be able to compile programs which
+use libxml. This additional package contains the needed header files
+and "xml(2)-config", which tells the C compiler where it finds the
+header files. If "xml(2)-config" or some header files in the packages
+of your distribution are missing, compile libxml from source.
 
-I (Till) have tested with the versions 1.8.17 and 2.4.19 of libxml,
-both work, but 1.8.17 requires that the XML files do not have leading
-blank lines. Use foomatic-fix-xml if you have such XML files (old or
+Till has tested with the versions 1.8.17 and 2.4.19 of libxml, both
+work, but 1.8.17 requires that the XML files do not have leading blank
+lines. Use foomatic-fix-xml if you have such XML files (old or
 third-party files).
 
 Using libxml 2.x is highly recommended.
@@ -1254,185 +1243,876 @@ things, but the two biggies are the prototype and the printers list
 #  </printer>
 
 
-Example for a Foomatic-generated PPD file with embedded Perl structure
-----------------------------------------------------------------------
+Example for a Foomatic-generated PPD file
+-----------------------------------------
 
-The extension of the usual PPD structure is in the "COMDATA" comment
-lines. This is a dump of a Perl data structure more or less equivalent
-to the Combo-XML data (the output of "foomatic-combo-xml"). You get
-the pure Perl data when you generate a datafile for LPD/LPRng or
-spooler-less printing with "foomatic-datafile -t lpd -p <printer-id>
--d <driver>" or by running "foomatic-perl-data" on a combo XML
-file. This Perl structure is read by the backend scripts (lpdomatic,
-cupsomatic, ppromatic, directomatic) which are written in pure
-standard Perl without needing special libraries (as one would probably
-need to read XML or PPD files without too high effort). Also XPP and
-the KDE printing system (only with CUPS as spooler) read the Perl data
-structure to provide true numerical options. Here is an example (all
-lines not beginning with an asterisk '*' are my comments and not
-really in the file, download URL for the file:
-http://www.linuxprinting.org/ppd-o-matic.cgi?driver=lxm5700m&printer=62016
-or generate it locally with "foomatic-datafile -t ppd -p 62016 -d
-lxm5700m"):
+This is an example PPD file, the PPD file for the Citizen printiva600U
+used with the "ppmtomd" driver. It was generated with the command line
 
+   ./foomatic-ppdfile -p Citizen-printiva600U -d ppmtomd
 
-### The following is the usual stuff of PPD files
+The structure is completely Adobe-compliant and no information is in
+comments. Besides the usual keywords which one finds in PPDs there are some
+special ones beginning with "*Foomatic...". These keywords are read by
+foomatic-rip and contain all information to build the renderer's command
+line. See explanations for these keywords below the example file.
 
+If a printer has auto-detection information in the Foomatic database,
+the manufacturer and model names from there are inserted in the
+"*Manufacturer:" and "*Product:" fields.
+
+----------------------------------------------------------------------------
 *PPD-Adobe: "4.3"
 *%
 *% For information on using this, and to obtain the required backend
-*% script, consult http://www.linuxprinting.org/ppd-doc.html
+*% script, consult http://www.linuxprinting.org/foomatic2.9/
 *%
-*% PPD-O-MATIC generated this PPD file. It is for use with all programs 
-*% and environments which use PPD files for dealing with printer capabilty
-*% information. The printer must be configured with a Foomatic backend
-*% filter script. This file and the backend filter script work together to
-*% support PPD-controlled printer driver option access with arbitrary free 
-*% software printer drivers and printing spoolers.
+*% PPD-O-MATIC (2.9.x or newer) generated this PPD file. It is for use with 
+*% all programs and environments which use PPD files for dealing with
+*% printer capabilty information. The printer must be configured with a
+*% Foomatic backend filter script of Foomatic 2.9.x or newer. This file and
+*% the backend filter script work together to support PPD-controlled printer
+*% driver option access with arbitrary free software printer drivers and
+*% printing spoolers.
 *%
-*% You may save this file as 'Lexmark-5700-lxm5700m-ppd.ppd'
+*% You may save this file as 'Citizen-printiva600U-ppmtomd.ppd'
 *%
 *%
 *FormatVersion:	"4.3"
 *FileVersion:	"1.1"
 *LanguageVersion: English 
 *LanguageEncoding: ISOLatin1
-*PCFileName:	"COM.PPD"
-*Manufacturer:	"Lexmark"
-*Product:	"5700"
+*PCFileName:	"PPMTOMD.PPD"
+*Manufacturer:	"Citizen"
+*Product:	"printiva600U"
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
-*cupsFilter:	"application/vnd.cups-postscript 0 cupsomatic"
-*ModelName:     "5700"
-*ShortNickName: "5700"
-*NickName:      "Lexmark 5700, Foomatic + lxm5700m"
+*cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
+*%pprRIP:        foomatic-rip other
+*ModelName:     "Citizen printiva600U, Foomatic + ppmtomd"
+*NickName:      "Citizen printiva600U, Foomatic + ppmtomd"
+*ShortNickName: "Citizen printiva600U"
 *PSVersion:	"(3010.000) 550"
 *PSVersion:	"(3010.000) 651"
 *PSVersion:	"(3010.000) 652"
+*PSVersion:	"(3010.000) 653"
+*PSVersion:	"(3010.000) 704"
+*PSVersion:	"(3010.000) 705"
 *LanguageLevel:	"3"
 *ColorDevice:	True
 *DefaultColorSpace: RGB
 *FileSystem:	False
 *Throughput:	"1"
 *LandscapeOrientation: Plus90
-*VariablePaperSize: False
 *TTRasterizer:	Type42
 
-### PageSize option, must be treated especially: Needs to appear twice, once
-### as "PageSize", once as "PageRegion", needs also "PaperDimension" and 
-### "Imageable Area" entries. Margins are set to zero because I don't have
-### margin info.
+ 
+*VariablePaperSize: False
 
-*OpenUI *PageSize/Page Size: PickOne
+*FoomaticIDs: Citizen-printiva600U ppmtomd
+*FoomaticRIPCommandLine: "gs -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -sDE&&
+VICE=ppmraw -sOutputFile=-%A%B -informat Colour%C"
+*End
+
+*OpenUI *PageSize/Page Size and Printing Quality: PickOne
+*FoomaticRIPOption PageSize: enum CmdLine B
+*OrderDependency: 100 AnySetup *PageSize
 *DefaultPageSize: Letter
-*PageSize A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
-*PageSize Executive/Executive: "<</PageSize[522 756]/ImagingBBox null>>setpagedevice"
-*PageSize EnvC5/Envelope C5: "<</PageSize[459 649]/ImagingBBox null>>setpagedevice"
-*PageSize EnvMonarch/Envelope Monarch: "<</PageSize[279 540]/ImagingBBox null>>setpagedevice"
-*PageSize Letter/US Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
-*PageSize Legal/US Legal: "<</PageSize[612 1008]/ImagingBBox null>>setpagedevice"
-*PageSize EnvISOB5/Envelope B5: "<</PageSize[499 709]/ImagingBBox null>>setpagedevice"
-*PageSize Env10/Envelope #10: "<</PageSize[297 684]/ImagingBBox null>>setpagedevice"
-*PageSize EnvDL/Envelope DL: "<</PageSize[312 624]/ImagingBBox null>>setpagedevice"
-*PageSize B5/B5 (JIS): "<</PageSize[516 729]/ImagingBBox null>>setpagedevice"
-*PageSize A5/A5: "<</PageSize[421 595]/ImagingBBox null>>setpagedevice"
+*PageSize Letter/Letter, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=Letter"
+*FoomaticRIPOptionSetting PageSize=Letter: " -sPAPERSIZE=letter -r600x&&
+600 - | ppmtomd -autoshift -papersize Letter"
+*End
+*PageSize A4/A4, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=A4"
+*FoomaticRIPOptionSetting PageSize=A4: " -sPAPERSIZE=a4 -r600x600 - | &&
+ppmtomd -autoshift -papersize A4"
+*End
+*PageSize A4HR/A4, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=A4HR"
+*FoomaticRIPOptionSetting PageSize=A4HR: " -sPAPERSIZE=a4 -r1200x600 -&&
+ | ppmtomd -resolution 1200 -inresolution 1200 -autoshift -papersize A&&
+4"
+*End
+*PageSize B5/B5, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=B5"
+*FoomaticRIPOptionSetting PageSize=B5: " -sPAPERSIZE=b5 -r600x600 - | &&
+ppmtomd -autoshift -papersize B5"
+*End
+*PageSize B5HR/B5, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=B5HR"
+*FoomaticRIPOptionSetting PageSize=B5HR: " -sPAPERSIZE=b5 -r1200x600 -&&
+ | ppmtomd -resolution 1200 -inresolution 1200 -autoshift -papersize B&&
+5"
+*End
+*PageSize Executive/Executive, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=Executive"
+*FoomaticRIPOptionSetting PageSize=Executive: " -sPAPERSIZE=executive &&
+-r600x600 - | ppmtomd -autoshift -papersize Executive"
+*End
+*PageSize ExecutiveHR/Executive, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=ExecutiveHR"
+*FoomaticRIPOptionSetting PageSize=ExecutiveHR: " -sPAPERSIZE=executiv&&
+e -r1200x600 - | ppmtomd -resolution 1200 -inresolution 1200 -autoshif&&
+t -papersize Executive"
+*End
+*PageSize Legal/Legal, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=Legal"
+*FoomaticRIPOptionSetting PageSize=Legal: " -sPAPERSIZE=legal -r600x60&&
+0 - | ppmtomd -autoshift -papersize Legal"
+*End
+*PageSize LegalHR/Legal, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=LegalHR"
+*FoomaticRIPOptionSetting PageSize=LegalHR: " -sPAPERSIZE=legal -r1200&&
+x600 - | ppmtomd -resolution 1200 -inresolution 1200 -autoshift -paper&&
+size Legal"
+*End
+*PageSize LetterHR/Letter, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=LetterHR"
+*FoomaticRIPOptionSetting PageSize=LetterHR: " -sPAPERSIZE=letter -r12&&
+00x600 - | ppmtomd -resolution 1200 -inresolution 1200 -autoshift -pap&&
+ersize Letter"
+*End
 *CloseUI: *PageSize
 
 *OpenUI *PageRegion: PickOne
-*OrderDependency: 10 AnySetup *PageRegion
+*OrderDependency: 100 AnySetup *PageRegion
 *DefaultPageRegion: Letter
-*PageRegion A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
-*PageRegion Executive/Executive: "<</PageSize[522 756]/ImagingBBox null>>setpagedevice"
-*PageRegion EnvC5/Envelope C5: "<</PageSize[459 649]/ImagingBBox null>>setpagedevice"
-*PageRegion EnvMonarch/Envelope Monarch: "<</PageSize[279 540]/ImagingBBox null>>setpagedevice"
-*PageRegion Letter/US Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
-*PageRegion Legal/US Legal: "<</PageSize[612 1008]/ImagingBBox null>>setpagedevice"
-*PageRegion EnvISOB5/Envelope B5: "<</PageSize[499 709]/ImagingBBox null>>setpagedevice"
-*PageRegion Env10/Envelope #10: "<</PageSize[297 684]/ImagingBBox null>>setpagedevice"
-*PageRegion EnvDL/Envelope DL: "<</PageSize[312 624]/ImagingBBox null>>setpagedevice"
-*PageRegion B5/B5 (JIS): "<</PageSize[516 729]/ImagingBBox null>>setpagedevice"
-*PageRegion A5/A5: "<</PageSize[421 595]/ImagingBBox null>>setpagedevice"
+*PageRegion Letter/Letter, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=Letter"
+*PageRegion A4/A4, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=A4"
+*PageRegion A4HR/A4, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=A4HR"
+*PageRegion B5/B5, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=B5"
+*PageRegion B5HR/B5, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=B5HR"
+*PageRegion Executive/Executive, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=Executive"
+*PageRegion ExecutiveHR/Executive, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=ExecutiveHR"
+*PageRegion Legal/Legal, 600x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=Legal"
+*PageRegion LegalHR/Legal, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=LegalHR"
+*PageRegion LetterHR/Letter, 1200x600 DPI: "%% FoomaticRIPOptionSetting: PageSize=LetterHR"
 *CloseUI: *PageRegion
 
 *DefaultImageableArea: Letter
-*ImageableArea A4/A4: "0 0 595 842"
-*ImageableArea Executive/Executive: "0 0 522 756"
-*ImageableArea EnvC5/Envelope C5: "0 0 459 649"
-*ImageableArea EnvMonarch/Envelope Monarch: "0 0 279 540"
-*ImageableArea Letter/US Letter: "0 0 612 792"
-*ImageableArea Legal/US Legal: "0 0 612 1008"
-*ImageableArea EnvISOB5/Envelope B5: "0 0 499 709"
-*ImageableArea Env10/Envelope #10: "0 0 297 684"
-*ImageableArea EnvDL/Envelope DL: "0 0 312 624"
-*ImageableArea B5/B5 (JIS): "0 0 516 729"
-*ImageableArea A5/A5: "0 0 421 595"
+*ImageableArea Letter/Letter, 600x600 DPI: "0 0 612 792"
+*ImageableArea A4/A4, 600x600 DPI: "0 0 595 842"
+*ImageableArea A4HR/A4, 1200x600 DPI: "0 0 595 842"
+*ImageableArea B5/B5, 600x600 DPI: "0 0 498 708"
+*ImageableArea B5HR/B5, 1200x600 DPI: "0 0 498 708"
+*ImageableArea Executive/Executive, 600x600 DPI: "0 0 522 756"
+*ImageableArea ExecutiveHR/Executive, 1200x600 DPI: "0 0 522 756"
+*ImageableArea Legal/Legal, 600x600 DPI: "0 0 612 1008"
+*ImageableArea LegalHR/Legal, 1200x600 DPI: "0 0 612 1008"
+*ImageableArea LetterHR/Letter, 1200x600 DPI: "0 0 612 792"
 
 *DefaultPaperDimension: Letter
-*PaperDimension A4/A4: "595 842"
-*PaperDimension Executive/Executive: "522 756"
-*PaperDimension EnvC5/Envelope C5: "459 649"
-*PaperDimension EnvMonarch/Envelope Monarch: "279 540"
-*PaperDimension Letter/US Letter: "612 792"
-*PaperDimension Legal/US Legal: "612 1008"
-*PaperDimension EnvISOB5/Envelope B5: "499 709"
-*PaperDimension Env10/Envelope #10: "297 684"
-*PaperDimension EnvDL/Envelope DL: "312 624"
-*PaperDimension B5/B5 (JIS): "516 729"
-*PaperDimension A5/A5: "421 595"
+*PaperDimension Letter/Letter, 600x600 DPI: "612 792"
+*PaperDimension A4/A4, 600x600 DPI: "595 842"
+*PaperDimension A4HR/A4, 1200x600 DPI: "595 842"
+*PaperDimension B5/B5, 600x600 DPI: "498 708"
+*PaperDimension B5HR/B5, 1200x600 DPI: "498 708"
+*PaperDimension Executive/Executive, 600x600 DPI: "522 756"
+*PaperDimension ExecutiveHR/Executive, 1200x600 DPI: "522 756"
+*PaperDimension Legal/Legal, 600x600 DPI: "612 1008"
+*PaperDimension LegalHR/Legal, 1200x600 DPI: "612 1008"
+*PaperDimension LetterHR/Letter, 1200x600 DPI: "612 792"
 
-### A driver-specific option. Driver-specific enumerated or boolean
-### options look like the "PageSize" options, a numerical option as
-### this one is mapped to an enumerated option as shown here, because
-### numerical options are not supported by the PPD syntax. This option
-### is also not executed by inserting PostScript code into the job
-### data (PostScript generated by the "Print" command of any Unix
-### application), but by adding a command line option to the
-### GhostScript command line which is set up and executed by the
-### Foomatic backend filter script (cupsomatic, ppromatic, lpdomatic,
-### directomatic). The PostScript code to be inserted into the job
-### data by a client application (as Star Office, gpr, ppdfilt, the
-### Adobe PostScript driver for Windows, ...) is a comment line
-### (beginning with '%') and the Foomatic backend filter script
-### searches the job data for these lines to translate its contents
-### into appropriate command line options.
+*OpenUI *ColourCorrection/Colour Correction: PickOne
+*FoomaticRIPOption ColourCorrection: enum CmdLine C
+*OrderDependency: 110 AnySetup *ColourCorrection
+*DefaultColourCorrection: Plain
+*ColourCorrection Plain/Plain (RGB --> CMYK): "%% FoomaticRIPOptionSetting: ColourCorrection=Plain"
+*FoomaticRIPOptionSetting ColourCorrection=Plain: " -colourcorrection &&
+Plain"
+*End
+*ColourCorrection None/None (RGB --> CMY): "%% FoomaticRIPOptionSetting: ColourCorrection=None"
+*FoomaticRIPOptionSetting ColourCorrection=None: " -colourcorrection N&&
+one"
+*End
+*ColourCorrection Photo/Photo (CMYK, gamma corrcetion, ...): "%% FoomaticRIPOptionSetting: ColourCorrection=Photo"
+*FoomaticRIPOptionSetting ColourCorrection=Photo: " -colourcorrection &&
+Photo"
+*End
+*CloseUI: *ColourCorrection
 
-*OpenUI *HeadSeparation/Head Separation: PickOne
-*DefaultHeadSeparation: 16
-*HeadSeparation 0/0: "%% FoomaticOpt: HeadSeparation=0"
-*HeadSeparation 1/1: "%% FoomaticOpt: HeadSeparation=1"
-*HeadSeparation 2/2: "%% FoomaticOpt: HeadSeparation=2"
-*HeadSeparation 3/3: "%% FoomaticOpt: HeadSeparation=3"
-*HeadSeparation 4/4: "%% FoomaticOpt: HeadSeparation=4"
-*HeadSeparation 5/5: "%% FoomaticOpt: HeadSeparation=5"
-*HeadSeparation 6/6: "%% FoomaticOpt: HeadSeparation=6"
-*HeadSeparation 7/7: "%% FoomaticOpt: HeadSeparation=7"
-*HeadSeparation 8/8: "%% FoomaticOpt: HeadSeparation=8"
-*HeadSeparation 9/9: "%% FoomaticOpt: HeadSeparation=9"
-*HeadSeparation 10/10: "%% FoomaticOpt: HeadSeparation=10"
-*HeadSeparation 11/11: "%% FoomaticOpt: HeadSeparation=11"
-*HeadSeparation 12/12: "%% FoomaticOpt: HeadSeparation=12"
-*HeadSeparation 13/13: "%% FoomaticOpt: HeadSeparation=13"
-*HeadSeparation 14/14: "%% FoomaticOpt: HeadSeparation=14"
-*HeadSeparation 15/15: "%% FoomaticOpt: HeadSeparation=15"
-*HeadSeparation 16/16: "%% FoomaticOpt: HeadSeparation=16"
-*HeadSeparation 17/17: "%% FoomaticOpt: HeadSeparation=17"
-*HeadSeparation 18/18: "%% FoomaticOpt: HeadSeparation=18"
-*HeadSeparation 19/19: "%% FoomaticOpt: HeadSeparation=19"
-*HeadSeparation 20/20: "%% FoomaticOpt: HeadSeparation=20"
-*HeadSeparation 21/21: "%% FoomaticOpt: HeadSeparation=21"
-*HeadSeparation 22/22: "%% FoomaticOpt: HeadSeparation=22"
-*HeadSeparation 23/23: "%% FoomaticOpt: HeadSeparation=23"
-*HeadSeparation 24/24: "%% FoomaticOpt: HeadSeparation=24"
-*HeadSeparation 25/25: "%% FoomaticOpt: HeadSeparation=25"
-*HeadSeparation 26/26: "%% FoomaticOpt: HeadSeparation=26"
-*HeadSeparation 27/27: "%% FoomaticOpt: HeadSeparation=27"
-*HeadSeparation 28/28: "%% FoomaticOpt: HeadSeparation=28"
-*HeadSeparation 29/29: "%% FoomaticOpt: HeadSeparation=29"
-*HeadSeparation 30/30: "%% FoomaticOpt: HeadSeparation=30"
-*CloseUI: *HeadSeparation
+*OpenUI *Colours/Colours to be printed: PickOne
+*FoomaticRIPOption Colours: enum CmdLine C
+*OrderDependency: 120 AnySetup *Colours
+*DefaultColours: CMYK
+*Colours C/Cyan only: "%% FoomaticRIPOptionSetting: Colours=C"
+*FoomaticRIPOptionSetting Colours=C: " -colours c"
+*Colours CK/Cyan, Black: "%% FoomaticRIPOptionSetting: Colours=CK"
+*FoomaticRIPOptionSetting Colours=CK: " -colours c,k"
+*Colours CM/Cyan, Magenta: "%% FoomaticRIPOptionSetting: Colours=CM"
+*FoomaticRIPOptionSetting Colours=CM: " -colours c,m"
+*Colours CMK/Cyan, Magenta, Black: "%% FoomaticRIPOptionSetting: Colours=CMK"
+*FoomaticRIPOptionSetting Colours=CMK: " -colours c,m,k"
+*Colours CMY/Cyan, Magenta, Yellow: "%% FoomaticRIPOptionSetting: Colours=CMY"
+*FoomaticRIPOptionSetting Colours=CMY: " -colours c,m,y"
+*Colours CMYK/Cyan, Magenta, Yellow, Black: "%% FoomaticRIPOptionSetting: Colours=CMYK"
+*FoomaticRIPOptionSetting Colours=CMYK: " -colours c,m,y,k"
+*Colours CY/Cyan, Yellow: "%% FoomaticRIPOptionSetting: Colours=CY"
+*FoomaticRIPOptionSetting Colours=CY: " -colours c,y"
+*Colours CYK/Cyan, Yellow, Black: "%% FoomaticRIPOptionSetting: Colours=CYK"
+*FoomaticRIPOptionSetting Colours=CYK: " -colours c,y,k"
+*Colours K/Black only: "%% FoomaticRIPOptionSetting: Colours=K"
+*FoomaticRIPOptionSetting Colours=K: " -colours k"
+*Colours M/Magenta only: "%% FoomaticRIPOptionSetting: Colours=M"
+*FoomaticRIPOptionSetting Colours=M: " -colours m"
+*Colours MK/Magenta, Black: "%% FoomaticRIPOptionSetting: Colours=MK"
+*FoomaticRIPOptionSetting Colours=MK: " -colours m,k"
+*Colours MY/Magenta, Yellow: "%% FoomaticRIPOptionSetting: Colours=MY"
+*FoomaticRIPOptionSetting Colours=MY: " -colours m,y"
+*Colours MYK/Magenta, Yellow, Black: "%% FoomaticRIPOptionSetting: Colours=MYK"
+*FoomaticRIPOptionSetting Colours=MYK: " -colours m,y,k"
+*Colours None/None: "%% FoomaticRIPOptionSetting: Colours=None"
+*FoomaticRIPOptionSetting Colours=None: " -colours none"
+*Colours Y/Yellow only: "%% FoomaticRIPOptionSetting: Colours=Y"
+*FoomaticRIPOptionSetting Colours=Y: " -colours y"
+*Colours YK/Yellow, Black: "%% FoomaticRIPOptionSetting: Colours=YK"
+*FoomaticRIPOptionSetting Colours=YK: " -colours y,k"
+*CloseUI: *Colours
 
-### Here comes the font info as needed by GhostScript.
+*OpenUI *PrintingMode/Printing Mode: PickOne
+*FoomaticRIPOption PrintingMode: enum CmdLine C
+*OrderDependency: 130 AnySetup *PrintingMode
+*DefaultPrintingMode: Colour
+*PrintingMode Black/Monochrome printing, standard black cartridge: "%% FoomaticRIPOptionSetting: PrintingMode=Black"
+*FoomaticRIPOptionSetting PrintingMode=Black: " -datamode Black"
+*PrintingMode Cassette/Do not care about cartridges, colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=Cassette"
+*FoomaticRIPOptionSetting PrintingMode=Cassette: " -datamode Cassette"
+*PrintingMode Colour/Colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=Colour"
+*FoomaticRIPOptionSetting PrintingMode=Colour: " -datamode Colour"
+*PrintingMode EconoBlack/Monochrome printing, re-usable economy black cartridge: "%% FoomaticRIPOptionSetting: PrintingMode=EconoBlack"
+*FoomaticRIPOptionSetting PrintingMode=EconoBlack: " -datamode EconoBl&&
+ack"
+*End
+*PrintingMode MultiColour/More than 4 colours, colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=MultiColour"
+*FoomaticRIPOptionSetting PrintingMode=MultiColour: " -datamode MultiC&&
+olour"
+*End
+*PrintingMode RasterCassette/Do not care about cartridges, each line in all colours: "%% FoomaticRIPOptionSetting: PrintingMode=RasterCassette"
+*FoomaticRIPOptionSetting PrintingMode=RasterCassette: " -datamode Ras&&
+terCassette"
+*End
+*PrintingMode RasterColour/Each line in all colours: "%% FoomaticRIPOptionSetting: PrintingMode=RasterColour"
+*FoomaticRIPOptionSetting PrintingMode=RasterColour: " -datamode Raste&&
+rColour"
+*End
+*CloseUI: *PrintingMode
+
+*FoomaticRIPOption Model: enum CmdLine C 210
+*FoomaticRIPOptionSetting Model=Printiva-600U: " -model Printiva-600U"
+
+*OpenUI *Dither/Dithering: PickOne
+*FoomaticRIPOption Dither: enum CmdLine C
+*OrderDependency: 140 AnySetup *Dither
+*DefaultDither: Halftone
+*Dither Black/Monochrome printing, standard black cartridge: "%% FoomaticRIPOptionSetting: Dither=Black"
+*FoomaticRIPOptionSetting Dither=Black: " -dither Black"
+*Dither EconoBlack/Monochrome printing, re-usable economy black cartridge: "%% FoomaticRIPOptionSetting: Dither=EconoBlack"
+*FoomaticRIPOptionSetting Dither=EconoBlack: " -dither EconoBlack"
+*Dither FloydSteinberg/Floyd-Steinberg (not recommended for MicroDry): "%% FoomaticRIPOptionSetting: Dither=FloydSteinberg"
+*FoomaticRIPOptionSetting Dither=FloydSteinberg: " -dither FloydSteinb&&
+erg"
+*End
+*Dither Halftone/Halftone (recommended for general use): "%% FoomaticRIPOptionSetting: Dither=Halftone"
+*FoomaticRIPOptionSetting Dither=Halftone: " -dither Halftone"
+*Dither MultiColour/More than 4 colours, colours one page at a time: "%% FoomaticRIPOptionSetting: Dither=MultiColour"
+*FoomaticRIPOptionSetting Dither=MultiColour: " -dither MultiColour"
+*Dither None/No dithering: "%% FoomaticRIPOptionSetting: Dither=None"
+*FoomaticRIPOptionSetting Dither=None: " -dither None"
+*Dither Square/Square (experimental, not recommended): "%% FoomaticRIPOptionSetting: Dither=Square"
+*FoomaticRIPOptionSetting Dither=Square: " -dither Square"
+*CloseUI: *Dither
+
+*OpenUI *GammaCorrection/Gamma Correction: PickOne
+*FoomaticRIPOption GammaCorrection: float CmdLine C
+*FoomaticRIPOptionPrototype GammaCorrection: " -gamma %s"
+*FoomaticRIPOptionRange GammaCorrection: 0.10 10.0
+*OrderDependency: 180 AnySetup *GammaCorrection
+*DefaultGammaCorrection: 1.0
+*GammaCorrection 0.1/0.1: "%% FoomaticRIPOptionSetting: GammaCorrection=0.1"
+*GammaCorrection 0.2/0.2: "%% FoomaticRIPOptionSetting: GammaCorrection=0.2"
+*GammaCorrection 0.3/0.3: "%% FoomaticRIPOptionSetting: GammaCorrection=0.3"
+*GammaCorrection 0.4/0.4: "%% FoomaticRIPOptionSetting: GammaCorrection=0.4"
+*GammaCorrection 0.5/0.5: "%% FoomaticRIPOptionSetting: GammaCorrection=0.5"
+*GammaCorrection 0.6/0.6: "%% FoomaticRIPOptionSetting: GammaCorrection=0.6"
+*GammaCorrection 0.7/0.7: "%% FoomaticRIPOptionSetting: GammaCorrection=0.7"
+*GammaCorrection 0.8/0.8: "%% FoomaticRIPOptionSetting: GammaCorrection=0.8"
+*GammaCorrection 0.9/0.9: "%% FoomaticRIPOptionSetting: GammaCorrection=0.9"
+*GammaCorrection 1.0/1.0: "%% FoomaticRIPOptionSetting: GammaCorrection=1.0"
+*GammaCorrection 1.1/1.1: "%% FoomaticRIPOptionSetting: GammaCorrection=1.1"
+*GammaCorrection 1.2/1.2: "%% FoomaticRIPOptionSetting: GammaCorrection=1.2"
+*GammaCorrection 1.3/1.3: "%% FoomaticRIPOptionSetting: GammaCorrection=1.3"
+*GammaCorrection 1.4/1.4: "%% FoomaticRIPOptionSetting: GammaCorrection=1.4"
+*GammaCorrection 1.5/1.5: "%% FoomaticRIPOptionSetting: GammaCorrection=1.5"
+*GammaCorrection 1.6/1.6: "%% FoomaticRIPOptionSetting: GammaCorrection=1.6"
+*GammaCorrection 1.7/1.7: "%% FoomaticRIPOptionSetting: GammaCorrection=1.7"
+*GammaCorrection 1.8/1.8: "%% FoomaticRIPOptionSetting: GammaCorrection=1.8"
+*GammaCorrection 1.9/1.9: "%% FoomaticRIPOptionSetting: GammaCorrection=1.9"
+*GammaCorrection 2.0/2.0: "%% FoomaticRIPOptionSetting: GammaCorrection=2.0"
+*GammaCorrection 2.1/2.1: "%% FoomaticRIPOptionSetting: GammaCorrection=2.1"
+*GammaCorrection 2.2/2.2: "%% FoomaticRIPOptionSetting: GammaCorrection=2.2"
+*GammaCorrection 2.3/2.3: "%% FoomaticRIPOptionSetting: GammaCorrection=2.3"
+*GammaCorrection 2.4/2.4: "%% FoomaticRIPOptionSetting: GammaCorrection=2.4"
+*GammaCorrection 2.5/2.5: "%% FoomaticRIPOptionSetting: GammaCorrection=2.5"
+*GammaCorrection 2.6/2.6: "%% FoomaticRIPOptionSetting: GammaCorrection=2.6"
+*GammaCorrection 2.7/2.7: "%% FoomaticRIPOptionSetting: GammaCorrection=2.7"
+*GammaCorrection 2.8/2.8: "%% FoomaticRIPOptionSetting: GammaCorrection=2.8"
+*GammaCorrection 2.9/2.9: "%% FoomaticRIPOptionSetting: GammaCorrection=2.9"
+*GammaCorrection 3.0/3.0: "%% FoomaticRIPOptionSetting: GammaCorrection=3.0"
+*GammaCorrection 3.1/3.1: "%% FoomaticRIPOptionSetting: GammaCorrection=3.1"
+*GammaCorrection 3.2/3.2: "%% FoomaticRIPOptionSetting: GammaCorrection=3.2"
+*GammaCorrection 3.3/3.3: "%% FoomaticRIPOptionSetting: GammaCorrection=3.3"
+*GammaCorrection 3.4/3.4: "%% FoomaticRIPOptionSetting: GammaCorrection=3.4"
+*GammaCorrection 3.5/3.5: "%% FoomaticRIPOptionSetting: GammaCorrection=3.5"
+*GammaCorrection 3.6/3.6: "%% FoomaticRIPOptionSetting: GammaCorrection=3.6"
+*GammaCorrection 3.7/3.7: "%% FoomaticRIPOptionSetting: GammaCorrection=3.7"
+*GammaCorrection 3.8/3.8: "%% FoomaticRIPOptionSetting: GammaCorrection=3.8"
+*GammaCorrection 3.9/3.9: "%% FoomaticRIPOptionSetting: GammaCorrection=3.9"
+*GammaCorrection 4.0/4.0: "%% FoomaticRIPOptionSetting: GammaCorrection=4.0"
+*GammaCorrection 4.1/4.1: "%% FoomaticRIPOptionSetting: GammaCorrection=4.1"
+*GammaCorrection 4.2/4.2: "%% FoomaticRIPOptionSetting: GammaCorrection=4.2"
+*GammaCorrection 4.3/4.3: "%% FoomaticRIPOptionSetting: GammaCorrection=4.3"
+*GammaCorrection 4.4/4.4: "%% FoomaticRIPOptionSetting: GammaCorrection=4.4"
+*GammaCorrection 4.5/4.5: "%% FoomaticRIPOptionSetting: GammaCorrection=4.5"
+*GammaCorrection 4.6/4.6: "%% FoomaticRIPOptionSetting: GammaCorrection=4.6"
+*GammaCorrection 4.7/4.7: "%% FoomaticRIPOptionSetting: GammaCorrection=4.7"
+*GammaCorrection 4.8/4.8: "%% FoomaticRIPOptionSetting: GammaCorrection=4.8"
+*GammaCorrection 4.9/4.9: "%% FoomaticRIPOptionSetting: GammaCorrection=4.9"
+*GammaCorrection 5.0/5.0: "%% FoomaticRIPOptionSetting: GammaCorrection=5.0"
+*GammaCorrection 5.1/5.1: "%% FoomaticRIPOptionSetting: GammaCorrection=5.1"
+*GammaCorrection 5.2/5.2: "%% FoomaticRIPOptionSetting: GammaCorrection=5.2"
+*GammaCorrection 5.3/5.3: "%% FoomaticRIPOptionSetting: GammaCorrection=5.3"
+*GammaCorrection 5.4/5.4: "%% FoomaticRIPOptionSetting: GammaCorrection=5.4"
+*GammaCorrection 5.5/5.5: "%% FoomaticRIPOptionSetting: GammaCorrection=5.5"
+*GammaCorrection 5.6/5.6: "%% FoomaticRIPOptionSetting: GammaCorrection=5.6"
+*GammaCorrection 5.7/5.7: "%% FoomaticRIPOptionSetting: GammaCorrection=5.7"
+*GammaCorrection 5.8/5.8: "%% FoomaticRIPOptionSetting: GammaCorrection=5.8"
+*GammaCorrection 5.9/5.9: "%% FoomaticRIPOptionSetting: GammaCorrection=5.9"
+*GammaCorrection 6.0/6.0: "%% FoomaticRIPOptionSetting: GammaCorrection=6.0"
+*GammaCorrection 6.1/6.1: "%% FoomaticRIPOptionSetting: GammaCorrection=6.1"
+*GammaCorrection 6.2/6.2: "%% FoomaticRIPOptionSetting: GammaCorrection=6.2"
+*GammaCorrection 6.3/6.3: "%% FoomaticRIPOptionSetting: GammaCorrection=6.3"
+*GammaCorrection 6.4/6.4: "%% FoomaticRIPOptionSetting: GammaCorrection=6.4"
+*GammaCorrection 6.5/6.5: "%% FoomaticRIPOptionSetting: GammaCorrection=6.5"
+*GammaCorrection 6.6/6.6: "%% FoomaticRIPOptionSetting: GammaCorrection=6.6"
+*GammaCorrection 6.7/6.7: "%% FoomaticRIPOptionSetting: GammaCorrection=6.7"
+*GammaCorrection 6.8/6.8: "%% FoomaticRIPOptionSetting: GammaCorrection=6.8"
+*GammaCorrection 6.9/6.9: "%% FoomaticRIPOptionSetting: GammaCorrection=6.9"
+*GammaCorrection 7.0/7.0: "%% FoomaticRIPOptionSetting: GammaCorrection=7.0"
+*GammaCorrection 7.1/7.1: "%% FoomaticRIPOptionSetting: GammaCorrection=7.1"
+*GammaCorrection 7.2/7.2: "%% FoomaticRIPOptionSetting: GammaCorrection=7.2"
+*GammaCorrection 7.3/7.3: "%% FoomaticRIPOptionSetting: GammaCorrection=7.3"
+*GammaCorrection 7.4/7.4: "%% FoomaticRIPOptionSetting: GammaCorrection=7.4"
+*GammaCorrection 7.5/7.5: "%% FoomaticRIPOptionSetting: GammaCorrection=7.5"
+*GammaCorrection 7.6/7.6: "%% FoomaticRIPOptionSetting: GammaCorrection=7.6"
+*GammaCorrection 7.7/7.7: "%% FoomaticRIPOptionSetting: GammaCorrection=7.7"
+*GammaCorrection 7.8/7.8: "%% FoomaticRIPOptionSetting: GammaCorrection=7.8"
+*GammaCorrection 7.9/7.9: "%% FoomaticRIPOptionSetting: GammaCorrection=7.9"
+*GammaCorrection 8.0/8.0: "%% FoomaticRIPOptionSetting: GammaCorrection=8.0"
+*GammaCorrection 8.1/8.1: "%% FoomaticRIPOptionSetting: GammaCorrection=8.1"
+*GammaCorrection 8.2/8.2: "%% FoomaticRIPOptionSetting: GammaCorrection=8.2"
+*GammaCorrection 8.3/8.3: "%% FoomaticRIPOptionSetting: GammaCorrection=8.3"
+*GammaCorrection 8.4/8.4: "%% FoomaticRIPOptionSetting: GammaCorrection=8.4"
+*GammaCorrection 8.5/8.5: "%% FoomaticRIPOptionSetting: GammaCorrection=8.5"
+*GammaCorrection 8.6/8.6: "%% FoomaticRIPOptionSetting: GammaCorrection=8.6"
+*GammaCorrection 8.7/8.7: "%% FoomaticRIPOptionSetting: GammaCorrection=8.7"
+*GammaCorrection 8.8/8.8: "%% FoomaticRIPOptionSetting: GammaCorrection=8.8"
+*GammaCorrection 8.9/8.9: "%% FoomaticRIPOptionSetting: GammaCorrection=8.9"
+*GammaCorrection 9.0/9.0: "%% FoomaticRIPOptionSetting: GammaCorrection=9.0"
+*GammaCorrection 9.1/9.1: "%% FoomaticRIPOptionSetting: GammaCorrection=9.1"
+*GammaCorrection 9.2/9.2: "%% FoomaticRIPOptionSetting: GammaCorrection=9.2"
+*GammaCorrection 9.3/9.3: "%% FoomaticRIPOptionSetting: GammaCorrection=9.3"
+*GammaCorrection 9.4/9.4: "%% FoomaticRIPOptionSetting: GammaCorrection=9.4"
+*GammaCorrection 9.5/9.5: "%% FoomaticRIPOptionSetting: GammaCorrection=9.5"
+*GammaCorrection 9.6/9.6: "%% FoomaticRIPOptionSetting: GammaCorrection=9.6"
+*GammaCorrection 9.7/9.7: "%% FoomaticRIPOptionSetting: GammaCorrection=9.7"
+*GammaCorrection 9.8/9.8: "%% FoomaticRIPOptionSetting: GammaCorrection=9.8"
+*GammaCorrection 9.9/9.9: "%% FoomaticRIPOptionSetting: GammaCorrection=9.9"
+*GammaCorrection 10.0/10.0: "%% FoomaticRIPOptionSetting: GammaCorrection=10.0"
+*CloseUI: *GammaCorrection
+
+*OpenUI *GammaSaturation/Gamma correction on saturation HSV component: PickOne
+*FoomaticRIPOption GammaSaturation: float CmdLine C
+*FoomaticRIPOptionPrototype GammaSaturation: " -satgamma %s"
+*FoomaticRIPOptionRange GammaSaturation: 0.10 10.0
+*OrderDependency: 250 AnySetup *GammaSaturation
+*DefaultGammaSaturation: 1.0
+*GammaSaturation 0.1/0.1: "%% FoomaticRIPOptionSetting: GammaSaturation=0.1"
+*GammaSaturation 0.2/0.2: "%% FoomaticRIPOptionSetting: GammaSaturation=0.2"
+*GammaSaturation 0.3/0.3: "%% FoomaticRIPOptionSetting: GammaSaturation=0.3"
+*GammaSaturation 0.4/0.4: "%% FoomaticRIPOptionSetting: GammaSaturation=0.4"
+*GammaSaturation 0.5/0.5: "%% FoomaticRIPOptionSetting: GammaSaturation=0.5"
+*GammaSaturation 0.6/0.6: "%% FoomaticRIPOptionSetting: GammaSaturation=0.6"
+*GammaSaturation 0.7/0.7: "%% FoomaticRIPOptionSetting: GammaSaturation=0.7"
+*GammaSaturation 0.8/0.8: "%% FoomaticRIPOptionSetting: GammaSaturation=0.8"
+*GammaSaturation 0.9/0.9: "%% FoomaticRIPOptionSetting: GammaSaturation=0.9"
+*GammaSaturation 1.0/1.0: "%% FoomaticRIPOptionSetting: GammaSaturation=1.0"
+*GammaSaturation 1.1/1.1: "%% FoomaticRIPOptionSetting: GammaSaturation=1.1"
+*GammaSaturation 1.2/1.2: "%% FoomaticRIPOptionSetting: GammaSaturation=1.2"
+*GammaSaturation 1.3/1.3: "%% FoomaticRIPOptionSetting: GammaSaturation=1.3"
+*GammaSaturation 1.4/1.4: "%% FoomaticRIPOptionSetting: GammaSaturation=1.4"
+*GammaSaturation 1.5/1.5: "%% FoomaticRIPOptionSetting: GammaSaturation=1.5"
+*GammaSaturation 1.6/1.6: "%% FoomaticRIPOptionSetting: GammaSaturation=1.6"
+*GammaSaturation 1.7/1.7: "%% FoomaticRIPOptionSetting: GammaSaturation=1.7"
+*GammaSaturation 1.8/1.8: "%% FoomaticRIPOptionSetting: GammaSaturation=1.8"
+*GammaSaturation 1.9/1.9: "%% FoomaticRIPOptionSetting: GammaSaturation=1.9"
+*GammaSaturation 2.0/2.0: "%% FoomaticRIPOptionSetting: GammaSaturation=2.0"
+*GammaSaturation 2.1/2.1: "%% FoomaticRIPOptionSetting: GammaSaturation=2.1"
+*GammaSaturation 2.2/2.2: "%% FoomaticRIPOptionSetting: GammaSaturation=2.2"
+*GammaSaturation 2.3/2.3: "%% FoomaticRIPOptionSetting: GammaSaturation=2.3"
+*GammaSaturation 2.4/2.4: "%% FoomaticRIPOptionSetting: GammaSaturation=2.4"
+*GammaSaturation 2.5/2.5: "%% FoomaticRIPOptionSetting: GammaSaturation=2.5"
+*GammaSaturation 2.6/2.6: "%% FoomaticRIPOptionSetting: GammaSaturation=2.6"
+*GammaSaturation 2.7/2.7: "%% FoomaticRIPOptionSetting: GammaSaturation=2.7"
+*GammaSaturation 2.8/2.8: "%% FoomaticRIPOptionSetting: GammaSaturation=2.8"
+*GammaSaturation 2.9/2.9: "%% FoomaticRIPOptionSetting: GammaSaturation=2.9"
+*GammaSaturation 3.0/3.0: "%% FoomaticRIPOptionSetting: GammaSaturation=3.0"
+*GammaSaturation 3.1/3.1: "%% FoomaticRIPOptionSetting: GammaSaturation=3.1"
+*GammaSaturation 3.2/3.2: "%% FoomaticRIPOptionSetting: GammaSaturation=3.2"
+*GammaSaturation 3.3/3.3: "%% FoomaticRIPOptionSetting: GammaSaturation=3.3"
+*GammaSaturation 3.4/3.4: "%% FoomaticRIPOptionSetting: GammaSaturation=3.4"
+*GammaSaturation 3.5/3.5: "%% FoomaticRIPOptionSetting: GammaSaturation=3.5"
+*GammaSaturation 3.6/3.6: "%% FoomaticRIPOptionSetting: GammaSaturation=3.6"
+*GammaSaturation 3.7/3.7: "%% FoomaticRIPOptionSetting: GammaSaturation=3.7"
+*GammaSaturation 3.8/3.8: "%% FoomaticRIPOptionSetting: GammaSaturation=3.8"
+*GammaSaturation 3.9/3.9: "%% FoomaticRIPOptionSetting: GammaSaturation=3.9"
+*GammaSaturation 4.0/4.0: "%% FoomaticRIPOptionSetting: GammaSaturation=4.0"
+*GammaSaturation 4.1/4.1: "%% FoomaticRIPOptionSetting: GammaSaturation=4.1"
+*GammaSaturation 4.2/4.2: "%% FoomaticRIPOptionSetting: GammaSaturation=4.2"
+*GammaSaturation 4.3/4.3: "%% FoomaticRIPOptionSetting: GammaSaturation=4.3"
+*GammaSaturation 4.4/4.4: "%% FoomaticRIPOptionSetting: GammaSaturation=4.4"
+*GammaSaturation 4.5/4.5: "%% FoomaticRIPOptionSetting: GammaSaturation=4.5"
+*GammaSaturation 4.6/4.6: "%% FoomaticRIPOptionSetting: GammaSaturation=4.6"
+*GammaSaturation 4.7/4.7: "%% FoomaticRIPOptionSetting: GammaSaturation=4.7"
+*GammaSaturation 4.8/4.8: "%% FoomaticRIPOptionSetting: GammaSaturation=4.8"
+*GammaSaturation 4.9/4.9: "%% FoomaticRIPOptionSetting: GammaSaturation=4.9"
+*GammaSaturation 5.0/5.0: "%% FoomaticRIPOptionSetting: GammaSaturation=5.0"
+*GammaSaturation 5.1/5.1: "%% FoomaticRIPOptionSetting: GammaSaturation=5.1"
+*GammaSaturation 5.2/5.2: "%% FoomaticRIPOptionSetting: GammaSaturation=5.2"
+*GammaSaturation 5.3/5.3: "%% FoomaticRIPOptionSetting: GammaSaturation=5.3"
+*GammaSaturation 5.4/5.4: "%% FoomaticRIPOptionSetting: GammaSaturation=5.4"
+*GammaSaturation 5.5/5.5: "%% FoomaticRIPOptionSetting: GammaSaturation=5.5"
+*GammaSaturation 5.6/5.6: "%% FoomaticRIPOptionSetting: GammaSaturation=5.6"
+*GammaSaturation 5.7/5.7: "%% FoomaticRIPOptionSetting: GammaSaturation=5.7"
+*GammaSaturation 5.8/5.8: "%% FoomaticRIPOptionSetting: GammaSaturation=5.8"
+*GammaSaturation 5.9/5.9: "%% FoomaticRIPOptionSetting: GammaSaturation=5.9"
+*GammaSaturation 6.0/6.0: "%% FoomaticRIPOptionSetting: GammaSaturation=6.0"
+*GammaSaturation 6.1/6.1: "%% FoomaticRIPOptionSetting: GammaSaturation=6.1"
+*GammaSaturation 6.2/6.2: "%% FoomaticRIPOptionSetting: GammaSaturation=6.2"
+*GammaSaturation 6.3/6.3: "%% FoomaticRIPOptionSetting: GammaSaturation=6.3"
+*GammaSaturation 6.4/6.4: "%% FoomaticRIPOptionSetting: GammaSaturation=6.4"
+*GammaSaturation 6.5/6.5: "%% FoomaticRIPOptionSetting: GammaSaturation=6.5"
+*GammaSaturation 6.6/6.6: "%% FoomaticRIPOptionSetting: GammaSaturation=6.6"
+*GammaSaturation 6.7/6.7: "%% FoomaticRIPOptionSetting: GammaSaturation=6.7"
+*GammaSaturation 6.8/6.8: "%% FoomaticRIPOptionSetting: GammaSaturation=6.8"
+*GammaSaturation 6.9/6.9: "%% FoomaticRIPOptionSetting: GammaSaturation=6.9"
+*GammaSaturation 7.0/7.0: "%% FoomaticRIPOptionSetting: GammaSaturation=7.0"
+*GammaSaturation 7.1/7.1: "%% FoomaticRIPOptionSetting: GammaSaturation=7.1"
+*GammaSaturation 7.2/7.2: "%% FoomaticRIPOptionSetting: GammaSaturation=7.2"
+*GammaSaturation 7.3/7.3: "%% FoomaticRIPOptionSetting: GammaSaturation=7.3"
+*GammaSaturation 7.4/7.4: "%% FoomaticRIPOptionSetting: GammaSaturation=7.4"
+*GammaSaturation 7.5/7.5: "%% FoomaticRIPOptionSetting: GammaSaturation=7.5"
+*GammaSaturation 7.6/7.6: "%% FoomaticRIPOptionSetting: GammaSaturation=7.6"
+*GammaSaturation 7.7/7.7: "%% FoomaticRIPOptionSetting: GammaSaturation=7.7"
+*GammaSaturation 7.8/7.8: "%% FoomaticRIPOptionSetting: GammaSaturation=7.8"
+*GammaSaturation 7.9/7.9: "%% FoomaticRIPOptionSetting: GammaSaturation=7.9"
+*GammaSaturation 8.0/8.0: "%% FoomaticRIPOptionSetting: GammaSaturation=8.0"
+*GammaSaturation 8.1/8.1: "%% FoomaticRIPOptionSetting: GammaSaturation=8.1"
+*GammaSaturation 8.2/8.2: "%% FoomaticRIPOptionSetting: GammaSaturation=8.2"
+*GammaSaturation 8.3/8.3: "%% FoomaticRIPOptionSetting: GammaSaturation=8.3"
+*GammaSaturation 8.4/8.4: "%% FoomaticRIPOptionSetting: GammaSaturation=8.4"
+*GammaSaturation 8.5/8.5: "%% FoomaticRIPOptionSetting: GammaSaturation=8.5"
+*GammaSaturation 8.6/8.6: "%% FoomaticRIPOptionSetting: GammaSaturation=8.6"
+*GammaSaturation 8.7/8.7: "%% FoomaticRIPOptionSetting: GammaSaturation=8.7"
+*GammaSaturation 8.8/8.8: "%% FoomaticRIPOptionSetting: GammaSaturation=8.8"
+*GammaSaturation 8.9/8.9: "%% FoomaticRIPOptionSetting: GammaSaturation=8.9"
+*GammaSaturation 9.0/9.0: "%% FoomaticRIPOptionSetting: GammaSaturation=9.0"
+*GammaSaturation 9.1/9.1: "%% FoomaticRIPOptionSetting: GammaSaturation=9.1"
+*GammaSaturation 9.2/9.2: "%% FoomaticRIPOptionSetting: GammaSaturation=9.2"
+*GammaSaturation 9.3/9.3: "%% FoomaticRIPOptionSetting: GammaSaturation=9.3"
+*GammaSaturation 9.4/9.4: "%% FoomaticRIPOptionSetting: GammaSaturation=9.4"
+*GammaSaturation 9.5/9.5: "%% FoomaticRIPOptionSetting: GammaSaturation=9.5"
+*GammaSaturation 9.6/9.6: "%% FoomaticRIPOptionSetting: GammaSaturation=9.6"
+*GammaSaturation 9.7/9.7: "%% FoomaticRIPOptionSetting: GammaSaturation=9.7"
+*GammaSaturation 9.8/9.8: "%% FoomaticRIPOptionSetting: GammaSaturation=9.8"
+*GammaSaturation 9.9/9.9: "%% FoomaticRIPOptionSetting: GammaSaturation=9.9"
+*GammaSaturation 10.0/10.0: "%% FoomaticRIPOptionSetting: GammaSaturation=10.0"
+*CloseUI: *GammaSaturation
+
+*OpenUI *CurlCorrection/Curl Correction: PickOne
+*FoomaticRIPOption CurlCorrection: enum CmdLine C
+*OrderDependency: 160 AnySetup *CurlCorrection
+*DefaultCurlCorrection: Default
+*CurlCorrection Default/Default behaviour: "%% FoomaticRIPOptionSetting: CurlCorrection=Default"
+*FoomaticRIPOptionSetting CurlCorrection=Default: ""
+*CurlCorrection Always/Always: "%% FoomaticRIPOptionSetting: CurlCorrection=Always"
+*FoomaticRIPOptionSetting CurlCorrection=Always: " -forcecurlcorrectio&&
+n"
+*End
+*CurlCorrection Never/Never: "%% FoomaticRIPOptionSetting: CurlCorrection=Never"
+*FoomaticRIPOptionSetting CurlCorrection=Never: " -nocurlcorrection"
+*CloseUI: *CurlCorrection
+
+*OpenUI *Glossy/Glossy finishing: Boolean
+*FoomaticRIPOption Glossy: bool CmdLine C
+*FoomaticRIPOptionSetting Glossy: " -glossy"
+*OrderDependency: 170 AnySetup *Glossy
+*DefaultGlossy: False
+*Glossy True/Glossy: "%% FoomaticRIPOptionSetting: Glossy=True"
+*Glossy False/noGlossy: "%% FoomaticRIPOptionSetting: Glossy=False"
+*CloseUI: *Glossy
+
+*OpenUI *JobType/Job Type: PickOne
+*FoomaticRIPOption JobType: enum CmdLine C
+*OrderDependency: 150 AnySetup *JobType
+*DefaultJobType: SinglePass
+*JobType MiddlePass/Middle pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=MiddlePass"
+*FoomaticRIPOptionSetting JobType=MiddlePass: " -midpass"
+*JobType FirstPass/First pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=FirstPass"
+*FoomaticRIPOptionSetting JobType=FirstPass: " -firstpass"
+*JobType LastPass/Last pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=LastPass"
+*FoomaticRIPOptionSetting JobType=LastPass: " -lastpass"
+*JobType SinglePass/Single Pass Job: "%% FoomaticRIPOptionSetting: JobType=SinglePass"
+*FoomaticRIPOptionSetting JobType=SinglePass: ""
+*CloseUI: *JobType
+
+*OpenUI *KeepBlack/Keep pure black: Boolean
+*FoomaticRIPOption KeepBlack: bool CmdLine C
+*FoomaticRIPOptionSetting KeepBlack: " -keepblack"
+*OrderDependency: 190 AnySetup *KeepBlack
+*DefaultKeepBlack: False
+*KeepBlack True/KeepBlack: "%% FoomaticRIPOptionSetting: KeepBlack=True"
+*KeepBlack False/CorrectBlack: "%% FoomaticRIPOptionSetting: KeepBlack=False"
+*CloseUI: *KeepBlack
+
+*OpenUI *LFAdjust/Line Feed Adjustment: PickOne
+*FoomaticRIPOption LFAdjust: int CmdLine C
+*FoomaticRIPOptionPrototype LFAdjust: " -lfadjust %s"
+*FoomaticRIPOptionRange LFAdjust: -128 127
+*OrderDependency: 200 AnySetup *LFAdjust
+*DefaultLFAdjust: 0
+*LFAdjust -128/-128: "%% FoomaticRIPOptionSetting: LFAdjust=-128"
+*LFAdjust -125/-125: "%% FoomaticRIPOptionSetting: LFAdjust=-125"
+*LFAdjust -120/-120: "%% FoomaticRIPOptionSetting: LFAdjust=-120"
+*LFAdjust -115/-115: "%% FoomaticRIPOptionSetting: LFAdjust=-115"
+*LFAdjust -110/-110: "%% FoomaticRIPOptionSetting: LFAdjust=-110"
+*LFAdjust -105/-105: "%% FoomaticRIPOptionSetting: LFAdjust=-105"
+*LFAdjust -100/-100: "%% FoomaticRIPOptionSetting: LFAdjust=-100"
+*LFAdjust -95/-95: "%% FoomaticRIPOptionSetting: LFAdjust=-95"
+*LFAdjust -90/-90: "%% FoomaticRIPOptionSetting: LFAdjust=-90"
+*LFAdjust -85/-85: "%% FoomaticRIPOptionSetting: LFAdjust=-85"
+*LFAdjust -80/-80: "%% FoomaticRIPOptionSetting: LFAdjust=-80"
+*LFAdjust -75/-75: "%% FoomaticRIPOptionSetting: LFAdjust=-75"
+*LFAdjust -70/-70: "%% FoomaticRIPOptionSetting: LFAdjust=-70"
+*LFAdjust -65/-65: "%% FoomaticRIPOptionSetting: LFAdjust=-65"
+*LFAdjust -60/-60: "%% FoomaticRIPOptionSetting: LFAdjust=-60"
+*LFAdjust -55/-55: "%% FoomaticRIPOptionSetting: LFAdjust=-55"
+*LFAdjust -50/-50: "%% FoomaticRIPOptionSetting: LFAdjust=-50"
+*LFAdjust -45/-45: "%% FoomaticRIPOptionSetting: LFAdjust=-45"
+*LFAdjust -40/-40: "%% FoomaticRIPOptionSetting: LFAdjust=-40"
+*LFAdjust -35/-35: "%% FoomaticRIPOptionSetting: LFAdjust=-35"
+*LFAdjust -30/-30: "%% FoomaticRIPOptionSetting: LFAdjust=-30"
+*LFAdjust -25/-25: "%% FoomaticRIPOptionSetting: LFAdjust=-25"
+*LFAdjust -20/-20: "%% FoomaticRIPOptionSetting: LFAdjust=-20"
+*LFAdjust -15/-15: "%% FoomaticRIPOptionSetting: LFAdjust=-15"
+*LFAdjust -10/-10: "%% FoomaticRIPOptionSetting: LFAdjust=-10"
+*LFAdjust -5/-5: "%% FoomaticRIPOptionSetting: LFAdjust=-5"
+*LFAdjust 0/0: "%% FoomaticRIPOptionSetting: LFAdjust=0"
+*LFAdjust 5/5: "%% FoomaticRIPOptionSetting: LFAdjust=5"
+*LFAdjust 10/10: "%% FoomaticRIPOptionSetting: LFAdjust=10"
+*LFAdjust 15/15: "%% FoomaticRIPOptionSetting: LFAdjust=15"
+*LFAdjust 20/20: "%% FoomaticRIPOptionSetting: LFAdjust=20"
+*LFAdjust 25/25: "%% FoomaticRIPOptionSetting: LFAdjust=25"
+*LFAdjust 30/30: "%% FoomaticRIPOptionSetting: LFAdjust=30"
+*LFAdjust 35/35: "%% FoomaticRIPOptionSetting: LFAdjust=35"
+*LFAdjust 40/40: "%% FoomaticRIPOptionSetting: LFAdjust=40"
+*LFAdjust 45/45: "%% FoomaticRIPOptionSetting: LFAdjust=45"
+*LFAdjust 50/50: "%% FoomaticRIPOptionSetting: LFAdjust=50"
+*LFAdjust 55/55: "%% FoomaticRIPOptionSetting: LFAdjust=55"
+*LFAdjust 60/60: "%% FoomaticRIPOptionSetting: LFAdjust=60"
+*LFAdjust 65/65: "%% FoomaticRIPOptionSetting: LFAdjust=65"
+*LFAdjust 70/70: "%% FoomaticRIPOptionSetting: LFAdjust=70"
+*LFAdjust 75/75: "%% FoomaticRIPOptionSetting: LFAdjust=75"
+*LFAdjust 80/80: "%% FoomaticRIPOptionSetting: LFAdjust=80"
+*LFAdjust 85/85: "%% FoomaticRIPOptionSetting: LFAdjust=85"
+*LFAdjust 90/90: "%% FoomaticRIPOptionSetting: LFAdjust=90"
+*LFAdjust 95/95: "%% FoomaticRIPOptionSetting: LFAdjust=95"
+*LFAdjust 100/100: "%% FoomaticRIPOptionSetting: LFAdjust=100"
+*LFAdjust 105/105: "%% FoomaticRIPOptionSetting: LFAdjust=105"
+*LFAdjust 110/110: "%% FoomaticRIPOptionSetting: LFAdjust=110"
+*LFAdjust 115/115: "%% FoomaticRIPOptionSetting: LFAdjust=115"
+*LFAdjust 120/120: "%% FoomaticRIPOptionSetting: LFAdjust=120"
+*LFAdjust 125/125: "%% FoomaticRIPOptionSetting: LFAdjust=125"
+*LFAdjust 127/127: "%% FoomaticRIPOptionSetting: LFAdjust=127"
+*CloseUI: *LFAdjust
+
+*OpenUI *NoReset/Reset after job: Boolean
+*FoomaticRIPOption NoReset: bool CmdLine C
+*FoomaticRIPOptionSetting NoReset: " -noreset"
+*OrderDependency: 220 AnySetup *NoReset
+*DefaultNoReset: False
+*NoReset True/NoReset: "%% FoomaticRIPOptionSetting: NoReset=True"
+*NoReset False/Reset: "%% FoomaticRIPOptionSetting: NoReset=False"
+*CloseUI: *NoReset
+
+*OpenUI *Overlay/Print next job over the current one: Boolean
+*FoomaticRIPOption Overlay: bool CmdLine C
+*FoomaticRIPOptionSetting Overlay: " -overlay"
+*OrderDependency: 230 AnySetup *Overlay
+*DefaultOverlay: False
+*Overlay True/Overlay: "%% FoomaticRIPOptionSetting: Overlay=True"
+*Overlay False/DoNotOverlay: "%% FoomaticRIPOptionSetting: Overlay=False"
+*CloseUI: *Overlay
+
+*OpenUI *PHAdjust/Density: PickOne
+*FoomaticRIPOption PHAdjust: int CmdLine C
+*FoomaticRIPOptionPrototype PHAdjust: " -phadjust %s"
+*FoomaticRIPOptionRange PHAdjust: -50 50
+*OrderDependency: 240 AnySetup *PHAdjust
+*DefaultPHAdjust: 0
+*PHAdjust -50/-50: "%% FoomaticRIPOptionSetting: PHAdjust=-50"
+*PHAdjust -49/-49: "%% FoomaticRIPOptionSetting: PHAdjust=-49"
+*PHAdjust -48/-48: "%% FoomaticRIPOptionSetting: PHAdjust=-48"
+*PHAdjust -47/-47: "%% FoomaticRIPOptionSetting: PHAdjust=-47"
+*PHAdjust -46/-46: "%% FoomaticRIPOptionSetting: PHAdjust=-46"
+*PHAdjust -45/-45: "%% FoomaticRIPOptionSetting: PHAdjust=-45"
+*PHAdjust -44/-44: "%% FoomaticRIPOptionSetting: PHAdjust=-44"
+*PHAdjust -43/-43: "%% FoomaticRIPOptionSetting: PHAdjust=-43"
+*PHAdjust -42/-42: "%% FoomaticRIPOptionSetting: PHAdjust=-42"
+*PHAdjust -41/-41: "%% FoomaticRIPOptionSetting: PHAdjust=-41"
+*PHAdjust -40/-40: "%% FoomaticRIPOptionSetting: PHAdjust=-40"
+*PHAdjust -39/-39: "%% FoomaticRIPOptionSetting: PHAdjust=-39"
+*PHAdjust -38/-38: "%% FoomaticRIPOptionSetting: PHAdjust=-38"
+*PHAdjust -37/-37: "%% FoomaticRIPOptionSetting: PHAdjust=-37"
+*PHAdjust -36/-36: "%% FoomaticRIPOptionSetting: PHAdjust=-36"
+*PHAdjust -35/-35: "%% FoomaticRIPOptionSetting: PHAdjust=-35"
+*PHAdjust -34/-34: "%% FoomaticRIPOptionSetting: PHAdjust=-34"
+*PHAdjust -33/-33: "%% FoomaticRIPOptionSetting: PHAdjust=-33"
+*PHAdjust -32/-32: "%% FoomaticRIPOptionSetting: PHAdjust=-32"
+*PHAdjust -31/-31: "%% FoomaticRIPOptionSetting: PHAdjust=-31"
+*PHAdjust -30/-30: "%% FoomaticRIPOptionSetting: PHAdjust=-30"
+*PHAdjust -29/-29: "%% FoomaticRIPOptionSetting: PHAdjust=-29"
+*PHAdjust -28/-28: "%% FoomaticRIPOptionSetting: PHAdjust=-28"
+*PHAdjust -27/-27: "%% FoomaticRIPOptionSetting: PHAdjust=-27"
+*PHAdjust -26/-26: "%% FoomaticRIPOptionSetting: PHAdjust=-26"
+*PHAdjust -25/-25: "%% FoomaticRIPOptionSetting: PHAdjust=-25"
+*PHAdjust -24/-24: "%% FoomaticRIPOptionSetting: PHAdjust=-24"
+*PHAdjust -23/-23: "%% FoomaticRIPOptionSetting: PHAdjust=-23"
+*PHAdjust -22/-22: "%% FoomaticRIPOptionSetting: PHAdjust=-22"
+*PHAdjust -21/-21: "%% FoomaticRIPOptionSetting: PHAdjust=-21"
+*PHAdjust -20/-20: "%% FoomaticRIPOptionSetting: PHAdjust=-20"
+*PHAdjust -19/-19: "%% FoomaticRIPOptionSetting: PHAdjust=-19"
+*PHAdjust -18/-18: "%% FoomaticRIPOptionSetting: PHAdjust=-18"
+*PHAdjust -17/-17: "%% FoomaticRIPOptionSetting: PHAdjust=-17"
+*PHAdjust -16/-16: "%% FoomaticRIPOptionSetting: PHAdjust=-16"
+*PHAdjust -15/-15: "%% FoomaticRIPOptionSetting: PHAdjust=-15"
+*PHAdjust -14/-14: "%% FoomaticRIPOptionSetting: PHAdjust=-14"
+*PHAdjust -13/-13: "%% FoomaticRIPOptionSetting: PHAdjust=-13"
+*PHAdjust -12/-12: "%% FoomaticRIPOptionSetting: PHAdjust=-12"
+*PHAdjust -11/-11: "%% FoomaticRIPOptionSetting: PHAdjust=-11"
+*PHAdjust -10/-10: "%% FoomaticRIPOptionSetting: PHAdjust=-10"
+*PHAdjust -9/-9: "%% FoomaticRIPOptionSetting: PHAdjust=-9"
+*PHAdjust -8/-8: "%% FoomaticRIPOptionSetting: PHAdjust=-8"
+*PHAdjust -7/-7: "%% FoomaticRIPOptionSetting: PHAdjust=-7"
+*PHAdjust -6/-6: "%% FoomaticRIPOptionSetting: PHAdjust=-6"
+*PHAdjust -5/-5: "%% FoomaticRIPOptionSetting: PHAdjust=-5"
+*PHAdjust -4/-4: "%% FoomaticRIPOptionSetting: PHAdjust=-4"
+*PHAdjust -3/-3: "%% FoomaticRIPOptionSetting: PHAdjust=-3"
+*PHAdjust -2/-2: "%% FoomaticRIPOptionSetting: PHAdjust=-2"
+*PHAdjust -1/-1: "%% FoomaticRIPOptionSetting: PHAdjust=-1"
+*PHAdjust 0/0: "%% FoomaticRIPOptionSetting: PHAdjust=0"
+*PHAdjust 1/1: "%% FoomaticRIPOptionSetting: PHAdjust=1"
+*PHAdjust 2/2: "%% FoomaticRIPOptionSetting: PHAdjust=2"
+*PHAdjust 3/3: "%% FoomaticRIPOptionSetting: PHAdjust=3"
+*PHAdjust 4/4: "%% FoomaticRIPOptionSetting: PHAdjust=4"
+*PHAdjust 5/5: "%% FoomaticRIPOptionSetting: PHAdjust=5"
+*PHAdjust 6/6: "%% FoomaticRIPOptionSetting: PHAdjust=6"
+*PHAdjust 7/7: "%% FoomaticRIPOptionSetting: PHAdjust=7"
+*PHAdjust 8/8: "%% FoomaticRIPOptionSetting: PHAdjust=8"
+*PHAdjust 9/9: "%% FoomaticRIPOptionSetting: PHAdjust=9"
+*PHAdjust 10/10: "%% FoomaticRIPOptionSetting: PHAdjust=10"
+*PHAdjust 11/11: "%% FoomaticRIPOptionSetting: PHAdjust=11"
+*PHAdjust 12/12: "%% FoomaticRIPOptionSetting: PHAdjust=12"
+*PHAdjust 13/13: "%% FoomaticRIPOptionSetting: PHAdjust=13"
+*PHAdjust 14/14: "%% FoomaticRIPOptionSetting: PHAdjust=14"
+*PHAdjust 15/15: "%% FoomaticRIPOptionSetting: PHAdjust=15"
+*PHAdjust 16/16: "%% FoomaticRIPOptionSetting: PHAdjust=16"
+*PHAdjust 17/17: "%% FoomaticRIPOptionSetting: PHAdjust=17"
+*PHAdjust 18/18: "%% FoomaticRIPOptionSetting: PHAdjust=18"
+*PHAdjust 19/19: "%% FoomaticRIPOptionSetting: PHAdjust=19"
+*PHAdjust 20/20: "%% FoomaticRIPOptionSetting: PHAdjust=20"
+*PHAdjust 21/21: "%% FoomaticRIPOptionSetting: PHAdjust=21"
+*PHAdjust 22/22: "%% FoomaticRIPOptionSetting: PHAdjust=22"
+*PHAdjust 23/23: "%% FoomaticRIPOptionSetting: PHAdjust=23"
+*PHAdjust 24/24: "%% FoomaticRIPOptionSetting: PHAdjust=24"
+*PHAdjust 25/25: "%% FoomaticRIPOptionSetting: PHAdjust=25"
+*PHAdjust 26/26: "%% FoomaticRIPOptionSetting: PHAdjust=26"
+*PHAdjust 27/27: "%% FoomaticRIPOptionSetting: PHAdjust=27"
+*PHAdjust 28/28: "%% FoomaticRIPOptionSetting: PHAdjust=28"
+*PHAdjust 29/29: "%% FoomaticRIPOptionSetting: PHAdjust=29"
+*PHAdjust 30/30: "%% FoomaticRIPOptionSetting: PHAdjust=30"
+*PHAdjust 31/31: "%% FoomaticRIPOptionSetting: PHAdjust=31"
+*PHAdjust 32/32: "%% FoomaticRIPOptionSetting: PHAdjust=32"
+*PHAdjust 33/33: "%% FoomaticRIPOptionSetting: PHAdjust=33"
+*PHAdjust 34/34: "%% FoomaticRIPOptionSetting: PHAdjust=34"
+*PHAdjust 35/35: "%% FoomaticRIPOptionSetting: PHAdjust=35"
+*PHAdjust 36/36: "%% FoomaticRIPOptionSetting: PHAdjust=36"
+*PHAdjust 37/37: "%% FoomaticRIPOptionSetting: PHAdjust=37"
+*PHAdjust 38/38: "%% FoomaticRIPOptionSetting: PHAdjust=38"
+*PHAdjust 39/39: "%% FoomaticRIPOptionSetting: PHAdjust=39"
+*PHAdjust 40/40: "%% FoomaticRIPOptionSetting: PHAdjust=40"
+*PHAdjust 41/41: "%% FoomaticRIPOptionSetting: PHAdjust=41"
+*PHAdjust 42/42: "%% FoomaticRIPOptionSetting: PHAdjust=42"
+*PHAdjust 43/43: "%% FoomaticRIPOptionSetting: PHAdjust=43"
+*PHAdjust 44/44: "%% FoomaticRIPOptionSetting: PHAdjust=44"
+*PHAdjust 45/45: "%% FoomaticRIPOptionSetting: PHAdjust=45"
+*PHAdjust 46/46: "%% FoomaticRIPOptionSetting: PHAdjust=46"
+*PHAdjust 47/47: "%% FoomaticRIPOptionSetting: PHAdjust=47"
+*PHAdjust 48/48: "%% FoomaticRIPOptionSetting: PHAdjust=48"
+*PHAdjust 49/49: "%% FoomaticRIPOptionSetting: PHAdjust=49"
+*PHAdjust 50/50: "%% FoomaticRIPOptionSetting: PHAdjust=50"
+*CloseUI: *PHAdjust
+
+*OpenUI *UseMultiColourRibbon/Use multi-colour ribbon: Boolean
+*FoomaticRIPOption UseMultiColourRibbon: bool CmdLine C
+*FoomaticRIPOptionSetting UseMultiColourRibbon: " -usemulticolourribbo&&
+n"
+*End
+*OrderDependency: 260 AnySetup *UseMultiColourRibbon
+*DefaultUseMultiColourRibbon: False
+*UseMultiColourRibbon True/UseMultiColourRibbon: "%% FoomaticRIPOptionSetting: UseMultiColourRibbon=True"
+*UseMultiColourRibbon False/UseStandardRibbons: "%% FoomaticRIPOptionSetting: UseMultiColourRibbon=False"
+*CloseUI: *UseMultiColourRibbon
+
+*OpenUI *XShift/Horizontal (X-)Shift (in dots): PickOne
+*FoomaticRIPOption XShift: int CmdLine C
+*FoomaticRIPOptionPrototype XShift: " -xshift %s"
+*FoomaticRIPOptionRange XShift: -600 600
+*OrderDependency: 450 AnySetup *XShift
+*DefaultXShift: 0
+*XShift -600/-600: "%% FoomaticRIPOptionSetting: XShift=-600"
+*XShift -580/-580: "%% FoomaticRIPOptionSetting: XShift=-580"
+*XShift -560/-560: "%% FoomaticRIPOptionSetting: XShift=-560"
+*XShift -540/-540: "%% FoomaticRIPOptionSetting: XShift=-540"
+*XShift -520/-520: "%% FoomaticRIPOptionSetting: XShift=-520"
+*XShift -500/-500: "%% FoomaticRIPOptionSetting: XShift=-500"
+*XShift -480/-480: "%% FoomaticRIPOptionSetting: XShift=-480"
+*XShift -460/-460: "%% FoomaticRIPOptionSetting: XShift=-460"
+*XShift -440/-440: "%% FoomaticRIPOptionSetting: XShift=-440"
+*XShift -420/-420: "%% FoomaticRIPOptionSetting: XShift=-420"
+*XShift -400/-400: "%% FoomaticRIPOptionSetting: XShift=-400"
+*XShift -380/-380: "%% FoomaticRIPOptionSetting: XShift=-380"
+*XShift -360/-360: "%% FoomaticRIPOptionSetting: XShift=-360"
+*XShift -340/-340: "%% FoomaticRIPOptionSetting: XShift=-340"
+*XShift -320/-320: "%% FoomaticRIPOptionSetting: XShift=-320"
+*XShift -300/-300: "%% FoomaticRIPOptionSetting: XShift=-300"
+*XShift -280/-280: "%% FoomaticRIPOptionSetting: XShift=-280"
+*XShift -260/-260: "%% FoomaticRIPOptionSetting: XShift=-260"
+*XShift -240/-240: "%% FoomaticRIPOptionSetting: XShift=-240"
+*XShift -220/-220: "%% FoomaticRIPOptionSetting: XShift=-220"
+*XShift -200/-200: "%% FoomaticRIPOptionSetting: XShift=-200"
+*XShift -180/-180: "%% FoomaticRIPOptionSetting: XShift=-180"
+*XShift -160/-160: "%% FoomaticRIPOptionSetting: XShift=-160"
+*XShift -140/-140: "%% FoomaticRIPOptionSetting: XShift=-140"
+*XShift -120/-120: "%% FoomaticRIPOptionSetting: XShift=-120"
+*XShift -100/-100: "%% FoomaticRIPOptionSetting: XShift=-100"
+*XShift -80/-80: "%% FoomaticRIPOptionSetting: XShift=-80"
+*XShift -60/-60: "%% FoomaticRIPOptionSetting: XShift=-60"
+*XShift -40/-40: "%% FoomaticRIPOptionSetting: XShift=-40"
+*XShift -20/-20: "%% FoomaticRIPOptionSetting: XShift=-20"
+*XShift 0/0: "%% FoomaticRIPOptionSetting: XShift=0"
+*XShift 20/20: "%% FoomaticRIPOptionSetting: XShift=20"
+*XShift 40/40: "%% FoomaticRIPOptionSetting: XShift=40"
+*XShift 60/60: "%% FoomaticRIPOptionSetting: XShift=60"
+*XShift 80/80: "%% FoomaticRIPOptionSetting: XShift=80"
+*XShift 100/100: "%% FoomaticRIPOptionSetting: XShift=100"
+*XShift 120/120: "%% FoomaticRIPOptionSetting: XShift=120"
+*XShift 140/140: "%% FoomaticRIPOptionSetting: XShift=140"
+*XShift 160/160: "%% FoomaticRIPOptionSetting: XShift=160"
+*XShift 180/180: "%% FoomaticRIPOptionSetting: XShift=180"
+*XShift 200/200: "%% FoomaticRIPOptionSetting: XShift=200"
+*XShift 220/220: "%% FoomaticRIPOptionSetting: XShift=220"
+*XShift 240/240: "%% FoomaticRIPOptionSetting: XShift=240"
+*XShift 260/260: "%% FoomaticRIPOptionSetting: XShift=260"
+*XShift 280/280: "%% FoomaticRIPOptionSetting: XShift=280"
+*XShift 300/300: "%% FoomaticRIPOptionSetting: XShift=300"
+*XShift 320/320: "%% FoomaticRIPOptionSetting: XShift=320"
+*XShift 340/340: "%% FoomaticRIPOptionSetting: XShift=340"
+*XShift 360/360: "%% FoomaticRIPOptionSetting: XShift=360"
+*XShift 380/380: "%% FoomaticRIPOptionSetting: XShift=380"
+*XShift 400/400: "%% FoomaticRIPOptionSetting: XShift=400"
+*XShift 420/420: "%% FoomaticRIPOptionSetting: XShift=420"
+*XShift 440/440: "%% FoomaticRIPOptionSetting: XShift=440"
+*XShift 460/460: "%% FoomaticRIPOptionSetting: XShift=460"
+*XShift 480/480: "%% FoomaticRIPOptionSetting: XShift=480"
+*XShift 500/500: "%% FoomaticRIPOptionSetting: XShift=500"
+*XShift 520/520: "%% FoomaticRIPOptionSetting: XShift=520"
+*XShift 540/540: "%% FoomaticRIPOptionSetting: XShift=540"
+*XShift 560/560: "%% FoomaticRIPOptionSetting: XShift=560"
+*XShift 580/580: "%% FoomaticRIPOptionSetting: XShift=580"
+*XShift 600/600: "%% FoomaticRIPOptionSetting: XShift=600"
+*CloseUI: *XShift
+
+*OpenUI *YShift/Vertical (Y-)Shift (in dots): PickOne
+*FoomaticRIPOption YShift: int CmdLine C
+*FoomaticRIPOptionPrototype YShift: " -yshift %s"
+*FoomaticRIPOptionRange YShift: -600 600
+*OrderDependency: 460 AnySetup *YShift
+*DefaultYShift: 0
+*YShift -600/-600: "%% FoomaticRIPOptionSetting: YShift=-600"
+*YShift -580/-580: "%% FoomaticRIPOptionSetting: YShift=-580"
+*YShift -560/-560: "%% FoomaticRIPOptionSetting: YShift=-560"
+*YShift -540/-540: "%% FoomaticRIPOptionSetting: YShift=-540"
+*YShift -520/-520: "%% FoomaticRIPOptionSetting: YShift=-520"
+*YShift -500/-500: "%% FoomaticRIPOptionSetting: YShift=-500"
+*YShift -480/-480: "%% FoomaticRIPOptionSetting: YShift=-480"
+*YShift -460/-460: "%% FoomaticRIPOptionSetting: YShift=-460"
+*YShift -440/-440: "%% FoomaticRIPOptionSetting: YShift=-440"
+*YShift -420/-420: "%% FoomaticRIPOptionSetting: YShift=-420"
+*YShift -400/-400: "%% FoomaticRIPOptionSetting: YShift=-400"
+*YShift -380/-380: "%% FoomaticRIPOptionSetting: YShift=-380"
+*YShift -360/-360: "%% FoomaticRIPOptionSetting: YShift=-360"
+*YShift -340/-340: "%% FoomaticRIPOptionSetting: YShift=-340"
+*YShift -320/-320: "%% FoomaticRIPOptionSetting: YShift=-320"
+*YShift -300/-300: "%% FoomaticRIPOptionSetting: YShift=-300"
+*YShift -280/-280: "%% FoomaticRIPOptionSetting: YShift=-280"
+*YShift -260/-260: "%% FoomaticRIPOptionSetting: YShift=-260"
+*YShift -240/-240: "%% FoomaticRIPOptionSetting: YShift=-240"
+*YShift -220/-220: "%% FoomaticRIPOptionSetting: YShift=-220"
+*YShift -200/-200: "%% FoomaticRIPOptionSetting: YShift=-200"
+*YShift -180/-180: "%% FoomaticRIPOptionSetting: YShift=-180"
+*YShift -160/-160: "%% FoomaticRIPOptionSetting: YShift=-160"
+*YShift -140/-140: "%% FoomaticRIPOptionSetting: YShift=-140"
+*YShift -120/-120: "%% FoomaticRIPOptionSetting: YShift=-120"
+*YShift -100/-100: "%% FoomaticRIPOptionSetting: YShift=-100"
+*YShift -80/-80: "%% FoomaticRIPOptionSetting: YShift=-80"
+*YShift -60/-60: "%% FoomaticRIPOptionSetting: YShift=-60"
+*YShift -40/-40: "%% FoomaticRIPOptionSetting: YShift=-40"
+*YShift -20/-20: "%% FoomaticRIPOptionSetting: YShift=-20"
+*YShift 0/0: "%% FoomaticRIPOptionSetting: YShift=0"
+*YShift 20/20: "%% FoomaticRIPOptionSetting: YShift=20"
+*YShift 40/40: "%% FoomaticRIPOptionSetting: YShift=40"
+*YShift 60/60: "%% FoomaticRIPOptionSetting: YShift=60"
+*YShift 80/80: "%% FoomaticRIPOptionSetting: YShift=80"
+*YShift 100/100: "%% FoomaticRIPOptionSetting: YShift=100"
+*YShift 120/120: "%% FoomaticRIPOptionSetting: YShift=120"
+*YShift 140/140: "%% FoomaticRIPOptionSetting: YShift=140"
+*YShift 160/160: "%% FoomaticRIPOptionSetting: YShift=160"
+*YShift 180/180: "%% FoomaticRIPOptionSetting: YShift=180"
+*YShift 200/200: "%% FoomaticRIPOptionSetting: YShift=200"
+*YShift 220/220: "%% FoomaticRIPOptionSetting: YShift=220"
+*YShift 240/240: "%% FoomaticRIPOptionSetting: YShift=240"
+*YShift 260/260: "%% FoomaticRIPOptionSetting: YShift=260"
+*YShift 280/280: "%% FoomaticRIPOptionSetting: YShift=280"
+*YShift 300/300: "%% FoomaticRIPOptionSetting: YShift=300"
+*YShift 320/320: "%% FoomaticRIPOptionSetting: YShift=320"
+*YShift 340/340: "%% FoomaticRIPOptionSetting: YShift=340"
+*YShift 360/360: "%% FoomaticRIPOptionSetting: YShift=360"
+*YShift 380/380: "%% FoomaticRIPOptionSetting: YShift=380"
+*YShift 400/400: "%% FoomaticRIPOptionSetting: YShift=400"
+*YShift 420/420: "%% FoomaticRIPOptionSetting: YShift=420"
+*YShift 440/440: "%% FoomaticRIPOptionSetting: YShift=440"
+*YShift 460/460: "%% FoomaticRIPOptionSetting: YShift=460"
+*YShift 480/480: "%% FoomaticRIPOptionSetting: YShift=480"
+*YShift 500/500: "%% FoomaticRIPOptionSetting: YShift=500"
+*YShift 520/520: "%% FoomaticRIPOptionSetting: YShift=520"
+*YShift 540/540: "%% FoomaticRIPOptionSetting: YShift=540"
+*YShift 560/560: "%% FoomaticRIPOptionSetting: YShift=560"
+*YShift 580/580: "%% FoomaticRIPOptionSetting: YShift=580"
+*YShift 600/600: "%% FoomaticRIPOptionSetting: YShift=600"
+*CloseUI: *YShift
+
 
 *% Generic boilerplate PPD stuff as standard PostScript fonts and so on
 
@@ -1474,260 +2154,117 @@ lxm5700m"):
 *Font Times-Roman: Standard "(001.007S)" Standard ROM
 *Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
 *Font ZapfDingbats: Special "(001.004S)" Standard ROM
+----------------------------------------------------------------------------
 
-### This is the mentioned Perl data structure.
+Foomatic keywords
+-----------------
 
-*% What follows is a dumped representation of the internal Perl data
-*% structure representing one entry in the Linux Printing Database.
-*% This can be used by frontends to give advanced features which are
-*% beyond the possibilities which can be defined by Adobe-compliant PPDs.
-*% The lines are comment lines, so that programs which require 
-*% Adobe-compliant PPD files can handle this file. They simply ignore
-*% this additional information.
-*%
-*% COMDATA #$VAR1 = {
+*FoomaticIDs: <printer> <driver>
+    <printer>: The printer ID in the Foomatic database
+    <driver>: The driver name/ID in the Foomatic database
 
-### Some fields of the printer and driver XML files (not needed by
-### backend filters)
+*FoomaticRIPPostPipe: "<code>"
+    <code>: A shell command line into which the output of foomatic-rip
+            is piped. Only used with LPRng, LPD, GNUlpr, spooler-less
 
-### CMD field of "auto detection" section
-*% COMDATA #  'pnp_cmd' => undef,
+*FoomaticRIPCammandLine: "<code>"
+    <code>: The command line prototype, with spots to insert option
+            settings ("%A", "%B", ...).
 
-### style field of driver XML, here "GhostScript", which means a
-### driver compiled into GhostScript
-*% COMDATA #  'type' => 'G',
+*FoomaticRIPOption <name>: <type> <style> <spot> [<order>]
+    <name>: Option name; <type>: enum, bool, int, float;
+    <style>: CmdLine, JCL, PS, Collective;
+    <spot>: Insert this at "%<spot>" in the "*FoomaticRIPCammandLine";
+    <order>: order number (1-choice options only)
 
-### Printer does not support PJL, so the backend filter does not insert the
-### "<ESC>%-12345X@PJL ..." stuff around the job data.
-*% COMDATA #  'pjl' => undef,
+*FoomaticRIPOptionSetting <name>=<choice>: "<code>"
+    <name>: Option name; <choice>: choice name;
+    <code>: Code to insert for Cmdline and JCL options,
+            Settings of member options for Collective
+            options (see below)
 
-### MFG field of "auto detection" section (not used by backend)
-*% COMDATA #  'pnp_mfg' => undef,
+*FoomaticRIPOptionPrototype <name>: "<code>"
+    (keyword only for numerical options)
+    <name>: Option name;
+    <code>: Code to insert for Cmdline, JCL, and
+            PS options. With "%s" for the number
+            set by the user.
 
-### Option data, this data is read by all backend filters so that the
-### backend knows all the options and can insert appropriate code into
-### the job or into the command line. Also XPP and the KDE printing
-### system (when CUPS is the spooler) read these option entries to
-### provide true numerical options.
-*% COMDATA #  'args_byname' => {
+*FoomaticRIPOptionRange <name>: <min> <max>
+    (keyword only for numerical options)
+    <name>: Option name;
+    <min>, <max>: allowed range for the number.
 
-### Here begins the option record for the "HeadSeparation" option, a
-### numerical option
-*% COMDATA #    'HeadSeparation' => {
 
-### Name of the option
-*% COMDATA #      'name' => 'HeadSeparation',
+All strings in quotes (Foomatic command line, snippets to insert in 
+command line, "<code>" in the keyword descriptions above) are encoded 
+with the "htmlify()" function of DB.pm, so they contain no forbidden 
+characters ("<", ">", "\"") any more. In addition they are broken up 
+into short lines. The filter will put them together at first and then 
+replace the HTML/XML entities by the original characters. If a string is 
+spilt up, an "*End" line follows, as required by the Adobe specification.
 
-### The style says how to insert the code, 'C' means "command line"
-### and so the code is inserted at the given spot of the command
-### line. Other possibilties are 'G' ("GhostScript") to insert the
-### code into the job data before passing it through GhostScript and
-### "J" for a PJL option, to be inserted in the PJL header.
-*% COMDATA #      'style' => 'C',
+All Foomatic-relevant info is stored with keywords beginning with 
+"*Foomatic...", not in comment lines. So if some program strips the 
+comments off the PPD file, the file still works. The data is stored 
+in a way compliant to the Adobe specification.
 
-### Integer option
-*% COMDATA #      'type' => 'int',
+The "*Foomatic..." lines are located in the option entries, so that all 
+info which is related is located close to each other. This makes the 
+file more easily readable. The lines also contain only the information 
+which is not provided by the standard PPD lines. So redundancy is low 
+and the PPD can more easily be edited and customized.
 
-### GUI string, backend filters use it to construct the help page
-*% COMDATA #      'comment' => 'Head Separation',
+"*Foomatic..." lines are given to all non-PostScript options and to
+numerical PostScript options. Usual "Boolean" and "PickOne" PostScript
+options do not need them. Numerical options are "PickOne" for most
+frontends, but with the "*Foomatic..." lines the server (the
+"foomatic-rip" filter script) identifies them as numerical options
+(and so accepts values between the ones listed) and second, frontends
+could also read the "*Foomatic..." lines and so show the options as
+numerical (with input field and slider), as KDE Print and XPP now do
+by reading the Perl structure.
 
-### Minimum value
-*% COMDATA #      'min' => '0',
+Non-PostScript options with only one choice consist only of
+"*Foomatic..." lines. So the one choice is stored in the PPD file but
+frontends will not show a widget for these options. An example is the
+"Model" option in the shown file.
 
-### If there is more than one option for this spot, insert them in
-### ascending order of this number
-*% COMDATA #      'order' => 110,
+With the replacement of the Perl structure by the "*Foomatic..." lines a 
+lot of unnecessary information is removed from the PPDs and the way how 
+the Foomatic-specific stuff is stored is much simpler. So one can easier 
+read and edit it and one can more easily parse it, especially with 
+non-Perl programs. In addition, the PPD file is shorter.
 
-### Code to insert, '%s' will be replaced by the user-supplied value
-*% COMDATA #      'proto' => ' -dHeadSeparation=%s',
+Also collective options (planned for a later release of Foomatic
+2.9.x) can be described more easily:
 
-### Default value
-*% COMDATA #      'default' => 16,
+----------------------------------------------------------------------------
 
-### Option ID, not used by the backend filter
-*% COMDATA #      'idx' => 'opt/46',
+*OpenUI *DocumentType/Document Type: PickOne
+*FoomaticRIPOption DocumentType: enum Collective C
+*OrderDependency: 20 AnySetup *DocumentType
+*DefaultDocumentType: Office
+*DocumentType Draft/Draft Printout: "%% FoomaticRIPOptionSetting: 
+DocumentType=Draft"
+*FoomaticRIPOptionSetting DocumentType=Draft: "Resolution=300
+MediaType=Normal Dither=VeryFast"
+*End
+*DocumentType Office/Office Document: "%% FoomaticRIPOptionSetting: 
+DocumentType=Office"
+*FoomaticRIPOptionSetting DocumentType=Office: "Resolution=600
+MediaType=Normal Dither=AdaptiveHybrid"
+*End
+*DocumentType Drawing/High Quality Drawing: "%% 
+FoomaticRIPOptionSetting: DocumentType=Drawing"
+*FoomaticRIPOptionSetting DocumentType=Drawing: "Resolution=1200
+MediaType=Inkjet Dither=AdaptiveHybrid"
+*End
+*DocumentType Photo: "%% FoomaticRIPOptionSetting: DocumentType=Photo"
+*FoomaticRIPOptionSetting DocumentType=Photo: "Resolution=1200
+MediaType=GlossyPhoto Dither=EvenTone"
+*End
+*CloseUI: *DocumentType
 
-### Maximum value
-*% COMDATA #      'max' => 30,
+----------------------------------------------------------------------------
 
-### Spot where the option has to be inserted into the command line,
-### here "%A". This field has no effect for GhostScript and PJL
-### options.
-*% COMDATA #      'spot' => 'A'
-*% COMDATA #    },
-
-### Here begins the option record for the "PageSize" option, an
-### enumerated choice (PickOne) option
-*% COMDATA #    'PageSize' => {
-
-### Enumerated choice options have always a list of possible values
-*% COMDATA #      'vals_byname' => {
-*% COMDATA #        'Letter' => {
-
-### Used for help page
-*% COMDATA #          'comment' => 'US Letter',
-*% COMDATA #          'value' => 'Letter',
-
-### Choice ID
-*% COMDATA #          'idx' => 'ev/1',
-
-### Code piece to replace the %s in the code to be inserted by the option.
-*% COMDATA #          'driverval' => '612 792'
-*% COMDATA #        },
-*% COMDATA #        'EnvMonarch' => {
-*% COMDATA #          'comment' => 'Envelope Monarch',
-*% COMDATA #          'value' => 'EnvMonarch',
-*% COMDATA #          'idx' => 'ev/902',
-*% COMDATA #          'driverval' => '279 540'
-*% COMDATA #        },
-*% COMDATA #        'EnvC5' => {
-*% COMDATA #          'comment' => 'Envelope C5',
-*% COMDATA #          'value' => 'EnvC5',
-*% COMDATA #          'idx' => 'ev/900',
-*% COMDATA #          'driverval' => '459 649'
-*% COMDATA #        },
-*% COMDATA #        'Executive' => {
-*% COMDATA #          'comment' => 'Executive',
-*% COMDATA #          'value' => 'Executive',
-*% COMDATA #          'idx' => 'ev/895',
-*% COMDATA #          'driverval' => '522 756'
-*% COMDATA #        },
-*% COMDATA #        'A4' => {
-*% COMDATA #          'comment' => 'A4',
-*% COMDATA #          'value' => 'A4',
-*% COMDATA #          'idx' => 'ev/3',
-*% COMDATA #          'driverval' => '595 842'
-*% COMDATA #        },
-*% COMDATA #        'Legal' => {
-*% COMDATA #          'comment' => 'US Legal',
-*% COMDATA #          'value' => 'Legal',
-*% COMDATA #          'idx' => 'ev/2',
-*% COMDATA #          'driverval' => '612 1008'
-*% COMDATA #        },
-*% COMDATA #        'A5' => {
-*% COMDATA #          'comment' => 'A5',
-*% COMDATA #          'value' => 'A5',
-*% COMDATA #          'idx' => 'ev/896',
-*% COMDATA #          'driverval' => '421 595'
-*% COMDATA #        },
-*% COMDATA #        'B5' => {
-*% COMDATA #          'comment' => 'B5 (JIS)',
-*% COMDATA #          'value' => 'B5',
-*% COMDATA #          'idx' => 'ev/897',
-*% COMDATA #          'driverval' => '516 729'
-*% COMDATA #        },
-*% COMDATA #        'EnvDL' => {
-*% COMDATA #          'comment' => 'Envelope DL',
-*% COMDATA #          'value' => 'EnvDL',
-*% COMDATA #          'idx' => 'ev/901',
-*% COMDATA #          'driverval' => '312 624'
-*% COMDATA #        },
-*% COMDATA #        'Env10' => {
-*% COMDATA #          'comment' => 'Envelope #10',
-*% COMDATA #          'value' => 'Env10',
-*% COMDATA #          'idx' => 'ev/899',
-*% COMDATA #          'driverval' => '297 684'
-*% COMDATA #        },
-*% COMDATA #        'EnvISOB5' => {
-*% COMDATA #          'comment' => 'Envelope B5',
-*% COMDATA #          'value' => 'EnvISOB5',
-*% COMDATA #          'idx' => 'ev/898',
-*% COMDATA #          'driverval' => '499 709'
-*% COMDATA #        }
-*% COMDATA #      },
-*% COMDATA #      'name' => 'PageSize',
-
-### GhostScript style option, so the code is PostScript which has to
-### be inserted into the job data before the job being rendered by
-### GhostScript
-*% COMDATA #      'style' => 'G',
-
-### Enumerated choice option
-*% COMDATA #      'type' => 'enum',
-*% COMDATA #      'comment' => 'Page Size',
-*% COMDATA #      'order' => 100,
-
-### PostScript code for setting the paper size
-*% COMDATA #      'proto' => '<</PageSize[%s]/ImagingBBox null>>setpagedevice',
-
-### Default choice
-*% COMDATA #      'default' => 'Letter',
-*% COMDATA #      'idx' => 'opt/2',
-
-### This will be filled up with links later, so that one can access
-### the option choices not only through a hash but also through an
-### array.
-*% COMDATA #      'vals' => [
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {},
-*% COMDATA #        {}
-*% COMDATA #      ],
-
-### The spot is not used for a GhostScript option.
-*% COMDATA #      'spot' => 'Z'
-*% COMDATA #    }
-*% COMDATA #  },
-
-### This printer does not print plain text (not used by backend)
-*% COMDATA #  'ascii' => '0',
-
-### More fields which are not used by the backend filters
-*% COMDATA #  'pnp_des' => undef,
-*% COMDATA #  'pnp_mdl' => undef,
-*% COMDATA #  'maxspot' => 'Z',
-*% COMDATA #  'driver' => 'lxm5700m',
-*% COMDATA #  'id' => 62016,
-
-### Here there will be placed links to access the options through an array.
-*% COMDATA #  'args' => [
-*% COMDATA #    {},
-*% COMDATA #    {}
-*% COMDATA #  ],
-*% COMDATA #  'compiled-at' => 'Sat Feb  9 10:44:25 2002',
-*% COMDATA #  'model' => 5700,
-*% COMDATA #  'url' => 'http://www.ultranet.com/~setaylor/papers.htm',
-*% COMDATA #  'comment' => '
-*% COMDATA #    Monochrome driver for the Lexmark 5700. Fast and less memory
-*% COMDATA #    consuming alternative to the "pbm2l7k" colour driver. You should
-*% COMDATA #    have it installed when you do not only use your printer for images
-*% COMDATA #    but also for letters and listings.
-*% COMDATA #  ',
-*% COMDATA #  'timestamp' => '1013269465',
-
-### The GhostScript command line to be used by the backend filter,
-### expects PostScript at stdin, produces data for the printer on
-### stdout, letters preceeded by a '%' are the spots where the code of
-### the "command line"-style options will be inserted.
-*% COMDATA #  'cmd' => 'gs -q -dBATCH -dSAFER -dQUIET -dNOPAUSE -sDEVICE=lxm5700m %A%Z -sOutputFile=- -',
-
-*% COMDATA #  'compiled-by' => 'www-data@poblano',
-*% COMDATA #  'make' => 'Lexmark',
-*% COMDATA #  'color' => 1
-*% COMDATA #};
-
-### these lines set links so that the backend filter Perl scripts can
-### access the options and choices through arrays.
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[0] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'A4'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[1] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'Executive'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[2] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'EnvC5'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[3] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'EnvMonarch'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[4] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'Letter'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[5] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'Legal'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[6] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'EnvISOB5'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[7] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'Env10'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[8] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'EnvDL'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[9] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'B5'};
-*% COMDATA #$VAR1->{'args_byname'}{'PageSize'}{'vals'}[10] = $VAR1->{'args_byname'}{'PageSize'}{'vals_byname'}{'A5'};
-*% COMDATA #$VAR1->{'args'}[0] = $VAR1->{'args_byname'}{'PageSize'};
-*% COMDATA #$VAR1->{'args'}[1] = $VAR1->{'args_byname'}{'HeadSeparation'};
-
-The structure is produced by foomatic-perl-data.c and somewhat
-beautified by DB.pm.

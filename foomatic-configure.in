@@ -774,7 +774,7 @@ sub default_lpd {
 	    if ($p->{'names'}[0] eq 'lp') {
 		# Do we have a raw queue?
 		if ((!defined($p->{'str'}{'if'})) ||
-		    ($p->{'str'}{'if'} ne $sysdeps->{'lpdomatic'})) {
+		    ($p->{'str'}{'if'} ne $sysdeps->{'foomatic-rip'})) {
 		    $rawqueue = 1;
 		}
 		# Search for a free name
@@ -1348,10 +1348,11 @@ sub setup_pdq {
 
     # Create driver description file
     if ($rawqueue) {
-	system("foomatic-rip --genrawpdq $driverfile") and
+	system("$sysdeps->{'foomatic-rip'} --genrawpdq $driverfile") and
 	    die "Cannot create $driverfile!\n";
     } else {
-	system("foomatic-rip --ppd $ppdfile --genpdq $driverfile") and
+	system("$sysdeps->{'foomatic-rip'} --ppd $ppdfile --genpdq " .
+	       "$driverfile") and
 	    die "Cannot create $driverfile!\n";
     }
 

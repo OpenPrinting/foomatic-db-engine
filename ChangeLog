@@ -1,3 +1,35 @@
+2002-11-28  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* Makefile.in, configure.in: Fixed connection to the other Foomatic
+	  packages in both regular and "inplace" installation.
+
+	  Insert absolute paths for the Perl library and database locations
+	  in the "inplace" installation.
+
+	  Set link to "foomatic-rip" into the source directory when
+	  installing "inplace", so one can start all programs from
+	  one directory.
+
+	  Let files of "foomatic-templates" directory be installed into
+	  /usr/share/foomatic/templates, so that "foomatic-addpjloptions"
+	  also works with a regular installation (worked only "inplace"
+	  before).
+
+	* makeDefaults.in: Removed paths for old src/*omatic filters,
+	  added path for "foomatic-rip" and for PPR daemon
+	  ("foomatic-configure" needs the daemon to check the PPR version).
+
+	  Insert absolute paths for the database location ($libdir) in the
+	  "inplace" installation.
+
+	* foomatic-configure.in: Used path from Defaults.pm for calls of
+	  "foomatic-rip" when generating PDQ driver files.
+
+	* foomatic-addpjloptions.8.in: Updated path in "FILES" section.
+
+	* README, USAGE, TODO: Updated pacckage documentation for the
+	  Foomatic 2.9.0 release.
+	
 2002-11-27  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Removed the generator functions for the

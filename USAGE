@@ -52,15 +52,15 @@ filter scripts and/or description files from a database and assigns
 them to the printer queue.
 
 Widely used databases were the RHS-Printfilters and the APS
-filters. There disadvantages were that they only supported one spooler
+filters. Their disadvantages were that they only supported one spooler
 (LPD/LPRng) and only a small part of the driver's options (mostly page
 size and resolution). Foomatic supports all options of the drivers and
-all known spoolers (LPD, LPRng, GNUlpr, CUPS, PPR, PDQ, direct
+all known spoolers (LPD, LPRng, GNUlpr, CUPS, PPR, PDQ, CPS, direct
 spooler-less printing). In addition, all known free software printer
 drivers are supported. Foomatic also supports printing of various
 non-PostScript file types for spoolers which do not support this by
 themselves (LPD, LPRng, GNUlpr, spooler-less printing). To enable this
-feature you need to have "a2ps" installed.
+feature you need to have "a2ps", "enscript", or "mpage" installed.
 
 Another problem is that the way how to install queues, to print files,
 and to handle jobs is very different with different spoolers. LPD for
@@ -88,7 +88,8 @@ need the libxml C library for XML handling and one of the tools
 
 In addition, you need the Foomatic database ("foomatic-db") and the
 Foomatic filters ("foomatic-filters"). It is recommended to install
-these packages before you install this package.
+these packages before you install this package. Then the paths to its
+components get auto-detected during the build of this package.
 
 "wget" is really a standard tool which nearly every distribution
 includes. If yours does not include it, you find "wget" on
@@ -114,7 +115,7 @@ and "xml(2)-config", which tells the C compiler where it finds the
 header files. If "xml(2)-config" or some header files in the packages
 of your distribution are missing, compile libxml from source.
 
-I (Till) have tested with the versions 1.8.17 and 2.4.19 of libxml,
+Till has tested with the versions 1.8.17 and 2.4.19 of libxml,
 both work, but 1.8.17 requires that the XML files do not have leading
 blank lines. Use foomatic-fix-xml if you have such XML files (old or
 third-party files). libxml 1.8.9 and earlier do not work.
@@ -126,8 +127,8 @@ ESP GhostScript 7.05.4 or newer highly recommended) if one has a
 non-PostScript printer. In addition, the appropriate driver for a
 non-PostScript printer must be installed.
 
-After installing the libxml Foomatic can be installed using the
-commands (if you have downloaded this package from CVS, run
+After installing the libxml package, Foomatic can be installed using
+the commands (if you have downloaded this package from CVS, run
 "./make_configure" at first, for that you will also need libxml 2.x,
 the "autoconf" and "aclocal" utilities, "aclocal" is in the "automake"
 package in some distributions):
@@ -164,7 +165,7 @@ info. You can also modify variables in the beginning of the "Makefile"
 after running "configure", but note that every run of "configure"
 re-creates the "Makefile".
 
-If "configure" did no auto-detect where you have placed the database
+If "configure" did not auto-detect where you have placed the database
 (or if you intend to install the database afterwards), do
 
    export LIBDIR=/path/to/the/database
@@ -192,15 +193,19 @@ XML files for the database and test them in your local database
 without messing up the system-wide one. To have the local database you
 need to put the "foomatic-db" tarball into the main directory of this
 package or into the directory where you have also put this package for
-unpacking. Unpack the database package. You do not need to build or
-install it. Alternatively, you can link a database directory to "db" in
-the main directory of this package, for example enter
+unpacking. Simply unpack the database package. You do not need to build or
+install it. 
 
-   ln -s /usr/share/foomatic db
+You can use Foomatic databases from wherever you want, edit the "$libdir"
+line in lib/Foomatic/Defaults.pm to point to the desired database. To
+use the system-wide one, let the line look like:
 
-to use the system-wide database.
+   ...
+   # Library directory; typically /usr/share/foomatic or somesuch.
+   $libdir = '/usr/share/foomatic';
+   ...
 
-In addition you should install a utility to make PostScript out of
+In addition, you should install a utility to make PostScript out of
 non-PostScript files, so that you can print those non-PostScript files
 and also a list of available options using the "docs" option. The
 supported utilities are "a2ps", "enscript", and "mpage". Recommended
@@ -243,14 +248,15 @@ To add a printer queue you use the queue administration tool
 foomatic-configure. You call it this way:
 
    foomatic-configure [-q] [-f] [-s <spooler>] -n <queue> -c <connection> 
-		      [-p <printer ID> -d <driver ID>] [-o <option>=<value>
-	              -o <option>=<value> ...] [--oldppd]
+		      [-p <printer ID> -d <driver ID>] [ --ppd <ppdfile> ]
+		      [-o <option>=<value> -o <option>=<value> ...]
 
 Options in [...] can be left out. The options mean:
 
    -q		Quiet operation: You are not asked for anything.
-   -f		Force rebuild: The disk cache of the database will be
-		deleted, so changes in the database are taken into account.
+   -f		Force rebuild: If you queue uses a PPD file generated from
+		the Foomatic database, it will be rebuilt when this option
+		is set. Otherwise only the default settings are updated.
    -s <spooler>	The spooler to be used. If this option is left out, the
 		spooler is auto-detected and the user is asked whether
 		the auto-detection is correct (unless -q is given). Possible
@@ -305,14 +311,11 @@ Options in [...] can be left out. The options mean:
    -d <driver ID> : The ID of the desired printer driver. If the "-p" and
 		the "-d" options are left out, a raw (filterless) queue is
 		set up (PDQ does not support raw queues).
+   --ppd <ppdfile> : If you have a PostScript printer which is shipped
+		with a PPD file (or a PPD file from the internet, a CD,
+		or so), you can set up your print queue with this PPD
+		file using this option. Do not use "-p" and "-d" then.
    -o <option>=<value> : Set the default value for an option.
-   --oldppd     If you set up a queue for CUPS, a PPD-O-Matic PPD file will
-		be created because this is closer to the Adobe standards.
-		These files work also with XPP 1.1 and KDE 3.x. If you want
-		to have XPP 1.0 and the printer manager of KDE 2.x correctly
-	        working, you should let foomatic-configure generate the older
-	        CUPS-O-Matic PPD files by setting this option. Note that you
-		have to give it whenever you modify your queue.
 
 Example: We have the HP DeskJet 840C on the USB and want to use it
 with the "cdj880" driver. To get a CUPS queue named "DeskJet" we have
@@ -355,13 +358,6 @@ set to A4):
    foomatic-configure -s cups -n DeskJet -c file:/dev/usb/lp0
 		      -p 133664 -d cdj880 -o PageSize=A4
 
-This gives you a CUPS queue with a PPD-O-Matic PPD file. For getting a
-CUPS-O-Matic PPD file you should use (see "--oldppd" in the option
-list above for more info):
-
-   foomatic-configure -s cups -n DeskJet -c file:/dev/usb/lp0
-		      -p 133664 -d cdj880 -o PageSize=A4 --oldppd
-
 Exactly the same queue, but for PDQ:
 
    foomatic-configure -s pdq  -n DeskJet -c file:/dev/usb/lp0
@@ -373,6 +369,17 @@ queue: "dj"), the line has to be:
    foomatic-configure -s cups -n DeskJet -c smb://winserver/dj
 		      -p 133664 -d cdj880 -o PageSize=A4
 
+If you have an HP LaserJet 4050, which is a PostScript printer, you
+can get its PPD file from its Windowsd driver CD, http://hp.sf.net/,
+or http://www.linuxprinting.org/download/PPD/. After downloading it
+you can set up a queue as follows:
+
+   foomatic-configure -s pdq  -n LJ4050 -c socket://printer:9100
+		      --ppd HP_LaserJet_4050_Series.ppd -o PageSize=A4
+   
+and you get full access to all features of the printer, even with
+non-PPD-aware spoolers (as PDQ in this example).
+
 A raw LPD queue pointing to an HP JetDirect box (IP: 192.168.1.234,
 port: 9100) is made this way:
 
@@ -380,34 +387,34 @@ port: 9100) is made this way:
 
 If you want to print on a multi-function device from HP you should use
 the low-level driver HPOJ (http://hpoj.sourceforge.net/) so that you
-are also able to scan or to access memory cards. For USB devices you
-need HPOJ even when you only want to print. To set up a queue, set up
-HPOJ first and then look for the HPOJ device for your printer. You
-find it in the /etc/ptal-start.conf file in the line where
-"ptal-printd" is started, directly after "ptal-printd", for example
-"mlc:usb:PSC_950" for an HP PSC 950 connected via USB. To set up a
-queue for this printer under CUPS you have to enter:
+are also able to scan or to access memory cards. For many USB devices
+you need HPOJ even when you only want to print. To set up a queue, set
+up HPOJ first and then look for the HPOJ device for your printer. You
+get a list of all configured (with "ptal-init setup") devices with "ls
+/etc/ptal" (users of HPOJ 0.8 find the device name in /etc/ptal-start.conf
+in the line starting with "ptal-printd").
+
+The device name is for example "mlc:usb:PSC_950" for an HP PSC 950
+connected via USB. To set up a queue for this printer under CUPS you
+have to enter:
 
    foomatic-configure -s cups -n PSC950 -c ptal:/mlc:usb:PSC_950
 		      -p HP-PSC_950 -d hpijs -o PageSize=A4
 
 If you use CUPS 1.1.12 and newer, you need the most recent "ptal"
-backend script from
+backend script, which is either part of HPOJ (0.9 or newer) or
+separately downloadable from
 
    http://www.hornclan.com/~mark/cups/
 
 (use the "File"/"Save as ..." function of your browser to get it onto
-your hard disk). Copy the file into
+your hard disk). Foolow the instructions in the beginning of the file
+to install it.
 
-   /usr/lib/cups/backend/ptal
-
-and make it executable
-
-   chmod a+rx /usr/lib/cups/backend/ptal
-
-Now restart the CUPS daemon and ONLY NOW set up your printer queue,
-foomatic-configure will then auto-detect the script and make use of
-it.
+After installing HPOJ and/or "ptal" and configuring your printer with
+"ptal-init setup" restart the CUPS daemon and ONLY NOW set up your
+printer queue, foomatic-configure will then auto-detect the "ptal"
+script and make use of it.
 
 
 Modifying a queue
@@ -439,8 +446,6 @@ parallel port:
 
    foomatic-configure -s cups -n DeskJet -c file:/dev/lp0
 
-Do not forget to add the "--oldppd" option at every queue modification
-when you are using CUPS queues with the old CUPS-O-Matic PPD files.
 
 
 Copying a queue
@@ -485,9 +490,6 @@ and our queues are transferred to CUPS. LPRng does not need to be
 installed to do that copy, but CUPS as the destination spooler must be
 running. All option settings, description, location, and so on are
 conserved.
-
-Add the "--oldppd" when the copy should be a CUPS queue with the old
-CUPS-O-Matic PPD file.
 
 
 Setting the default queue
@@ -776,17 +778,22 @@ Print a listing of valid options with
 
 - Direct, spooler-less printing
 
-Here one uses the "directomatic" filter with a similar syntax as the "lpr"
+Here one uses the "foomatic-rip" filter with a similar syntax as the "lpr"
 commands of CUPS and GNUlpr. Use "-o" to include option settings:
 
-   directomatic [-P <queue>] 
+   foomatic-rip [-P <queue>] [--ppd <ppdfile>]
        [-o <option1>=<value1>] [-o <option2>=<value2>] 
-       [-o <option3>] [<file1>] [<file2>] ...
+       [-o <option3>] [<file1>] [<file2>] ... [ > <destination> ]
 
 Options in [...] can be left out. The options mean:
 
    -P <queue>	The queue where the job should be printed. If not given the
-		default is chosen according to the rules of the spooler.
+		default is chosen.
+   --ppd <ppdfile> If your printer is not configured (or for testing/
+		debugging) you can specify a PPD file which defines
+		how the job should be handled. The PPD file cane be
+		one generated by Foomatic, but also one shipped with a
+		PostScript printer.
    -o <option>  The switch "option" is set.
    -o <option>=<value> The option "option" is set to the value "value".
    -o docs      Print listing of the options. Works only when you provide
@@ -794,17 +801,39 @@ Options in [...] can be left out. The options mean:
 		printed).
    <file>	File(s) to be printed. When no file is given, the data to
 		print is taken from standard input.
+   > <destination> If no destination ("/dev/lp0", ...) for the output
+		data is specified, the data is directed to standard
+		output. In most cases it makes more sense to re-direct
+		the output to a printer or into a file.
 
 The first example from above looks like the following now:
 
-   directomatic -P DeskJet -o PageSize=A4 -o Quality=presentation file.ps
+   foomatic-rip -P DeskJet -o PageSize=A4 -o Quality=presentation file.ps
 
 Print a listing of valid options with
 
-   directomatic -P DeskJet -o docs ~/.bashrc
+   foomatic-rip -P DeskJet -o docs ~/.bashrc
 
-Note that "directomatic" only exits when the whole data is passed
-through the printer driver and sent to the printer, because we hav no
+If you want to try out a PostScript printer which you have not configured
+yet, do
+
+   foomatic-rip --ppd HP_LaserJet_4050_Series.ppd file.ps > /dev/lp0
+   foomatic-rip --ppd HP_LaserJet_4050_Series.ppd file.ps | nc -w1 host 9100
+
+The first command assumes that the printer is on the first parallel
+port.  Make sure that you have write permissions to /dev/lp0. The
+second command one has to use when the printer is connected via the
+local network, has the host name "host" and listens for jobs on port
+9100 (TCP/Socket/JetDirect).
+
+You can also use this for debugging purposes, for example when your
+jobs do not get printed. This surrounds the spooler and sends the
+filtered job directly to the printer. When they get printed this way,
+the problem is probably a problem of the spooler, not of the printer
+or the driver.
+
+Note that "foomatic-rip" only exits when the whole data is passed
+through the printer driver and sent to the printer, because we have no
 spooler which stores the data on the hard disk to print out of the
 background.
 
@@ -812,17 +841,21 @@ background.
 Printing from the command line with libppd/ppdfilt
 --------------------------------------------------
 
-If you do not want to install Foomatic on a client machine you can
-also use the ppdfilt utility of the libppd
-(http://libppd.sourceforge.net/, http://sourceforge.net/projects/lpr)
-to submit jobs with option settings (for example when the client uses
-stock LPD (not LPRng) and the server CUPS). You need to download the
-PPD-O-Matic PPD file for your printer onto the client. It is generated
-by foomatic-configure when setting up the printer and you find it as
-/etc/foomatic/<printer queue name>.ppd on your server. Then enter a
-command line as follows:
+In most cases you don't need this, because foomatic-rip has more or
+less the same functionality (see section directly above this one) and
+is much easier to install (one Perl script).
 
-   ppdfilt [-p <PPD-O-Matic PPD file>]
+If you do not want to install Foomatic (or at least foomatic-rip and
+the PPD file) on a client machine you can also use the ppdfilt utility
+of the libppd (http://libppd.sourceforge.net/,
+http://sourceforge.net/projects/lpr) to submit jobs with option
+settings (for example when the client uses stock LPD (not LPRng) and
+the server CUPS). You need to download the PPD file for your printer
+onto the client. It is generated by foomatic-configure when setting up
+the printer and you find it as /etc/foomatic/<spooler>/<printer queue
+name>.ppd on your server. Then enter a command line as follows:
+
+   ppdfilt [-p <PPD file>]
 	   [-o <option1>:<value1>] [-o <option2>:<value2>] 
            [-o <option3>] [<file1>] [<file2>] ... | lpr [-P <queue>]
 
@@ -841,7 +874,7 @@ Options in [...] can be left out. The options mean:
 
 The first example from above will look as follows:
 
-   ppdfilt -p DeskJet.ppd -o PageSize:A4 -oQuality:presentation file.ps | 
+   ppdfilt -p DeskJet.ppd -o PageSize:A4 -o Quality:presentation file.ps | 
            lpr -P DeskJet
 
 Extra options of ppdfilt can be used independent of Foomatic.
@@ -851,31 +884,15 @@ Printing through a graphical interface
 --------------------------------------
 
 XPP (http://cups.sourceforge.net/xpp/),
-QtCUPS (http://cups.sourceforge.net/qtcups/)
+GTKLP (http://www.stud.uni-hannover.de/~sirtobi/gtklp/index.html)
 
 These graphical interfaces for CUPS work just out of the box. You call
 them instead of "lpr" or "foomatic-printjob" (from the command line or
 out of an application) and you get a window to select the desired
 printer and thanks to the capabilities of CUPS you also can access all
-options of the driver (through the "Options" or "Properties" button),
+options of the driver (through the "Options" button or the tabs),
 independent whether the printer is on the local or on a remote
-machine. When you are using kprinter, QtCUPS or XPP 1.0 or earlier you
-should set up your queues with the old CUPS-O-Matic PPD files
-("--oldppd" option in foomatic-configure). XPP 1.1 (upgrading to this
-version is highly recommended) is adapted to handle both CUPS-O-Matic
-and PPD-O-Matic PPD files, the QtCUPS development was discontinued
-before the PPD-O-Matic PPDs were introduced (QtCUPS is replaced by
-kprinter now).
-
-GTKLP (http://www.stud.uni-hannover.de/~sirtobi/gtklp/index.html)
-
-This is another graphical frontend for CUPS, which works the same way
-as XPP and QtCUPS, but it does not show the numerical options of the
-drivers. To make the numerical options at least visible as enumerated
-options, you should set up your printer queue with the PPD-O-Matic PPD
-file (No "--oldppd" option in foomatic-configure). Note that then XPP
-1.0 or earlier, QtCUPS and kprinter 2.x will not work correctly any
-more.
+machine. 
 
 GPR (http://sourceforge.net/projects/lpr)
 
@@ -884,42 +901,36 @@ and LPRng. Stock LPD is not supported because it does not provide
 option passing (the "-J'option1=setting1 option2=setting2 ...'" trick
 of Foomatic is not supported by GPR). GPR can also be used as frontend
 for CUPS when one sets up one's printers with Foomatic as shown
-above. As PPD files for GPR use the PPD-O-Matic PPD files for all
-spoolers, they are automatically generated by foomatic-configure and
-dropped into /etc/foomatic/<printer queue name>.ppd when you set up
-your printer as shown above. For printers on CUPS servers GPR will
-also work with the CUPS-O-Matic PPD files, but it will not show the
-numerical options. So setting up CUPS queues with the PPD-O-Matic PPDs
-is recommended.
+above. As PPD files for use the PPD files assigned to your print
+queues, they are stored on your hard disk as
+/etc/foomatic/<spooler>/<printer queue name>.ppd
 
-kprinter (http://www.kde.org/)
+kprinter (http://printing.kde.org/)
 
 This is the printing interface of KDE 2.2 and newer, it either appears
 as the printing dialog of KDE applications or you use the "kprinter"
 command instead of "lpr" on the command line or in non-KDE
-applications. For users of CUPS it behaves exactly as QtCUPS (see
-above), for users of LPD/LPRng/GNUlpr it does not show the Foomatic
-options. When you are using kprinter of KDE 2.x with CUPS you should
-set up your queues with the old CUPS-O-Matic PPD files ("--oldppd"
-option in foomatic-configure), when you are using KDE 3.x or no KDE at
-all the PPD-O-Matic PPD files are recommended.
-
+applications. For users of CUPS it behaves as the other graphical
+frontends for CUPS (see above), for users of LPD/LPRng/GNUlpr older
+versions do not show the Foomatic options, recent do. In addition to
+providing access to all printers and driver options, you can also let
+you jobs being pre-filtered (for example to make booklets with the
+tools of the "ps-utils" package or to pretty-print text files with
+"a2ps"), or you can print posters on usual A4/Legal-sized
+printers. CUPS user have also access to job scheduling and priority
+features of CUPS.
 
 Printing from applications
 --------------------------
 
-The PPD-O-Matic PPD files, which foomatic-configure generates in the
-/etc/foomatic directory, can be used to make the driver options of
-your printer(s), which you have set up with Foomatic, available in
-various PPD-file-aware applications. If you are using CUPS do not use
-the CUPS-O-Matic PPD files, set up your queues with PPD-O-Matic PPD
-files (No "--oldppd" option in foomatic-configure) or use the
-PPD-O-Matic PPD file which is always in /etc/foomatic. Otherwise you
-will not have access to the numerical options.
+The PPD files, which foomatic-configure generates in (or copies to)
+the /etc/foomatic/<spooler>/ directory, can be used to make the driver
+options of your printer(s), which you have set up with Foomatic,
+available in various PPD-file-aware applications.
 
 If your printer is on a remote CUPS server and you have set it up with
-a PPD-O-Matic PPD file, you can easily download the PPD file to your
-client with
+a PPD file (no raw queue), you can easily download the PPD file to
+your client with
 
 wget http://<server name or IP>:631/printers/<printer queue name>.ppd
 
@@ -944,31 +955,29 @@ printer driver. Try printing with a non-KDE application at first to
 check this. OpenOffice.org 1.0 or newer is highly recommended as free
 office solution.
 
-Here are some tips for using common applications with PPD-O-Matic PPD
-files:
+Here are some tips for using common applications with PPD files:
 
 
 Star Office 5.x (http://www.sun.com/staroffice/)
 
 If you want to get all the options of your printer into the printing
-dialog of Star Office ("Properties" button), you can use the
-PPD-O-Matic PPD files (/etc/foomatic/<printer queue name>.ppd) as Star
-Office "drivers" and this way fully support all Foomatic-supported
-printers under Star Office.
+dialog of Star Office ("Properties" button), you can use PPD files
+(/etc/foomatic/<spooler>/<printer queue name>.ppd) as Star Office
+"drivers" and this way fully support all Foomatic-supported (or
+PostScript printer PPD supported) printers under Star Office.
 
 To do so start "spadmin", the printer setup program of Star Office (it
 is usually in /opt/office52/program or /usr/lib/office52/program) as
 "root". Click on "Install new driver ..." and in the dialog use the
-"Browse" button to navigate to the directory where the PPD-O-Matic PPD
-file for your printer is located. Choose the file in the file list and
-click "OK". Now your printer has an entry in the list "Existing
-printer drivers". Choose it and click "Add new printer". Choose the
-new entry in "Installed printers" and click on "Connect". In the
-dialog choose the queue with the command pointing to your printer or
-enter a new, non-existing queue name, an "=" character, and the
-command to print PostScript files on your printer plus a perl
-one-liner to fix the bug of the Euro currency symbol not being
-printed, for example:
+"Browse" button to navigate to the directory where the PPD file for
+your printer is located. Choose the file in the file list and click
+"OK". Now your printer has an entry in the list "Existing printer
+drivers". Choose it and click "Add new printer". Choose the new entry
+in "Installed printers" and click on "Connect". In the dialog choose
+the queue with the command pointing to your printer or enter a new,
+non-existing queue name, an "=" character, and the command to print
+PostScript files on your printer plus a perl one-liner to fix the bug
+of the Euro currency symbol not being printed, for example:
 
 EpsonQueue=perl -p -e "s=16#80 /euro=16#80 /Euro=" | lpr -P Epson
 
@@ -994,19 +1003,18 @@ find it in /opt/openoffice/, /usr/lib/openoffice/, /opt/office60/, or
 wizard opens and on its first page choose "Add a printer". The next
 page shows a list of printer models. These entries come from PPD files
 of native PostScript printers which were already shipped with
-OpenOffice.org or Star Office 6.0. Click "Import" to import your
-PPD-O-Matic PPD file into the list. Then a "Driver Installation"
-dialog appears. There click on "Browse" to get to the directory with
-your PPD file or type in the path. If you did it correctly, the name
-of your printer model appears in the big field. Note that when you use
-the "Browse" button, the browsing dialog does not show any file
-name. Click on the entry with your printer's model name and then on
-OK. Now your printer is in the list of printer models in the wizard
-and you can choose it. The next step asks for the desired printing
-command. Choose the "lpr" command for your printer's queue in the
-list. Then add a Perl one-liner to it so that the bug of the Euro
-currency symbol not being printed gets fixed, as the following example
-shows:
+OpenOffice.org or Star Office 6.0. Click "Import" to import your PPD
+file into the list. Then a "Driver Installation" dialog appears. There
+click on "Browse" to get to the directory with your PPD file or type
+in the path. If you did it correctly, the name of your printer model
+appears in the big field. Note that when you use the "Browse" button,
+the browsing dialog does not show any file name. Click on the entry
+with your printer's model name and then on OK. Now your printer is in
+the list of printer models in the wizard and you can choose it. The
+next step asks for the desired printing command. Choose the "lpr"
+command for your printer's queue in the list. Then add a Perl
+one-liner to it so that the bug of the Euro currency symbol not being
+printed gets fixed, as the following example shows:
 
 perl -p -e "s=/euro /unused=/Euro /unused=" | lpr -P laserjet
 
@@ -1033,8 +1041,8 @@ OpenOffice.org directory can be at different places:
 the following. Please use the directory according to your
 installation.
 
-At first copy (or link) the PPD-O-Matic PPD file
-(/etc/foomatic/<printer queue name>.ppd) into the
+At first copy (or link) the PPD file (/etc/foomatic/<spooler>/<printer
+queue name>.ppd) into the
 /usr/lib/OpenOffice.org638/share/psprint/driver directory and rename
 the copy (or the link) to have the file name extension ".PS". Make the
 file world-readable ("chmod 644 <filename>"). When you have done so,
@@ -1055,9 +1063,8 @@ for the printer which should be the default printer, "0" in the
 others. "Location=" and "Comment=" are only comments shown in the
 printing dialog of OpenOffice.org, you don't need to fill them
 in. "Command=" should contain the command line command to print
-PostScript files on your printerplus a perl
-one-liner to fix the bug of the Euro currency symbol not being
-printed, for example:
+PostScript files on your printerplus a perl one-liner to fix the bug
+of the Euro currency symbol not being printed, for example:
 
 perl -p -e "s=/euro /unused=/Euro /unused=" | lpr -P Epson
 
@@ -1095,14 +1102,14 @@ a list entry) and click on "Setup Printer ...". If your printer is
 listed, it is supported by GIMP-Print and you do not need a PPD file
 for using it with GIMP. If it is not listed, choose "PostScript Level
 2". Then an input field for a PPD file will appear. Enter the path and
-name under which your PPD-O-Matic PPD file is located
-(foomatic-configure generates it as /etc/foomatic/<printer queue
-name>.ppd) or choose it with the "Browse" button. Adapt the printing
-command to your spooler, especially remove the "-oraw" option, because
-it is important that the print job is going through the Foomatic
-filter. After closing the dialog with "OK" the fields for the options
-("Media Size", "Media Source", ...) will contain the choices according
-to your printer. Click "Save Settings" to make your setup permanent.
+name under which your PPD file is located (foomatic-configure puts it
+into /etc/foomatic/<spooler>/<printer queue name>.ppd) or choose it
+with the "Browse" button. Adapt the printing command to your spooler,
+especially remove the "-oraw" option, because it is important that the
+print job is going through the Foomatic filter. After closing the
+dialog with "OK" the fields for the options ("Media Size", "Media
+Source", ...) will contain the choices according to your
+printer. Click "Save Settings" to make your setup permanent.
 
 
 Printing from Windows clients
@@ -1110,29 +1117,28 @@ Printing from Windows clients
 
 When you have configured a printer on a GNU/Linux or Unix server with
 Foomatic, you can set up Windows clients using the generic PostScript
-printer driver (best from http://www.adobe.com/) and the PPD-O-Matic
-PPD file (/etc/foomatic/<printer queue name>.ppd). Then you don't need
-to install the Windows driver for your printer. On Epson inkjets
-driven by the current version of GIMP-Print you could even obtain a
-better printout quality than with the Windows driver. You can also do
-things as installing filters which parse the PostScript and count the
-pages on your server which is not possible when the client's Windows
-driver sends a data stream in a proprietary format. It also helps you
-when you have an old printer which works nicely under Windows 3.1 and
-under GNU/Linux or Unix with GhostScript, but not any more under
-Windows 98/ME/XP/2000.
+printer driver (best from http://www.adobe.com/) and the PPD file
+(/etc/foomatic/<spooler>/<printer queue name>.ppd) assigned to the
+queue. Then you don't need to install the Windows driver for your
+printer. On Epson inkjets driven by the current version of GIMP-Print
+you could even obtain a better printout quality than with the Windows
+driver. You can also do things as installing filters which parse the
+PostScript and count the pages on your server which is not possible
+when the client's Windows driver sends a data stream in a proprietary
+format. It also helps you when you have an old printer which works
+nicely under Windows 3.1 and under GNU/Linux or Unix with GhostScript,
+but not any more under Windows 98/ME/XP/2000.
 
 To set up this you should configure the Samba (http://www.samba.org/)
 on your server so that its printing command does not contain options
 for raw (unfiltered) printing ("-oraw", "-l"). The printing command
 you find in /etc/samba/smb.conf in the "[printers]" section in the
-"print command = " line. It is also convenient to make the PPD-O-Matic
-PPD files downloadable for the Windows clients.
+"print command = " line. It is also convenient to make the PPD files
+of the queues downloadable for the Windows clients.
 
 When you have CUPS 1.1.12 or newer on your server you can get it even
-easier by the "cupsaddsmb" tool. Set up your printers with PPD-O-Matic
-PPD files (No "--oldppd" option in foomatic-configure) and than follow
-the instructions shown by "man cupsaddsmb".
+easier by the "cupsaddsmb" tool. After setting up your printer(s) with
+foomatic-configure follow the instructions shown by "man cupsaddsmb".
 
 
 More info

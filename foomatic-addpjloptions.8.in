@@ -37,7 +37,7 @@ Print a help message
 
 .SH FILES
 .TP 25
-foomatic-templates/pjl*.xml
+@$ENV{LIBDIR}@/templates/pjl*.xml
 Necessary for successful operation.
 .PD 0
 

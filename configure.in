@@ -129,6 +129,7 @@ AC_PATH_PROGS(PDQ_PRINT,pdq lpr-pdq,/usr/bin/pdq,$BINSEARCHPATH)
 dnl PDQ_JOBDIR=~/.printjobs
 
 dnl Paths for PPR
+AC_PATH_PROGS(PPR_PPRD,ppr/bin/pprd,/usr/lib/ppr/bin/pprd,$LIBSEARCHPATH)
 AC_PATH_DIRS(PPR_INTERFACES,ppr/interfaces,/usr/lib/ppr/interfaces,$LIBSEARCHPATH)
 AC_PATH_DIRS(PPR_PPDFILES,ppr/PPDFiles,/usr/share/ppr/PPDFiles,$DATASEARCHPATH)
 AC_PATH_DIRS(PPR_ETC,ppr,/etc/ppr,$SYSCONFSEARCHPATH)
@@ -152,8 +153,14 @@ AC_PATH_PROGS(WGET,wget,/usr/bin/wget,$BINSEARCHPATH:$SBINSEARCHPATH)
 AC_PATH_PROGS(CURL,curl,/usr/bin/curl,$BINSEARCHPATH:$SBINSEARCHPATH)
 
 dnl Path for Foomatic XML database (foomatic-db)
-AC_PATH_DIRS(LIBDIR,foomatic,/usr/share/foomatic,$DATASEARCHPATH)
-AC_PATH_DIRS(LOCALLIBDIR,.,./foomatic-db,./foomatic-db*:./db:../foomatic-db*)
+AC_PATH_DIRS(LIBDIR,foomatic/db/source,/usr/share/foomatic/db/source,$DATASEARCHPATH)
+LIBDIR=`echo $LIBDIR | sed -e "s:/db/source$::"`
+AC_PATH_DIRS(LOCAL_LIBDIR,db/source,../foomatic-db/db/source,.:./foomatic-db:./foomatic-db*:../foomatic-db:../foomatic-db*)
+LOCAL_LIBDIR=`echo $LOCAL_LIBDIR | sed -e "s:/db/source$::"`
+
+dnl Path for foomatic-rip (from foomatic-filters)
+AC_PATH_PROGS(FOOMATIC_RIP,foomatic-rip,/usr/bin/foomatic-rip,$BINSEARCHPATH:$SBINSEARCHPATH)
+AC_PATH_PROGS(LOCAL_FOOMATIC_RIP,foomatic-rip,../foomatic-filters/foomatic-rip,.:./foomatic-filters:./foomatic-filters*:../foomatic-filters:../foomatic-filters*)
 
 dnl AC_OUTPUT(Makefile src/Makefile)
 AC_OUTPUT(Makefile makeDefaults makeMan

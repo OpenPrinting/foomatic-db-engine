@@ -34,7 +34,13 @@ PERLPREFIX=@PERLPREFIX@
 LIBDIR=@LIBDIR@
 
 # Foomatic database location for a "make inplace" installation
-LOCALLIBDIR=@LOCALLIBDIR@
+LOCAL_LIBDIR=@LOCAL_LIBDIR@
+
+# foomatic-rip path for a regular installation
+FOOMATIC_RIP=@FOOMATIC_RIP@
+
+# foomatic-rip path for a "make inplace" installation
+LOCAL_FOOMATIC_RIP=@LOCAL_FOOMATIC_RIP@
 
 # Locations for installing the components of this package
 BINDIR=$(bindir)
@@ -59,7 +65,7 @@ PERL_INSTALLDIRS=@PERL_INSTALLDIRS@
 EXEC_PATH=/usr/local/bin:/usr/bin:/bin
 LOG_PATH=/tmp
 
-# Paths for LPD and LPRng (without magicfilter)
+# Paths for LPD and LPRng
 LPD_SPOOL=@LPD_SPOOL@
 LPD_LOG=@LPD_LOG@
 LPD_BIN=@LPD_BIN@
@@ -100,6 +106,7 @@ PDQ_PRINT=@PDQ_PRINT@
 PDQ_JOBDIR=~/.printjobs
 
 # Paths for PPR
+PPR_PPRD=@PPR_PPRD@
 PPR_INTERFACES=@PPR_INTERFACES@
 PPR_PPDFILES=@PPR_PPDFILES@
 PPR_ETC=@PPR_ETC@
@@ -145,6 +152,9 @@ SBINFILES:=foomatic-kitload foomatic-ppdload \
 	foomatic-getpjloptions foomatic-addpjloptions \
 	foomatic-preferred-driver foomatic-fix-xml
 
+# Foomatic XML templates
+TEMPLATES:=pjl_enum_choice.xml pjl_enum_option.xml pjl_num_option.xml
+
 # Masks for trash files which have to be removed before packaging Foomatic
 TRASHFILES:="*~" "*\#*" ".??*" "*.rej"
 
@@ -170,11 +180,16 @@ install-bin: check-config lib/Makefile
 	install -d $(DESTDIR)$(BINDIR)
 	install -d $(DESTDIR)$(SBINDIR)
 	install -d $(DESTDIR)$(ETCDIR)
+	install -d $(DESTDIR)$(LIBDIR)/templates
 	cp -f $(BINFILES) $(DESTDIR)$(BINDIR)
 	cp -f $(SBINFILES) $(DESTDIR)$(SBINDIR)
-#	Link to allow foomatic-ppdfile be called under the olf name
+	( cd foomatic-templates && \
+	  cp -f $(TEMPLATES) $(DESTDIR)$(LIBDIR)/templates \
+	)
+	$(PERL) -p -i -e "s:foomatic-templates:$(LIBDIR)/templates:g" $(DESTDIR)$(SBINDIR)/foomatic-addpjloptions
+#	Link to allow foomatic-ppdfile be called under the old name
 #	foomatic-datafile
-	ln -s $(BINDIR)/foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
+	ln -sf $(BINDIR)/foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
 
 install-man: check-config
 	install -d $(DESTDIR)$(MANDIR)
@@ -187,7 +202,7 @@ install-man: check-config
 # "make testing", we remove them.
 build: defaults lib/Makefile foomatic-combo-xml foomatic-perl-data man
 	for m in $(BINFILES) $(SBINFILES); do \
-	  perl -p -i -e "s=use lib 'lib/';\n==s" $$m; \
+	  $(PERL) -p -i -e "s=use lib '.*lib/';\n==s" $$m; \
 	done
 	chmod a+rx $(AC_OUTPUT_FILES)
 
@@ -214,6 +229,8 @@ clean: lib/Makefile remove-trash
 	rm -f foomatic-perl-data
 	rm -f Foomatic
 	$(RM) $(BINFILES:=.1) $(SBINFILES:=.8)
+#	Remove links from inplace installation
+	rm -f foomatic-rip foomatic-datafile man
 
 distclean: clean
 	rm -f $(AC_OUTPUT_FILES) config.log config.status config.cache
@@ -238,6 +255,10 @@ uninstall-bin: check-config lib/Makefile
 	( cd $(DESTDIR)$(SBINDIR) && \
 	  rm -f $(SBINFILES) \
 	)
+	( cd $(DESTDIR)$(LIBDIR)/templates && \
+	  rm -f $(TEMPLATES) \
+	)
+	rmdir $(DESTDIR)$(LIBDIR)/templates || :
 	rmdir $(DESTDIR)$(ETCDIR) || :
 
 uninstall-man: check-config
@@ -254,12 +275,18 @@ uninstall-man: check-config
 # systems with installed Foomatic.
 inplace: testing
 testing: INPLACE = --inplace
-testing: defaults foomatic-combo-xml foomatic-perl-data
+testing: defaults foomatic-combo-xml foomatic-perl-data man
 	ln -sf lib/Foomatic .; \
 	for m in $(BINFILES) $(SBINFILES); do \
-	  perl -p -i -e "s=^\#\x21$(PERL)\n=\#\x21$(PERL)\nuse lib 'lib/';\n=s" $$m; \
+	  $(PERL) -p -i -e "s=^\#\x21$(PERL)\n=\#\x21$(PERL)\nuse lib '`pwd`/lib/';\n=s" $$m; \
 	done
 	chmod a+rx $(AC_OUTPUT_FILES)
+#	Links for more convenient usage of the "inplace" installation
+	ln -sf $(LOCAL_FOOMATIC_RIP) foomatic-rip
+	ln -sf `pwd`/foomatic-ppdfile foomatic-datafile
+#	Script for the man pages
+	echo -en '#!/bin/sh\nman ./\044\061.[1-9n] 2>/dev/null || man \044\061\n' > man || :
+	chmod a+rx man || :
 
 inplace-clean: testing_clean
 testing-clean: clean
