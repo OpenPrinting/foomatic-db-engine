@@ -2493,32 +2493,21 @@ sub getppd {
     # The Perl data structure of the current printer/driver combo.
     my $dat = $db->{'dat'};
 
-    # Find enumerated choice option with the lowest amount of choices. This
-    # option will carry the command line prototype. There will always be an
-    # enumerated choice option since the "PageSize" option is required in
-    # PPD files.
+    my @optionblob; # Lines for command line and options in the PPD file
 
-    my $minchoices = 999999;
-    my $carrycommandline; # Name of the option which should carry the
-                          # command line prototype
+    # Insert the command line prototype right before the option
+    # descriptions
     
-    for $arg (@{$dat->{'args'}}) {
-	my $name = $arg->{'name'};
-	my $type = $arg->{'type'};
-	if ($type eq 'enum') {
-	    # We are only interested in enumerated choice options here
-	    $numchoices = scalar(@{$arg->{'vals'}});
-	    if ((($numchoices > 1) || (($name eq "PageSize"))) && 
-		($numchoices < $minchoices)) { 
-		$minchoices = $numchoices;
-		$carrycommandline = $name;
-	    }
-	}
+    my $header = "*FoomaticRIPCammandLine";
+    my $cmdline = $dat->{'cmd'};
+    my $cmdlinestr = ripdirective($header, $cmdline);
+    push(@optionblob, "$cmdlinestr\n");
+    if ($cmdlinestr =~ /\n/s) {
+	push(@optionblob, "*End\n");
     }
 
     # Construct the option entries for the PPD file
 
-    my @optionblob; # Lines to put into the PPD file
     my @groupstack; # In which group are we currently
 
     for $arg (@{$dat->{'args'}}) {
@@ -2569,17 +2558,35 @@ sub getppd {
 	}
 
 	if ($type eq 'enum') {
-	    # Skip zero or one choice arguments (except "PageSize", a PPD
-	    # file without "PageSize" will break the CUPS environment).
+	    # Skip zero or one choice arguments. Do not skip "PageSize",
+	    # since a PPD file without "PageSize" will break the CUPS
+	    # environment and also do not skip PostScript options. For
+	    # skipped options with one choice only "*Foomatic..."
+	    # definitions will be used.
 	    if ((1 < scalar(@{$arg->{'vals'}})) ||
-		($name eq "PageSize")) {
+		($name eq "PageSize") ||
+		($arg->{'style'} eq 'G')) {
+
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
+
+		if ($arg->{'style'} ne 'G') {
+		    # For non-PostScript options insert line with option
+		    # properties
+		    my $optstyle = ($arg->{'style'} eq 'J' ? 
+				    "JCL" : "CmdLine");
+		    push(@optionblob, sprintf
+			 ("*FoomaticRIPOption %s: enum %s %s\n",
+			  $name, $optstyle, $spot));
+		}
+
+		push(@optionblob,
 		     sprintf("*OrderDependency: %s %s *%s\n", 
 			     $order, $section, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? $default : 'Unknown')));
+
 		if (!defined($default)) {
 		    my $whr = sprintf("%s %s driver %s",
 				      $dat->{'make'},
@@ -2587,7 +2594,7 @@ sub getppd {
 				      $dat->{'driver'});
 		    warn "undefined default for $idx/$name on a $whr\n";
 		}
-	    
+		
 		# If this is the page size argument; construct
 		# PageRegion, ImageableArea, and PaperDimension clauses 
 		# from it. Arguably this is all backwards, but what can
@@ -2673,6 +2680,7 @@ sub getppd {
 			push(@paperdimension,
 			     "*PaperDimension $value/$comment: \"$size\"");
 		    }
+		    my $foomaticstr = "";
 		    if ($arg->{'style'} eq 'G') {
 			# Ghostscript argument; offer up ps for insertion
 			$psstr = sprintf($cmd, 
@@ -2683,24 +2691,19 @@ sub getppd {
 			# Option setting directive for Foomatic filter
 			# 4 "%" because of the "sprintf" applied to it
 			# In the end stay 2 "%" to have a PostScript comment
-			my $optstyle = ($arg->{'style'} eq 'J' ? 
-					"JCL" : "CommandLine");
-			my $cmdval =
-			    htmlify(sprintf($cmd,
-					    (defined($v->{'driverval'})
-					     ? $v->{'driverval'}
-					     : $v->{'value'})));
 			$psstr = sprintf
-			    ("%%%% RIP%sOption %s %s %s:%s",
-			     $optstyle, $name, $spot, $order, $cmdval);
-		    }
-		    if ($name eq $carrycommandline) {
-			# This option will carry the command line prototype,
-			# So insert it right before the code to be inserted
-			# into the PostScript data
-			$psstr =
-			    sprintf("%%%% RIPCammandLine:%s\n",
-				    htmlify($dat->{'cmd'})) . $psstr;
+			     ("%%%% FoomaticRIPOptionSetting: %s=%s",
+			      $name, $v->{'value'});
+			my $header = sprintf
+			    ("*FoomaticRIPOptionSetting %s=%s",
+			     $name, $v->{'value'});
+			my $cmdval =
+			    sprintf($cmd,
+				    (defined($v->{'driverval'})
+				     ? $v->{'driverval'}
+				     : $v->{'value'}));
+			$foomaticstr = ripdirective($header, $cmdval) . 
+			    "\n";
 		    }
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
@@ -2711,14 +2714,21 @@ sub getppd {
 		    if ($psstr =~ /\n/s) {
 			push(@optionblob, "*End\n");
 		    }
+		    push(@optionblob, $foomaticstr);
+		    # Stuff to insert into command line/job is more than one
+		    # line? Let an "*End" line follow
+		    if ($foomaticstr =~ /\n.*\n/s) {
+			push(@optionblob, "*End\n");
+		    }
 		    # In modern PostScript interpreters "PageRegion" 
 		    # and "PageSize" are the same option, so we fill 
 		    # in the "PageRegion" the same
 		    # way as the "PageSize" choices.
 		    if ($name eq "PageSize") {
 			push(@pageregion,
-			     sprintf("*PageRegion %s/%s: \"$psstr\"", 
-				     $v->{'value'}, $v->{'comment'}));
+			     sprintf("*PageRegion %s/%s: \"%s\"", 
+				     $v->{'value'}, $v->{'comment'},
+				     $psstr));
 			if ($psstr =~ /\n/s) {
 			    push(@pageregion, "*End");
 			}
@@ -2754,6 +2764,7 @@ sub getppd {
 			# to advise the filter
 			
 			my $pscode;
+			my $foomaticstr = "";
 			if ($arg->{'style'} eq 'G') {
 			    $pscode = "pop pop
 2 mod 0 eq {exch} if
@@ -2762,13 +2773,23 @@ sub getppd {
 			    my $a = $arg->{'vals_byname'}{'Custom'};
 			    my $optstyle = ($arg->{'style'} eq 'J' ? 
 					    "JCL" : "CommandLine");
+			    my $header = sprintf
+				("*FoomaticRIPOptionSetting %s=%s",
+				 $name, $a->{'value'});
 			    my $cmdval =
-				htmlify(sprintf($cmd,
-						(defined($a->{'driverval'})
-						 ? $a->{'driverval'}
-						 : $a->{'value'})));
-				$pscode = "pop pop pop pop pop
-%% RIP${optstyle}Option $name $spot $order:$cmdval";
+				sprintf($cmd,
+					(defined($a->{'driverval'})
+					 ? $a->{'driverval'}
+					 : $a->{'value'}));
+			    $foomaticstr =
+				ripdirective($header, $cmdval) . "\n";
+			    # Stuff to insert into command line/job is more
+			    # than one line? Let an "*End" line follow
+			    if ($foomaticstr =~ /\n.*\n/s) {
+				$foomaticstr .= "*End\n";
+			    }
+			    $pscode = "pop pop pop pop pop
+%% FoomaticRIPOptionSetting: $name=Custom";
 			}
 			my $custompagesizeheader = "*HWMargins: 0 0 0 0
 *VariablePaperSize: True
@@ -2777,7 +2798,7 @@ sub getppd {
 *NonUIOrderDependency: $order $section *CustomPageSize
 *CustomPageSize True: \"$pscode\"
 *End
-*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
+${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 *ParamCustomPageSize Height: 2 points 36 $maxpageheight
 *ParamCustomPageSize Orientation: 3 int 0 0
 *ParamCustomPageSize WidthOffset: 4 points 0 0
@@ -2788,13 +2809,42 @@ sub getppd {
 			unshift (@optionblob, $custompagesizeheader);
 		    }
 		}
+	    } elsif ((1 == scalar(@{$arg->{'vals'}})) &&
+		($arg->{'style'} ne 'G')) {
+		# Enumerated choice option with one single choice
+
+		# For non-PostScript options insert line with option
+		# properties
+		my $v = $arg->{'vals'}[0];
+		my $optstyle = ($arg->{'style'} eq 'J' ? 
+				"JCL" : "CmdLine");
+		my $header = sprintf
+		    ("*FoomaticRIPOptionSetting %s=%s",
+		     $name, $v->{'value'});
+		my $cmdval =
+		    sprintf($cmd,
+			    (defined($v->{'driverval'})
+			     ? $v->{'driverval'}
+			     : $v->{'value'}));
+		my $foomaticstr = ripdirective($header, $cmdval) . "\n";
+		push(@optionblob, sprintf
+		     ("\n*FoomaticRIPOption %s: enum %s %s %s\n",
+		      $name, $optstyle, $spot, $order),
+		     $foomaticstr);
 	    }
 	} elsif ($type eq 'bool') {
 	    my $name = $arg->{'name'};
 	    my $namef = $arg->{'name_false'};
 	    my $defstr = ($default ? 'True' : 'False');
+	    if (!defined($default)) { 
+		$defstr = 'Unknown';
+	    }
 	    my $psstr = "";
 	    my $psstrf = "";
+
+	    push(@optionblob,
+		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, $com));
+
 	    if ($arg->{'style'} eq 'G') {
 		# Ghostscript argument
 		$psstr = $cmd;
@@ -2802,21 +2852,25 @@ sub getppd {
 		# Option setting directive for Foomatic filter
 		# 4 "%" because of the "sprintf" applied to it
 		# In the end stay 2 "%" to have a PostScript comment
+		my $header = sprintf
+		    ("%%%% FoomaticRIPOptionSetting: %s", $name);
+		$psstr = "$header=True";
+		$psstrf = "$header=False";
+		my $header = sprintf
+		    ("*FoomaticRIPOptionSetting %s=True", $name);
+		my $foomaticstr = ripdirective($header, $cmd) . "\n";
+		# For non-PostScript options insert line with option
+		# properties
 		my $optstyle = ($arg->{'style'} eq 'J' ? 
-					"JCL" : "CommandLine");
-		my $cmdval = htmlify($cmd);
-		$psstr = sprintf
-		    ("%%%% RIP%sOption %s %s %s:%s",
-		     $optstyle, $name, $spot, $order, $cmdval);
-		$psstrf = sprintf
-		    ("%%%% RIP%sOption %s %s %s:%s",
-		     $optstyle, $name, $spot, $order, "");
+				"JCL" : "CmdLine");
+		push(@optionblob, sprintf
+		     ("*FoomaticRIPOption %s: bool %s %s\n",
+		      $name, $optstyle, $spot).
+		     $foomaticstr,
+		     ($foomaticstr =~ /\n.*\n/s ? "*End\n" : ""));
 	    }
-	    if (!defined($default)) { 
-		$defstr = 'Unknown';
-	    }
+
 	    push(@optionblob,
-		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, $com),
 		 sprintf("*OrderDependency: %s AnySetup *%s\n", 
 			 $order, $name),
 		 sprintf("*Default%s: $defstr\n", $name),
@@ -2839,9 +2893,9 @@ sub getppd {
 	    my $second = $min + 1;
 	    my $stepsize = 1;
 	    if (($max - $min > 100) && ($name ne "Copies")) {
-		# We don't want to have more than 1000 values, but when the
-		# difference between min and max is more than 1000 we should
-		# have at least 100 steps.
+		# We don't want to have more than 100 values, but when the
+		# difference between min and max is more than 100 we should
+		# have at least 10 steps.
 		my $mindesiredvalues = 10;
 		my $maxdesiredvalues = 100;
 		# Find the order of magnitude of the value range
@@ -2904,7 +2958,37 @@ sub getppd {
 	    # Skip zero or one choice arguments
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
+
+		# Insert lines with the special properties of a
+		# numerical option. Do this also for PostScript options
+		# because numerical options are not supported by the PPD
+		# file syntax. This way the info about this option being
+		# a numerical one does not get lost
+
+		my $optstyle = ($arg->{'style'} eq 'J' ? "JCL" : 
+				($arg->{'style'} eq 'C' ? "CmdLine" :
+				 "PS"));
+		push(@optionblob, sprintf
+		     ("*FoomaticRIPOption %s: int %s %s\n",
+		      $name, $optstyle, $spot));
+
+		my $header = sprintf
+		    ("*FoomaticRIPOptionPrototype %s",
+		     $name);
+		$foomaticstr = ripdirective($header, $cmd) . "\n";
+		push(@optionblob, $foomaticstr);
+		# Stuff to insert into command line/job is more than one
+		# line? Let an "*End" line follow
+		if ($foomaticstr =~ /\n.*\n/s) {
+		    push(@optionblob, "*End\n");
+		}
+
+		push(@optionblob, sprintf
+		     ("*FoomaticRIPOptionRange %s: %s %s\n",
+		      $name, $arg->{'min'}, $arg->{'max'}));
+
+		push(@optionblob,
 		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
 			     $order, $name),
 		     sprintf("*Default%s: %s\n", 
@@ -2929,13 +3013,9 @@ sub getppd {
 			# Option setting directive for Foomatic filter
 			# 4 "%" because of the "sprintf" applied to it
 			# In the end stay 2 "%" to have a PostScript comment
-			my $optstyle = ($arg->{'style'} eq 'J' ? 
-					"JCL" : "CommandLine");
-			my $cmdval =
-			    htmlify(sprintf($cmd,$v));
 			$psstr = sprintf
-			    ("%%%% RIP%sOption %s %s %s:%s",
-			     $optstyle, $name, $spot, $order, $cmdval);
+			     ("%%%% FoomaticRIPOptionSetting: %s=%s",
+			      $name, $v);
 		    }
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
@@ -2953,6 +3033,12 @@ sub getppd {
 	    
 	} elsif ($type eq 'float') {
 	    
+	    # Real numerical options do not exist in the Adobe
+	    # specification for PPD files. So we map the numerical
+	    # options to enumerated options offering the minimum, the
+	    # maximum, the default, and some values inbetween to the
+	    # user.
+
 	    my $min = $arg->{'min'};
 	    my $max = $arg->{'max'};
 	    # We don't want to have more than 500 values or less than 50
@@ -3050,7 +3136,37 @@ sub getppd {
 	    # Skip zero or one choice arguments
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
+
+		# Insert lines with the special properties of a
+		# numerical option. Do this also for PostScript options
+		# because numerical options are not supported by the PPD
+		# file syntax. This way the info about this option being
+		# a numerical one does not get lost
+
+		my $optstyle = ($arg->{'style'} eq 'J' ? "JCL" : 
+				($arg->{'style'} eq 'C' ? "CmdLine" :
+				 "PS"));
+		push(@optionblob, sprintf
+		     ("*FoomaticRIPOption %s: float %s %s\n",
+		      $name, $optstyle, $spot));
+
+		my $header = sprintf
+		    ("*FoomaticRIPOptionPrototype %s",
+		     $name);
+		$foomaticstr = ripdirective($header, $cmd) . "\n";
+		push(@optionblob, $foomaticstr);
+		# Stuff to insert into command line/job is more than one
+		# line? Let an "*End" line follow
+		if ($foomaticstr =~ /\n.*\n/s) {
+		    push(@optionblob, "*End\n");
+		}
+
+		push(@optionblob, sprintf
+		     ("*FoomaticRIPOptionRange %s: %s %s\n",
+		      $name, $arg->{'min'}, $arg->{'max'}));
+
+		push(@optionblob,
 		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
 			     $order, $name),
 		     sprintf("*Default%s: %s\n", 
@@ -3064,7 +3180,7 @@ sub getppd {
 				      $dat->{'driver'});
 		    warn "undefined default for $idx/$name on a $whr\n";
 		}
-	    
+
 		my $v;
 		for $v (@choicelist) {
 		    my $psstr = "";
@@ -3075,13 +3191,9 @@ sub getppd {
 			# Option setting directive for Foomatic filter
 			# 4 "%" because of the "sprintf" applied to it
 			# In the end stay 2 "%" to have a PostScript comment
-			my $optstyle = ($arg->{'style'} eq 'J' ? 
-					"JCL" : "CommandLine");
-			my $cmdval =
-			    htmlify(sprintf($cmd,$v));
 			$psstr = sprintf
-			    ("%%%% RIP%sOption %s %s %s:%s",
-			     $optstyle, $name, $spot, $order, $cmdval);
+			     ("%%%% FoomaticRIPOptionSetting: %s=%s",
+			      $name, $v);
 		    }
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
@@ -3161,12 +3273,13 @@ EOFPGSZ
 "*% For information on using this, and to obtain the required backend
 *% script, consult http://www.linuxprinting.org/ppd-doc.html
 *%
-*% PPD-O-MATIC generated this PPD file. It is for use with all programs 
-*% and environments which use PPD files for dealing with printer capabilty
-*% information. The printer must be configured with a Foomatic backend
-*% filter script. This file and the backend filter script work together to
-*% support PPD-controlled printer driver option access with arbitrary free 
-*% software printer drivers and printing spoolers.";
+*% PPD-O-MATIC (2.9.x or newer) generated this PPD file. It is for use with 
+*% all programs and environments which use PPD files for dealing with
+*% printer capabilty information. The printer must be configured with a
+*% Foomatic backend filter script of Foomatic 2.9.x or newer. This file and
+*% the backend filter script work together to support PPD-controlled printer
+*% driver option access with arbitrary free software printer drivers and
+*% printing spoolers.";
 
     my $blob = join('',@datablob);
     my $opts = join('',@optionblob);
@@ -3267,6 +3380,41 @@ sub htmlify {
     $str =~ s/\"/\&quot;/g;
     $str =~ s/\'/\&apos;/g;
     return $str;
+}
+
+# This splits RIP directives (PostScript comments which are
+# foomatic-rip uses to build the RIP command line) into multiple lines
+# of a fixed length, to avoid lines longer than 255 characters. The
+# PPD specification does not allow such long lines.
+sub ripdirective {
+    my ($header, $content) = ($_[0], htmlify($_[1]));
+    my $maxlength = 72;
+    my $continueheader = "";
+    my $continuelineend = "";
+    my $out;
+    my $freelength = $maxlength - length($header) -
+	length($continuelineend) - 3;
+    if ($freelength < 0) {
+	$out = "$header$continuelineend\n$continueheader";
+	$freelength = $maxlength - length($continueheader) -
+	    length($continuelineend);
+    } else {
+	$out = "$header";
+    }
+    $out .= ": \"";
+    $content .= "\"";
+    while ($content) {
+	if (length($content) < $freelength) {
+	    $freelength = length($content);
+	}
+	my $line = substr($content, 0, $freelength, "");
+	$out .= $line;
+	last if (!$content);
+	$freelength = $maxlength - length($continueheader) -
+	    length($continuelineend);
+	$out .= "$continuelineend\n$continueheader";
+    }
+    return $out;
 }
 
 # Get documentation for the printer/driver pair to print out. For

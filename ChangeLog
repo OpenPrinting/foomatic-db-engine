@@ -1,3 +1,23 @@
+2002-10-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: After Grant Taylor discovered a huge
+	  security hole in the original concept of the Perl-free PPDs,
+	  changed to a new concept. The former concept was that the
+	  GhostScript command line and all snippets to insert into the
+	  command line are stuffed into the PostScript data by the client
+	  (so having the PPD file on the server was not required). This
+	  leads to the case that every user can run arbitrary programs on
+	  the server. In the new concept the client stuffs only key/value
+	  pairs for the option settings into the PostScript data (as in
+	  Foomatic 2.0.x), the server will read the command line
+	  information from the PPD file and build the command line
+	  according to the settings in the PostScript data. The PPD files
+	  do not contain any important information in comment lines, so
+	  that if a program strips off the comments, nothing will break.
+	  All information is stored in Adobe-compliant PPD structures and
+	  only the relly needed information is stored, with a minimum of
+	  redundancy, so the new PPDs are more easily customizable.
+
 2002-10-20  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Introduced new function "getppd()" which
