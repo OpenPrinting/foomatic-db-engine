@@ -3,6 +3,9 @@
 	* foomatic-filters-ppds-install, foomatic-filters-ppds-README,
 	  README.build-foomatic-filters-ppds, Makefile.in: Added facility
 	  to build package with all PPD files and the filters.
+
+	* foomatic-compiledb.in: Added permissions to "mkdir" function call,
+	  so that "foomatic-compiledb" also works with Perl 5.0.x.
 	
 2003-02-03  Till Kamppeter <till.kamppeter@gmx.net>
 

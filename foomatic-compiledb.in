@@ -50,7 +50,7 @@ if (($opt_t eq "ppd") || ($opt_t eq "cups") || ($opt_t eq "ppr")) {
 my $pwd = `pwd`;
 chomp $pwd;
 print STDERR "\nStoring files in directory $pwd/$destdir.\n";
-mkdir $destdir or $force or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
+mkdir $destdir, 755 or $force or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
 
 # Compute the overview
 $db->get_overview();
