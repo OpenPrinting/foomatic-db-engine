@@ -1,3 +1,13 @@
+2004-02-23  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Fixed bug of old non-Foomatic PPD not
+	  overtaken when applying "foomatic-configure" to a queue without
+	  specifying a PPD or a printer/driver pair.
+
+	* lib/Foomatic/DB.pm: When modifying PPD defaults for boolean
+	  options "0" or "1" was written into the PPD file and not
+	  "False" or "True".
+
 2004-01-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* makeDefaults.in, foomatic-cleanupdrivers.in: Allow use of an

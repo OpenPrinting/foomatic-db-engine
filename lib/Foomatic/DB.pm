@@ -1358,7 +1358,8 @@ sub ppdsetdefaults {
 			 (lc($def) eq 'no') || (lc($def) eq 'false')) {
 		    $def='False';
 		}
-		$def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
+		$def = (checkoptionvalue($this->{'dat'}, $name, $def, 1) ?
+			'True' : 'False');
 	    } elsif ($arg->{'type'} =~ /^(int|float)$/) {
 		if (defined($arg->{'cdefault'})) {
 		    $def = $arg->{'cdefault'};

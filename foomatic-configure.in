@@ -255,7 +255,6 @@ sub getoldqueuedata {
 		$config->{'driver'} = "raw";
 		$config->{'printer'} = undef;
 	    }
-	    if ($olddatablob->{'queuedata'}{'foomatic'}) {
 		# We do not need the queue data block any more
 		delete($olddatablob->{'queuedata'});
 	    } else {
@@ -263,20 +262,14 @@ sub getoldqueuedata {
 		$olddatablob = undef;
 	    }
 	} else {
-	    # No Foomatic/PPD data
-	    $olddatablob = undef;
-	}
-    } else {
 	# Load the datablob of the former configuration
 	if ($reconf) {
-	    if (($olddatablob = load_datablob($config->{'spooler'}, 
-					      $config->{'queue'})) &&
-		($olddatablob->{'queuedata'}{'foomatic'})) {
-		# We do not need the queue data block here
-		delete($olddatablob->{'queuedata'});
+	    if ($olddatablob = load_datablob($config->{'spooler'}, 
+					     $config->{'queue'})) {
 		# If the user has supplied only a printer or only a driver
 		# fill in the second of the two fields in $config
-		if (!$config->{'ppdfile'}) {
+		if ((!$config->{'ppdfile'}) &&
+		    ($olddatablob->{'queuedata'}{'foomatic'})) {
 		    if ((!$config->{'driver'}) && ($config->{'printer'})) {
 			$config->{'driver'} = $olddatablob->{'driver'};
 		    }
@@ -284,6 +277,8 @@ sub getoldqueuedata {
 			$config->{'printer'} = $olddatablob->{'id'};
 		    }
 		}
+		# We do not need the queue data block here
+		delete($olddatablob->{'queuedata'});
 	    } else {
 		$olddatablob = undef;
 	    }
