@@ -1,3 +1,15 @@
+2003-01-29  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm, oomatic-configure.in: Improved sorting of
+	  options, make PPD parser sort the options when the PPD file is
+	  non-Foomatic, Automatically fill in longnames/translations which
+	  are missing in the PPD file, fixed stripping of "dossy" line
+	  ends in PPD files, foomatic-configure can now also generate a
+	  Perl data structure when a PPD file and not a Foomatic
+	  printer/driver combo is specified on the command line, the Perl
+	  output which foomatic-configure generates for Foomatic
+	  printer/driver combos contains the composite options now.
+	
 2003-01-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* COPYING: Added file containing the GPL.

@@ -963,8 +963,8 @@ sub query_lpd {
 
     # User requests data of a printer/driver combo to see the options before
     # installing a queue
-    if (($opt_P) && ($config->{'driver'}) && ($config->{'printer'}) &&
-	($config->{'driver'} ne "raw")) {
+    if (($opt_P) && ((($config->{'driver'}) && ($config->{'printer'}) &&
+	($config->{'driver'} ne "raw")) || ($config->{'ppdfile'}))) {
 	if ($opt_n) {
 	    my $olddatablob = load_lpd_datablob($opt_n);
 	    print_perl_combo_data($config, $olddatablob);
@@ -1238,8 +1238,8 @@ sub query_cups {
 
     # User requests data of a printer/driver combo to see the options before
     # installing a queue
-    if (($opt_P) && ($config->{'driver'}) && ($config->{'printer'}) &&
-	($config->{'driver'} ne "raw")) {
+    if (($opt_P) && ((($config->{'driver'}) && ($config->{'printer'}) &&
+	($config->{'driver'} ne "raw")) || ($config->{'ppdfile'}))) {
 	if ($opt_n) {
 	    my $olddatablob = load_cups_datablob($opt_n);
 	    print_perl_combo_data($config, $olddatablob);
@@ -1558,8 +1558,8 @@ sub query_pdq {
 
     # User requests data of a printer/driver combo to see the options before
     # installing a queue
-    if (($opt_P) && ($config->{'driver'}) && ($config->{'printer'}) &&
-	($config->{'driver'} ne "raw")) {
+    if (($opt_P) && ((($config->{'driver'}) && ($config->{'printer'}) &&
+	($config->{'driver'} ne "raw")) || ($config->{'ppdfile'}))) {
 	if ($opt_n) {
 	    my $olddatablob = load_pdq_datablob($opt_n);
 	    print_perl_combo_data($config, $olddatablob);
@@ -2123,8 +2123,8 @@ sub query_ppr {
 
     # User requests data of a printer/driver combo to see the options before
     # installing a queue
-    if (($opt_P) && ($config->{'driver'}) && ($config->{'printer'}) &&
-	($config->{'driver'} ne "raw")) {
+    if (($opt_P) && ((($config->{'driver'}) && ($config->{'printer'}) &&
+	($config->{'driver'} ne "raw")) || ($config->{'ppdfile'}))) {
 	if ($opt_n) {
 	    my $olddatablob = load_ppr_datablob($opt_n);
 	    print_perl_combo_data($config, $olddatablob);
@@ -2490,8 +2490,8 @@ sub query_direct {
 
     # User requests data of a printer/driver combo to see the options before
     # installing a queue
-    if (($opt_P) && ($config->{'driver'}) && ($config->{'printer'}) &&
-	($config->{'driver'} ne "raw")) {
+    if (($opt_P) && ((($config->{'driver'}) && ($config->{'printer'}) &&
+	($config->{'driver'} ne "raw")) || ($config->{'ppdfile'}))) {
 	if ($opt_n) {
 	    my $olddatablob = load_direct_datablob($opt_n);
 	    print_perl_combo_data($config, $olddatablob);
@@ -3948,14 +3948,28 @@ sub set_default_options {
 }
 
 sub print_perl_combo_data {
-    my ($config) = $_[0];
-    my ($olddatablob) = $_[1];
+    my ($config, $olddatablob) = @_;
 
     # Get the data
-    my $possible = $db->getdat($config->{'driver'}, 
-			       $config->{'printer'});
-    die "That printer and driver combination is not possible.\n"
-	if (!$possible);
+    if ($config->{'ppdfile'}) { 
+	# From PPD file
+	my $dat = ppdtoperl($config->{'ppdfile'});
+	if (!defined($dat)) {
+	    die ("Unable to open PPD file $ppdfile\n");
+	}
+	$db->{'dat'} = $dat;
+    } else {
+	# From Foomatic XML database
+	my $possible = $db->getdat($config->{'driver'}, 
+				   $config->{'printer'});
+	die "That printer and driver combination is not possible.\n"
+	    if (!$possible);
+	# Generate the PPD and extract it to Perl again (to get in the
+	# composite options)
+	my $ppd = $db->getppd();
+	delete ($db->{'dat'});
+	$db->{'dat'} = ppdfromvartoperl(split(/\n/, $ppd));
+    }
 
     # The data can be viewed with the option defaults of an existing
     # queue set

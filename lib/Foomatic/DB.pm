@@ -7,7 +7,7 @@ use Exporter;
 		get_overview
 		getexecdocs
 		);
-@EXPORT = qw(ppdtoperl);
+@EXPORT = qw(ppdtoperl ppdfromvartoperl);
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
 use Data::Dumper;
@@ -213,10 +213,17 @@ sub sortargs {
 			"resolution",
 			"gsresolution",
 			"hwresolution",
+			"jclresolution",
+			"fastres",
+			"jclfastres",
 			"quality",
 			"printquality",
+			"printingquality",
 			"printoutquality",
 			"bitsperpixel",
+			"econo",
+			"jclecono",
+			"tonersav",
 			"photomode",
 			"photo",
 			"colormode",
@@ -251,6 +258,7 @@ sub sortargs {
 			"ret\$",
 			"cret\$",
 			"photoret\$",
+			"smooth",
 			# Adjustments
 			"gammacorrection",
 			"gammacorr",
@@ -486,8 +494,10 @@ sub getdat {
     # We do some additional stuff which is very awkward to implement in C
     # now, so we do it here
 
-    $this->sortoptions();
-    $this->generalentries();
+    # Some clean-up
+    checklongnames($this->{'dat'});
+    sortoptions($this->{'dat'});
+    generalentries($this->{'dat'});
 
     return \%dat;
 }
@@ -504,9 +514,6 @@ sub getdatfromppd {
 
     $this->{'dat'} = $dat;
 
-    # Some clean-up
-    $this->generalentries();
-
 }
 
 sub ppdtoperl {
@@ -515,10 +522,20 @@ sub ppdtoperl {
 
     my ($ppdfile) = @_;
 
-    # Load the PPD file and build a data structure for the renderer's
-    # command line and the options
+    # Load the PPD file and send it to the parser
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
 	       "$sysdeps->{'gzip'} -cd $ppdfile |") or return undef;
+    my @ppd = <PPD>;
+    close PPD;
+    return ppdfromvartoperl(@ppd);
+}
+
+sub ppdfromvartoperl {
+
+    my (@ppd) = @_;
+
+    # Build a data structure for the renderer's command line and the
+    # options
 
     my $dat = {};              # data structure for the options
     my $currentargument = "";  # We are currently reading this argument
@@ -532,12 +549,13 @@ sub ppdtoperl {
     # @datablob, and correct the default settings according to the ones of
     # the main PPD structure
     my @datablob;
-
+    
     # Parse the PPD file
-    while(<PPD>) {
-	# foomatic-rip should also work with PPD file downloaded under
+    for (my $i; $i <= $#ppd; $i ++) {
+	$_ = $ppd[$i];
+	# Foomatic should also work with PPD files downloaded under
 	# Windows.
-	undossify();
+	$_ = undossify($_);
 	# Parse keywords
 	if (m!^\*ShortNickName:\s*\"(.*)$!) {
 	    # "*ShortNickName: <code>"
@@ -554,7 +572,8 @@ sub ppdtoperl {
 		    $cmd .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -591,7 +610,8 @@ sub ppdtoperl {
 		    $cmd .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -612,7 +632,8 @@ sub ppdtoperl {
 		    $cmd .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -643,7 +664,8 @@ sub ppdtoperl {
 		    $code .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -760,7 +782,8 @@ sub ppdtoperl {
 		    $proto .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -844,7 +867,8 @@ sub ppdtoperl {
 		    $code .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -899,7 +923,8 @@ sub ppdtoperl {
 		    $code .= "$line\n";
 		}
 		# Read next line
-		$line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -928,7 +953,8 @@ sub ppdtoperl {
 		    $code .= "$line\n";
 		}
 		# Read next line
-	    $line = <PPD>;
+		$i ++;
+		$line = $ppd[$i];
 		chomp $line;
 	    }
 	    $line =~ m!^([^\"]*)\"!;
@@ -948,12 +974,6 @@ sub ppdtoperl {
     }
     close PPD;
 
-    # Remove make and model fields when we don't have a Foomatic PPD file
-    if (!$isfoomatic) {
-	$dat->{'make'} = undef;
-	$dat->{'model'} = undef;
-    }
-
     # If we have an old Foomatic 2.0.x PPD file use its Perl data structure
     if ($#datablob >= 0) {
 	my $VAR1;
@@ -969,11 +989,24 @@ sub ppdtoperl {
 	    undef $dat;
 	    $dat = $VAR1;
 	    $dat->{'jcl'} = $dat->{'pjl'};
+	    $isfoomatic = 1;
 	} else {
 	    # Perl structure broken
 	    warn "\nUnable to evaluate datablob, print jobs may come " .
 		"out incorrectly or not at all.\n\n";
 	}
+    }
+
+    # Some clean-up
+    checklongnames($dat);
+    generalentries($dat);
+
+    # Remove make and model fields and sort the options if we don't have 
+    # a Foomatic PPD file
+    if (!$isfoomatic) {
+	$dat->{'make'} = undef;
+	$dat->{'model'} = undef;
+	sortoptions($dat, 1);
     }
 
     return $dat;
@@ -983,19 +1016,18 @@ sub ppdgetdefaults {
 
     # Read a PPD and get only the defaults and the postpipe.
     my ($this, $ppdfile) = @_;
-    
+
     # Open the PPD file
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
-	       "$sysdeps->{'gzip'} -cd $ppdfile |") or do {
-	die ("Unable to open PPD file $ppdfile\n");
-    };
+	       "$sysdeps->{'gzip'} -cd $ppdfile |") or 
+	       die ("Unable to open PPD file $ppdfile\n");
 
     # We don't read the "COMDATA" lines of old Foomatic 2.0.x PPD files
     # here, because the defaults in the main PPD structure have priority.
     while(<PPD>) {
-	# foomatic-rip should also work with PPD file downloaded under
+	# Foomatic should also work with PPD file downloaded under
 	# Windows.
-	undossify();
+	$_ = undossify($_);
 	# Parse keywords
 	if (m!^\*FoomaticRIPPostPipe:\s*\"(.*)$!) {
 	    # "*FoomaticRIPPostPipe: <code>"
@@ -1388,17 +1420,19 @@ sub syncpagesize {
 
 sub sortoptions {
 
-    my ($this) = @_;
+    my ($dat, $only_options) = @_;
 
     # The following stuff is very awkward to implement in C, so we do
     # it here.
 
     # Sort options with "sortargs" function
-    my @sortedarglist = sort sortargs @{$this->{'dat'}{'args'}};
-    @{$this->{'dat'}{'args'}} = @sortedarglist;
+    my @sortedarglist = sort sortargs @{$dat->{'args'}};
+    @{$dat->{'args'}} = @sortedarglist;
+
+    return if $only_options;
 
     # Sort values of enumerated options with "sortvals" function
-    for my $arg (@{$this->{'dat'}{'args'}}) {
+    for my $arg (@{$dat->{'args'}}) {
        	my @sortedvalslist = sort sortvals keys(%{$arg->{'vals_byname'}});
 	@{$arg->{'vals'}} = ();
 	for my $i (@sortedvalslist) {
@@ -1411,16 +1445,33 @@ sub sortoptions {
 
 sub generalentries {
 
-    my ($this) = @_;
+    my ($dat) = @_;
 
-    $this->{'dat'}{'compiled-at'} = localtime(time());
-    $this->{'dat'}{'timestamp'} = time();
+    $dat->{'compiled-at'} = localtime(time());
+    $dat->{'timestamp'} = time();
 
     my $user = `whoami`; chomp $user;
     my $host = `hostname`; chomp $host;
 
-    $this->{'dat'}{'compiled-by'} = "$user\@$host";
+    $dat->{'compiled-by'} = "$user\@$host";
 
+}
+
+sub checklongnames {
+
+    my ($dat) = @_;
+
+    # Add missing longnames/translations
+    for my $arg (@{$dat->{'args'}}) {
+	if (!($arg->{'comment'})) {
+	    $arg->{'comment'} = longname($arg->{'name'});
+	}
+	for my $i (@{$arg->{'vals'}}) {
+	    if (!($i->{'comment'})) {
+		$i->{'comment'} = longname($arg->{'value'});
+	    }
+	}
+    }
 }
 
 
