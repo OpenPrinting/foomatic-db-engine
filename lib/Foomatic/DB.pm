@@ -3588,7 +3588,7 @@ sub get_tmpl {
 \@\@IEEE1284\@\@
 \@\@EXTRALINES\@\@
 \@\@OTHERSTUFF\@\@
- 
+
 \@\@OPTIONS\@\@
 
 *% Generic boilerplate PPD stuff as standard PostScript fonts and so on
