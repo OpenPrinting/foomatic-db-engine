@@ -1,3 +1,8 @@
+2002-11-14  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixed PostScript code for custom paper
+	  sizes.
+
 2002-11-07  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Let "foomatic-rip" instead of "cupsomatic"

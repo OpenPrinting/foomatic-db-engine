@@ -2776,8 +2776,7 @@ sub getppd {
 			my $pscode;
 			my $foomaticstr = "";
 			if ($arg->{'style'} eq 'G') {
-			    $pscode = "pop pop
-2 mod 0 eq {exch} if
+			    $pscode = "pop pop pop
 <</PageSize [ 5 -2 roll ] /ImagingBBox null>>setpagedevice";
 			} else {
 			    my $a = $arg->{'vals_byname'}{'Custom'};
@@ -3892,6 +3891,7 @@ sub get_tmpl {
 *cupsManualCopies: True
 *cupsModelNumber:  2
 *cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
+*%pprRIP:        foomatic-rip other
 *ModelName:     "\@\@NICKNAME\@\@"
 *NickName:      "\@\@NICKNAME\@\@"
 *ShortNickName: "\@\@SHORTNICKNAME\@\@"
