@@ -108,7 +108,8 @@ idlist_t /* O - pointer to the printer ID translation table */
 *loadidlist(const char *filename) { /* I - file name */
   char          *idlistbuffer = NULL; /* ID list in memory */
   char          *scan; /* pointer for scanning through the list */
-  char          *oldid, *newid; /* pointer to IDs in the current line */
+  char          *oldid = NULL,
+                *newid = NULL; /* pointers to IDs in the current line */
   int           inoldid = 0, /* Are we reading and old or a new ID */
                 innewid = 0; /* currently */
   idlist_t      *idlist = NULL, /* Pointer to ID list */

@@ -1,3 +1,8 @@
+2003-08-12  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-combo-xml.c: Pre-initialized pointers in the loadidlist()
+	  function (thanks to Gwenole Beauchesne from MandrakeSoft).
+
 2003-08-07  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: HPOJ after 0.9 needs two slashes instead
