@@ -3113,27 +3113,47 @@ EOFPGSZ
     $modelname =~ s/[^A-Za-z0-9 \.\/\-\+]//gs;
     my $shortnickname = "$make $model, $drivername";
     if (length($shortnickname) > 31) {
+	# ShortNickName too long? Shorten it.
 	my %parts;
 	$parts{'make'} = $make;
 	$parts{'model'} = $model;
 	$parts{'driver'} = $drivername;
+	# Go through the three components, begin with model name, then
+	# make and then driver
 	for my $part (qw/model make driver/) {
+	    # Split the component into words, cutting always at the right edge
+	    # of the word. Cut also at a capital in the middle of the word
+	    # (ex: "S" in "PostScript").
 	    my @words = split(/(?<=[a-zA-Z])(?![a-zA-Z])|(?<=[a-z])(?=[A-Z])/,
 			      $parts{$part});
+	    # Go through all words
 	    for (@words) {
+		# Do not abbreviate words of less than 4 letters
 		next if ($_ !~ /[a-zA-Z]{4,}$/);
+		# How many letters did we chop off
 		my $abbreviated = 0;
 	        while (1) {
+		    # Remove the last letter
 		    chop;
 		    $abbreviated ++;
+		    # Build the shortened component ...
 		    $parts{$part} = join('', @words);
+		    # ... and the ShortNickName
 		    $shortnickname =
 			"$parts{'make'} $parts{'model'}, $parts{'driver'}";
+		    # Stop if the ShostNickName has 30 characters or less
+		    # (we have still to add the abbreviation point), if there
+		    # is only one letter left, or if the manufacturer name
+		    # is reduced to three characters. Do not accept an
+		    # abbreviation of one character, as, taking the
+		    # abbreviation point into account, it does not save
+		    # a character.
 		    last if (((length($shortnickname) <= 30) &&
 			      ($abbreviated != 1)) ||
 			     ($_ !~ /[a-zA-Z]{2,}$/) ||
 			     (length($parts{'make'}) <= 3));
 		}
+		#Abbreviation point
 		if ($abbreviated) {
 		    $_ .= '.';
 		}
@@ -3146,12 +3166,14 @@ EOFPGSZ
 	}
 	while ((length($shortnickname) > 31) &&
 	       (length($parts{'model'}) > 3)) {
+	    # ShortNickName too long? Remove last words from model name.
 	    $parts{'model'} =~
 		s/(?<=[a-zA-Z0-9])[^a-zA-Z0-9]+[a-zA-Z0-9]*$//;
 	    $shortnickname =
 		"$parts{'make'} $parts{'model'}, $parts{'driver'}";
 	}
 	if (length($shortnickname) > 31) {
+	    # If nothing else helps ...
 	    $shortnickname = substr($shortnickname, 0, 31);
 	}
     }
