@@ -4149,7 +4149,7 @@ sub print_perl_combo_data {
 	# From PPD file
 	my $dat = ppdtoperl($config->{'ppdfile'});
 	if (!defined($dat)) {
-	    die ("Unable to open PPD file $ppdfile\n");
+	    die ("Unable to open PPD file $config->{'ppdfile'}\n");
 	}
 	$db->{'dat'} = $dat;
     } else {
