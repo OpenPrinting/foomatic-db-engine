@@ -1,3 +1,7 @@
+2003-04-13  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* README: Documentation for string and password options.
+
 2003-04-12  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c, lib/Foomatic/DB.pm, foomatic-configure.in:

@@ -229,6 +229,20 @@ Implemented in 3.0.0rc1:
    correct bitmap size into the filter's command line. The user sees
    only the composite option and sets the paper size with it as usual.
 
+ - String and password options: These options allow the user to supply
+   nearly arbitrary strings (within a length limit) to the printer
+   driver, for example names of color calibration files, fax numbers,
+   passwords for confidential jobs, ... Frequently needed strings can
+   be added as enumerated choices, so a frontend can show the option
+   as a combo-box. The enumerated choices are also used for frontends
+   which only support options as defined by the PPD spec.
+
+ - New handling of numerical options in the PPD files:
+   "*Default<option>: ..." now always contains one of the enumerated
+   choices to be Adobe-compliant, the exact default value for
+   Foomatic-aware applications is stored with the new
+   "*FoomaticRIPDefault<option>: ..." keywords now.
+
  - URIs (Unified Resource Identifiers, the descriptions for the
    printer connection type used with the "-c" option of
    foomatic-configure) are exactly the same as under CUPS now. The
@@ -278,12 +292,6 @@ Implemented in 3.0.0rc1:
    connection, possibility to insert the constant part of the original
    IEEE-1284 ID string. The ID string will also be inserted into the
    PPD file.
-
- - New handling of numerical options in the PPD files:
-   "*Default<option>: ..." now always contains one of the enumerated
-   choices to be Adobe-compliant, the exact default value for
-   Foomatic-aware applications is stored with the new
-   "*FoomaticRIPDefault<option>: ..." keywords now.
 
  - Added a facility to chnage all the cryptic numerical printer IDs
    from the old PostGreSQL time to clear-text printer IDs. With a
@@ -1762,9 +1770,9 @@ gs -q -dBATCH -dSAFER -dNOPAUSE -sDEVICE=bitcmyk -r600 -sOutputFile=-
 - | filter -size=<width>x<height>
 
 where <width> and <height> is the page size in points (1/72
-inches). In addition, GhostScript needs to no the page size. For this
-one usually puts the following PostScript code into the PostScript
-input file:
+inches). In addition, GhostScript needs to know the page size. For
+this one usually puts the following PostScript code into the
+PostScript input file:
 
 <</PageSize[<width> <height>]/ImagingBBox null>>setpagedevice
 
@@ -1775,10 +1783,10 @@ the page size for the filter. The user would have to change both when
 he wants to print on another paper size, and it does not make sense to
 have different settings for the two. So one could make the "PageSize"
 option a composite option of the two, but then the GUI exposes an ugly
-"PageSize" option with the two individual options. To avoid this, one
+"PageSize" group with the two individual options. To avoid this, one
 uses a forced composite option ("Forced" because the user is forced to
 use the composite option, the individual member options are not
-accessible.
+accessible).
 
 Assuming that the name of the PostScript option for the page size is
 "GSPageSize", the name of the page size option for the filter is
@@ -1801,7 +1809,6 @@ follows:
    <arg_section>AnySetup</arg_section>
    <arg_spot>A</arg_spot>
    <arg_forced_composite />
-   <!-- <arg_proto></arg_proto> -->
   </arg_execution>
   <constraints>
      <constraint sense="true">
@@ -1862,6 +1869,166 @@ keywords as "*OpenUI...", "*OrderDependency...", ... This way
 PPD-aware graphical frontends do not see the member options but
 "foomatic-rip" has all information from them to run the driver
 correctly.
+
+
+String and Password Options
+---------------------------
+
+These options allow the user to supply nearly arbitrary strings
+(within a length limit) to the printer driver, for example names of
+color calibration files, fax numbers, passwords for confidential jobs,
+... Frequently needed strings can be added as enumerated choices, so a
+frontend can show the option as a combo-box. The enumerated choices
+are also used for frontends which only support options as defined by
+the PPD spec.
+
+In the XML database string and password options look similar to
+enumerated choice options. The differences are the option types
+"string" or "password" and the additional "<arg_maxlength>" tags to
+give the length limit. Here is an example for an option to supply the
+file name for an ICC profile for the "foo2zjs" driver (this option is
+neither in the CVS for the Foomatic database nor tested with this
+driver):
+
+--------------------------------------------------------------------------
+<option type="string" id="opt/foo2zjs-ICM">
+    <comments>
+	<en>
+	This option controls which .ICM file to use for color correction.
+	ICM files are stored in the directory /usr/share/foo2zjs/icm/.
+	</en>
+    </comments>
+    <arg_longname> <en>ICM Color Profile</en> </arg_longname>
+    <arg_shortname> <en>ICM</en> </arg_shortname>
+    <arg_execution>
+	<arg_group>Adjustment</arg_group>
+	<arg_order>300</arg_order>
+	<arg_spot>A</arg_spot>
+	<arg_required />
+	<arg_substitution />
+	<arg_proto>-G%s </arg_proto>
+    </arg_execution>
+    <arg_maxlength>127</arg_maxlength>
+    <constraints>
+	<constraint sense="true">
+	    <driver>foo2zjs</driver>
+	    <arg_defval>ev/foo2zjs-ICM-none</arg_defval>
+	</constraint>
+	<constraint sense="true">
+	    <make>Minolta</make>
+	    <model>magicolor 2300 DL</model>
+	    <driver>foo2zjs</driver>
+	    <arg_defval>ev/foo2zjs-ICM-DL2312</arg_defval>
+	</constraint>
+	<constraint sense="true">
+	    <make>Minolta</make>
+	    <model>magicolor 2200 DL</model>
+	    <driver>foo2zjs</driver>
+	    <arg_defval>ev/foo2zjs-ICM-DL2200RGB</arg_defval>
+	</constraint>
+    </constraints>
+    <enum_vals>
+	<enum_val id="ev/foo2zjs-ICM-none">
+	    <ev_longname> <en>No ICM color correction</en> </ev_longname>
+	    <ev_shortname> <en>none</en> </ev_shortname>
+	    <ev_driverval></ev_driverval>
+	</enum_val>
+	<enum_val id="ev/foo2zjs-ICM-DL2312">
+	    <ev_longname> <en>File DL2312.icm</en> </ev_longname>
+	    <ev_shortname> <en>DL2312</en> </ev_shortname>
+	    <ev_driverval>DL2312.icm</ev_driverval>
+	    <constraints>
+	        <constraint sense="false">
+	    	    <make>HP</make> <model>LaserJet 1000</model>
+	        </constraint>
+	    </constraints>
+	</enum_val>
+	<enum_val id="ev/foo2zjs-ICM-DL2324">
+	    <ev_longname> <en>File DL2324.icm</en> </ev_longname>
+	    <ev_shortname> <en>DL2324</en> </ev_shortname>
+	    <ev_driverval>DL2324.icm</ev_driverval>
+	    <constraints>
+	        <constraint sense="false">
+	    	    <make>HP</make> <model>LaserJet 1000</model>
+	        </constraint>
+	    </constraints>
+	</enum_val>
+
+	...
+
+    </enum_vals>
+</option>
+--------------------------------------------------------------------------
+
+This option allows to choose either one of the given file names,
+either by using the "<ev_shortname>"s or the "<ev_driverval>"s, or one
+can give every arbitrary other file name, file names exceeding the
+"<arg_maxlength>" limit are cut off at the limit. Giving a limit is
+optional, if none is given, arbitrary long strings are accepted, but
+this is not recommended, as it can cause buffer overflows in some
+drivers or too long lines in the PostScript code of the job.
+
+To be able to offer strings as an enumerated choice which are not
+allowed as an option name in a PPD file, the "<ev_shortname>" may
+differ from the "<ev_driverval>", the string inserted at the "%s"
+place holder in the "<arg_proto>" is always the "<ev_driverval>",
+independent whether the user supplies the "<ev_driverval>" directly or
+the "<ev_shortname>". In this example both
+
+   lpr -o ICM= file.ps
+
+and
+
+   lpr -o ICM=none file.ps
+
+supply an empty string as the value of the ICM option.
+
+For the default value there must be an enumerate choice, if there is
+none, the PPD generator will create one. So this entry is allowed
+(this option is only an example, it is not in the CVS of the Foomatic
+database):
+
+--------------------------------------------------------------------------
+<option type="password" id="opt/Password">
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+  <arg_longname>
+   <en>Password (for confidential jobs)</en>
+  </arg_longname>
+  <arg_shortname>
+   <en>Password</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+  <arg_execution>
+   <arg_group>General</arg_group>
+   <arg_order>100</arg_order>
+   <arg_spot>B</arg_spot>
+   <arg_substitution />
+   <arg_proto> --pass=%s</arg_proto>
+  </arg_execution>
+  <arg_maxlength>30</arg_maxlength>
+  <constraints>
+     <constraint sense='true'>
+      <driver>mydriver</driver>
+      <arg_defval></arg_defval>
+     </constraint>
+  </constraints>
+</option>
+--------------------------------------------------------------------------
+
+The default value is an empty string here. So the PPD generator will
+add a choice for the empty string.
+
+Normally, automatically added choices get the same "<ev_shortname>" as
+the string itself, but if the string is not allowed as an option name
+in a PPD file, the "<ev_shortname>" will be modified. For an empty
+string (as in the example above) "None" will be used and all
+characters except numbers, letters, and underscores ("_") will be
+replaced by underscores.
+
+The option types "string" and "password" are treated exactly the same
+way by the PPD generator and by "foomatic-rip", the different names
+are only for frontends to know whether the input field should display
+the typed characters or asterisks on the screen.
 
 
 Option Grouping
@@ -3125,16 +3292,21 @@ Foomatic keywords
             options (see below)
 
 *FoomaticRIPOptionPrototype <name>: "<code>"
-    (keyword only for numerical options)
+    (keyword only for numerical and string/password options)
     <name>: Option name;
     <code>: Code to insert for Cmdline, JCL, and
-            PS options. With "%s" for the number
+            PS options. With "%s" for the number/string
             set by the user.
 
 *FoomaticRIPOptionRange <name>: <min> <max>
     (keyword only for numerical options)
     <name>: Option name;
     <min>, <max>: allowed range for the number.
+
+*FoomaticRIPOptionMaxLength <name>: <length>
+    (keyword only for string/password options)
+    <name>: Option name;
+    <length>: maximum allowed length for the string.
 
 *FoomaticRIPDefault<name>: <value>
     (keyword only for numerical options)
@@ -3149,7 +3321,7 @@ with the "htmlify()" function of DB.pm, so they contain no forbidden
 characters ("<", ">", "\"") any more. In addition they are broken up
 into short lines. The filter ("foomatic-rip") will put them together
 at first and then replace the HTML/XML entities by the original
-characters. If a string is spilt up, an "*End" line follows, as
+characters. If a string is split up, an "*End" line follows, as
 required by the Adobe specification.
 
 All Foomatic-relevant info is stored with keywords beginning with 
@@ -3164,14 +3336,17 @@ which is not provided by the standard PPD lines. So redundancy is low
 and the PPD can more easily be edited and customized.
 
 "*Foomatic..." lines are given to all non-PostScript options and to
-numerical PostScript options. Usual "Boolean" and "PickOne" PostScript
-options do not need them. Numerical options are "PickOne" for most
-frontends, but with the "*Foomatic..." lines the server (the
-"foomatic-rip" filter script) identifies them as numerical options
-(and so accepts values between the ones listed) and second, frontends
-could also read the "*Foomatic..." lines and so show the options as
-numerical (with input field and slider), as KDE Print and XPP now do
-by reading the Perl structure.
+numerical or string/password PostScript options. Usual "Boolean" and
+"PickOne" PostScript options do not need them. Numerical and
+string/password options are "PickOne" for most frontends, but with the
+"*Foomatic..." lines the server (the "foomatic-rip" filter script)
+identifies them as numerical or string/password options (and so
+accepts values which are not listed) and, second, frontends could also
+read the "*Foomatic..." lines and so show the options as numerical or
+string (with input field, slider, combo box) or even as password
+(input field which shows asterisks instead of the actually typed
+characters), as KDE Print and XPP now do by reading the Perl
+structure.
 
 Non-PostScript options with only one choice consist only of
 "*Foomatic..." lines. So the one choice is stored in the PPD file but
