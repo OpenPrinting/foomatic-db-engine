@@ -189,7 +189,7 @@ Implemented in 3.0.0:
       Very High Quality
       Photo
 
-   For an Epson Stylus Color 680 with GIMP-Print it sets the options
+   For an Epson Stylus Color 680 with Gimp-Print it sets the options
    resolution, ditherering, and image type as follows:
 
       Choice           Resolution     Dither            ImageType
@@ -360,7 +360,7 @@ Implemented in 3.0.1:
 
  - Script to update the "gimp-print" driver entry in the database
    using the src/foomatic/foomatic-printermap file of the source
-   tarball of GIMP-Print 4.2.x.
+   tarball of Gimp-Print 4.2.x.
 
  - perltoxml() Perl function in DB.pm to generate XML database entries
    from PPD files (thanks to Tim Waugh from Red Hat).
@@ -456,7 +456,7 @@ General features
    having an on-disk cache is not necessary.
 
  - The PPD files serve also for PPD-aware applications as Star Office,
-   Open Office, the GIMP (for printers not supported by GIMP-Print), GPR,
+   Open Office, the GIMP (for printers not supported by Gimp-Print), GPR,
    Windows/Mac clients using their PostScript driver (and the Linux/Unix
    server using the Linux driver for the printer). They give access to
    all the driver's options in the printing dialogs of said
@@ -959,7 +959,7 @@ to its components get auto-detected during the build of this package.
 
 Composite options are introduced in "foomatic-db" from December 17,
 2002 ("20021217") or newer, "foomatic-db-hpijs" 1.3-2 or newer, and
-GIMP-Print 4.2.5 or newer. "foomatic-filters" 2.9.1 or newer is needed
+Gimp-Print 4.2.5 or newer. "foomatic-filters" 2.9.1 or newer is needed
 for using them. Nested composite options are supported and introduced
 on August 1, 2003.
 

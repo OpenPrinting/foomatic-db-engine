@@ -1,9 +1,9 @@
 #!@PERL@
 
 # This script updates the printer list of the driver XML file of
-# GIMP-Print (db/source/driver/gimp-print.xml in foomatic-db package)
+# Gimp-Print (db/source/driver/gimp-print.xml in foomatic-db package)
 # according to the file src/foomatic/foomatic-printermap of the source
-# tarball of GIMP-Print 4.2.x or later.
+# tarball of Gimp-Print 4.2.x or later.
 #
 # Remarks:
 #
@@ -37,7 +37,7 @@ if ($opt_h) {
 foomatic-printermap-to-gimp-print-xml [ -f <foomatic-printermap> ] \
                               [ -g <gimp-print.xml> ]
  -f <foomatic-printermap>: File src/foomatic/foomatic-printermap of
-                    GIMP-Print source tarball (4.2.x or later). Default
+                    Gimp-Print source tarball (4.2.x or later). Default
                     is foomatic-printermap in the current directory
 
  -g <gimp-print.xml>: File gimp-print.xml whose printer list should be
@@ -45,9 +45,9 @@ foomatic-printermap-to-gimp-print-xml [ -f <foomatic-printermap> ] \
                     Foomatic database currently in use.
 
 This program updates the printer list of the driver XML file of
-GIMP-Print (db/source/driver/gimp-print.xml in foomatic-db package)
+Gimp-Print (db/source/driver/gimp-print.xml in foomatic-db package)
 according to the file src/foomatic/foomatic-printermap of the source
-tarball of GIMP-Print 4.2.x or later.
+tarball of Gimp-Print 4.2.x or later.
 
 ";
     exit 0;
@@ -66,7 +66,7 @@ if (!$foomaticprintermapfile) {
    $foomaticprintermapfile = "./foomatic-printermap";
 }
 
-# Read list of printer IDs from GIMP-Print's foomatic-printermap
+# Read list of printer IDs from Gimp-Print's foomatic-printermap
 open PM, "< $foomaticprintermapfile" or
     die "Cannot read $foomaticprintermapfile!\n";
 my @printermap = <PM>;

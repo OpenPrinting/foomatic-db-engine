@@ -15,7 +15,7 @@ option, where \fIdirname\fR is the toplevel directory of a foomatic
 driver "kit".  A "kit" is a selection of XML source files arranged
 exactly as in the source/section of the master database (ie, opt/driver/printer/ subdirs).
 
-GIMP-Print's foomatic-generator produces exactly such a kit.
+Gimp-Print's foomatic-generator produces exactly such a kit.
 
 Foomatic-kitload is moderately paranoid about kits: the kit must
 contain at least one of \fIprinter\fR, \fIdriver\fR or \fIopt\fR; the

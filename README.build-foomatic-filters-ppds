@@ -33,9 +33,9 @@ To include support for HPIJS
 
 foomatic-db-hpijs
 
-To include support for GIMP-Print
+To include support for Gimp-Print
 
-GIMP-Print from http://gimp-print.sf.net/
+Gimp-Print from http://gimp-print.sf.net/
 
 To include support for Omni
 
@@ -77,7 +77,7 @@ cd ../foomatic-db-engine*
 ./foomatic-kitload -f -k ../foomatic-db-hoijs*/db/source/
 cd ..
 
-Add support for GIMP-Print (optional, <...> is the GIMP-Print source
+Add support for Gimp-Print (optional, <...> is the Gimp-Print source
 code directory):
 
 cd foomatic-db-engine*

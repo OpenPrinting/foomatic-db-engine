@@ -128,7 +128,7 @@ sub sortdrivers ($$) {
 			# any other driver.
 			"pnm2ppa", # color
 			"pbm2ppa", # bw
-			# Lexmark 3200, the GIMP-Print support for this
+			# Lexmark 3200, the Gimp-Print support for this
 			# printer is broken
 			"lxm3200-tweaked",
 			"lxm3200\$",
@@ -136,7 +136,7 @@ sub sortdrivers ($$) {
 			"lxm3200m",
 			"lxm3200p",
 			# Canon BJC-8200, these UPPs are probably better
-			# than GIMP-Print
+			# than Gimp-Print
 			"bj8pa06n.upp",
 			"bj8oh06n.upp",
 			"bj8ts06n.upp",
@@ -149,13 +149,13 @@ sub sortdrivers ($$) {
 			"cdj970", # Duplex support
 			"DJ", # HP drivers, but no duplex
 			"chp2200", # HP driver
-			"gimp-print-ijs", # IJS plug-in driver of GIMP-Print
+			"gimp-print-ijs", # IJS plug-in driver of Gimp-Print
 			"gimp-print", # Tray selection on laser, best 
 				      # quality on inkjets (for HP HP's
 				      # driver is better
-			"stp", # Predecessor of GIMP-Print
+			"stp", # Predecessor of Gimp-Print
 			"cdj1600", # Relatively good drivers for HP inkjets
-			"cdj890",  # not covered by GIMP-Print or the HP
+			"cdj890",  # not covered by Gimp-Print or the HP
 			"cdj880",  # drivers
 			"cdj850",
 			"cdj670",

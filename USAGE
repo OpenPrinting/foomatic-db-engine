@@ -438,7 +438,7 @@ non-PPD-aware spoolers (as PDQ in this example). Compressed PPD files
 ("file.ppd.gz") are also allowed here.
 
 In this example we set up an Epson Stylus Photo 1290 with the CUPS
-driver of GIMP-Print, but with PDQ as the spooler:
+driver of Gimp-Print, but with PDQ as the spooler:
 
    foomatic-configure -s pdq  -n Eps1290 -c usb:/dev/usb/lp0
 		      --ppd escp2-1290.ppd -o PageSize=A4
@@ -1223,13 +1223,13 @@ OpenOffice.org and Star Office.
 
 The GIMP (http://www.gimp.org/)
 
-The GIMP uses the GIMP-Print plug-in
+The GIMP uses the Gimp-Print plug-in
 (http://gimp-print.sourceforge.net/) to print. If it is installed you
 can click into the window with your image using the right mouse button
 and then choose "File" and "Print". In the printing dialog choose your
 printer queue (if it is not listed, click "New Printer ..." to create
 a list entry) and click on "Setup Printer ...". If your printer is
-listed, it is supported by GIMP-Print and you do not need a PPD file
+listed, it is supported by Gimp-Print and you do not need a PPD file
 for using it with GIMP. If it is not listed, choose "PostScript Level
 2". Then an input field for a PPD file will appear. Enter the path and
 name under which your PPD file is located (foomatic-configure puts it
@@ -1251,7 +1251,7 @@ printer driver (best from http://www.adobe.com/, but for certain
 Windows versions also from http://www.cups.org/) and the PPD file
 (/etc/foomatic/<spooler>/<printer queue name>.ppd) assigned to the
 queue. Then you don't need to install the Windows driver for your
-printer. On Epson inkjets driven by the current version of GIMP-Print
+printer. On Epson inkjets driven by the current version of Gimp-Print
 you could even obtain a better printout quality than with the Windows
 driver. You can also do things as installing filters which parse the
 PostScript and count the pages on your server which is not possible

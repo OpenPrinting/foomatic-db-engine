@@ -3765,7 +3765,7 @@ ENDTMPL
 # files.
 #
 # The paper sizes in the list are all sizes known to GhostScript, all
-# of GIMP-Print, all sizes of HPIJS, and some others found in the data
+# of Gimp-Print, all sizes of HPIJS, and some others found in the data
 # of printer drivers.
 
 sub getpapersize {
