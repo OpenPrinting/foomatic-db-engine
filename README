@@ -90,7 +90,7 @@ Implemented in 3.0.0:
    Adobe specifications DSC (Document Structuring Conventions) and
    PPD (PostScript Printer Description) as published on
 
-   http://partners.adobe.com/asn/tech/ps/technotes.jsp
+   http://partners.adobe.com/asn/tech/ps/specifications.jsp
 
  - foomatic-rip inserts all default settings from the PPD file (so you
    can edit the "*Default..." lines in the PPD files to set the defaults),
