@@ -1825,6 +1825,11 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 			     ? $v->{'driverval'}
 			     : $v->{'value'}));
 		my $foomaticstr = ripdirective($header, $cmdval) . "\n";
+		# Stuff to insert into command line/job is more
+		# than one line? Let an "*End" line follow
+		if ($foomaticstr =~ /\n.*\n/s) {
+		    $foomaticstr .= "*End\n";
+		}
 		push(@optionblob, sprintf
 		     ("\n*FoomaticRIPOption %s: enum %s %s %s\n",
 		      $name, $optstyle, $spot, $order),

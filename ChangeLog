@@ -24,6 +24,10 @@
 
 	* lib/Foomatic/DB.pm: Improved header text of the PPD files:
 	  GPL, Foomatic 2.9 URL, "foomatic-rip", download instructions.
+
+	  When an option has only one choice and therefore is described
+	  only with "*Foomatic" keywords in the PPD file, the "*End" was
+	  not inserted when the option code needed more than one line.
 	
 	* foomatic-configure.in: Used path from Defaults.pm for calls of
 	  "foomatic-rip" when generating PDQ driver files.
