@@ -1,5 +1,9 @@
 2003-10-20  Till Kamppeter <till.kamppeter@gmx.net>
 
+	* configure.in: Added /usr/local/libexec to LIBSEARCHPATH for *BSD
+	  compatibilty. Thanks to Sebastian Horzela (sh at horzela dot
+	  com).
+	
 	* configure.in: Replaced a "==" by "=" in a "test" expression (*BSD
 	  compatibility).
 
