@@ -1,5 +1,5 @@
 
-Foomatic 3.0.1
+Foomatic 3.0.2
 ==============
 
 foomatic-db-engine
@@ -372,6 +372,23 @@ Implemented in 3.0.1:
 
  - Fixed PPD file generation so that the files pass the "cupstestppd"
    of CUPS 1.1.20.
+
+Implemented in 3.0.2:
+
+ - Some fixes to make foomatic-rip more robust against weird input via
+   the command line or environment variables are done. This solves the
+   problem of an attacker being able to run arbitrary commands as "lp"
+   (or however the spooler's special user is named) on the print
+   server (Security Advisory CAN-2004-0801).
+
+ - Workaround for PostScript generation bug in all OpenOffice.org
+   1.1.x versions.
+
+ - Let the PPD generator use the manufacturer as defined in the
+   Foomatic database and not the one from the IEEE-1284 auto-detection
+   ID string for the "*Manufacturer: ..." tag of the PPD files, as in
+   the IDs the manufacturer names often do not comply with the Adobe
+   specs (as "Hewlett-Packard", "HP" has to be used.
 
 Planned/Roadmap for future releases:
 

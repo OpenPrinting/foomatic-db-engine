@@ -1,3 +1,10 @@
+2004-09-14  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* *: Tagged CVS for the release of foomatic-db-engine 3.0.2. 
+	  Tag name: "foomatic-db-engine-3_0_2".
+
+	* README, USAGE: Updated for version 3.0.2.
+
 2004-07-30  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Use the manufacturer as defined in the
