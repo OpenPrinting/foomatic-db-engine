@@ -20,7 +20,9 @@ foomatic-replaceoldprinterids [ -l <leftpattern> ] [ -r <rightpattern> ] \
                     at the left side of the old printer ID (default:
                     \"recnum=\")
  -r <rightpattern>: Regular expresasion (Perl) which has to be matched 
-                    at the right side of the old printer ID (default: \"\")
+                    at the right side of the old printer ID (default:
+                    \"(?!\\d)\", this pattern means that on the right
+                    side should be no further digit, see \"man perlre\")
  -t <transltable>:  Translation table, every line an old ID, white space,
                     a new ID (default $libdir/db/oldprinterids)
  file1, file2, ...  File(s) to be processed
@@ -30,7 +32,7 @@ foomatic-replaceoldprinterids [ -l <leftpattern> ] [ -r <rightpattern> ] \
 }
 
 my $leftpattern = 'recnum=';
-my $rightpattern = '';
+my $rightpattern = '(?!\d)';
 $leftpattern = $opt_l if defined($opt_l);
 $rightpattern = $opt_r if defined($opt_r);
 my %idhash;

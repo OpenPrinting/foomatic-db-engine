@@ -1,3 +1,10 @@
+2003-04-25  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-replaceoldprinterids.in: Changed default pattern on the
+	  right side of the printer ID to "(?!\d)", which means that there
+	  should be no further digit on the right. This is the right
+	  choice in nearly every case.
+
 2003-04-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Auto-abbreviation of "*ShortNickName"s in
