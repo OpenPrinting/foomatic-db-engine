@@ -2577,6 +2577,13 @@ EOFPGSZ
 	$color = "*ColorDevice:	False\n*DefaultColorSpace: Gray";
     }
 
+    # Clean up "<ppdentry>"s
+    foreach my $type ('printerppdentry', 'driverppdentry', 'comboppdentry'){
+	$dat->{$type} =~ s/^\s+//gm;
+	$dat->{$type} =~ s/\s+$//gm;
+	$dat->{$type} =~ s/^\n+//gs;
+	$dat->{$type} =~ s/\n+$/\n/gs;
+    }
     my $extralines = join("\n", ($dat->{'printerppdentry'} .
 				 $dat->{'driverppdentry'} .
 				 $dat->{'comboppdentry'}));

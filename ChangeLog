@@ -1,3 +1,10 @@
+2003-02-25  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: "<ppdentry>"s are now cleaned up before
+	  insertion into the PPD file. Leading and trailing white space
+	  is removed from every line and also leading and trailing blank
+	  lines are removed.
+
 2003-02-24  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Added support for
