@@ -290,7 +290,7 @@ testing: INPLACE = --inplace
 testing: defaults foomatic-combo-xml foomatic-perl-data man
 	ln -sf lib/Foomatic .; \
 	for m in $(BINFILES) $(SBINFILES); do \
-	  $(PERL) -p -i -e "s=^\#\x21$(PERL)\n=\#\x21$(PERL)\nuse lib '`pwd`/lib/';\n=s" $$m; \
+	  $(PERL) -p -i -e "s=^\#\x21$(PERL)(.*)\n=\#\x21$(PERL)\$$1\nuse lib '`pwd`/lib/';\n=s" $$m; \
 	done
 	chmod a+rx $(AC_OUTPUT_FILES)
 #	Links for more convenient usage of the "inplace" installation
