@@ -3891,7 +3891,7 @@ sub get_tmpl {
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
-*cupsFilter:	"application/vnd.cups-postscript 0 cupsomatic"
+*cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
 *ModelName:     "\@\@NICKNAME\@\@"
 *NickName:      "\@\@NICKNAME\@\@"
 *ShortNickName: "\@\@SHORTNICKNAME\@\@"
