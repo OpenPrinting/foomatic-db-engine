@@ -1,3 +1,9 @@
+2003-02-23  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-filters-ppds-install, foomatic-filters-ppds-README,
+	  README.build-foomatic-filters-ppds, Makefile.in: Added facility
+	  to build package with all PPD files and the filters.
+	
 2003-02-03  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.0beta1. 
