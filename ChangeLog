@@ -1,5 +1,10 @@
 2003-07-21  Till Kamppeter <till.kamppeter@gmx.net>
 
+	* README, foomatic-ppdload.in, foomatic-ppdload.8.in: Removed
+	  the "foomatic-ppdload" tool as generating XML data from PPD
+	  files is not needed any more. "foomatic-rip" works also with
+	  manufacturer-supplied PostScript PPDs.
+	
 	* foomatic-perl-data.c: Let URL of manufacturer PPD also appear
 	  in printer/driver combo output.
 

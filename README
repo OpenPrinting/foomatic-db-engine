@@ -527,30 +527,6 @@ foomatic-configure
   Queue copying especially allows to switch between spoolers overtaking
   ones queues with all settings and adjustments.
 
-foomatic-ppdload
-
-  This program takes a ppd filename and a printer id as arguments.  It
-  parses a PPD file and writes option data into the Foomatic database
-  for use with the foomatic "ppd" driver and that printer.  There are
-  several limitations, but it's an interesting experiment.
-
-  Right now, it will handle Boolean and PickOne options that go in the
-  Prolog, DocumentSetup, or PageSetup spots.  Also, PPD interoption
-  constraints (not to be confused with foomatic option to printer and
-  driver mapping constraints) are not supported by foomatic.  And of
-  course, the interesting color and font information from the PPD has
-  no place in the current foomatic schema.  All this will change over
-  time.
-
-  The program has also a "-R" option which removes a printer with the
-  given ID from the "ppd" driver in the Foomatic database. See the man
-  page for more info.
-
-  This program is mostly interesting for developers. If you want to
-  set up a queue with the native PPD file of a PostScript printer,
-  simply use the PPD file directly instead of converting it into XML
-  first.
-
 foomatic-getpjloptions
 
   Reads the PJL options from local (parallel, USB. serial, ...) or remote
