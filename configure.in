@@ -71,7 +71,7 @@ AC_PATH_PROGS(PERL,perl,/usr/bin/perl,$BINSEARCHPATH)
 
 dnl Check whether Perl libraries will be found when installed with current
 dnl $prefix, if not, try to fall back to /usr/local at first, then to /usr
-if test x$prefix == xNONE; then
+if test x$prefix = xNONE; then
   PREFIX=$ac_default_prefix
 else
   PREFIX=$prefix
