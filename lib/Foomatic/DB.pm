@@ -2735,8 +2735,13 @@ sub getmargins {
     if ($cbottom > $bottom) {$bottom = $cbottom};
     # If we entered with $width == 0 and $height == 0, we mean
     # relative margins, so correct the signs
-    if (($width == 0) && ($right != 0)) {$right = -$right};
-    if (($height == 0) && ($top != 0)) {$top = -$top};
+    if ($width == 0) {$right = -$right};
+    if ($height == 0) {$top = -$top};
+    # Clean up output
+    $left =~ s/^\s*-0\s*$/0/;
+    $right =~ s/^\s*-0\s*$/0/;
+    $top =~ s/^\s*-0\s*$/0/;
+    $bottom =~ s/^\s*-0\s*$/0/;
     # Return the results
     return ($left, $right, $top, $bottom);
 }
