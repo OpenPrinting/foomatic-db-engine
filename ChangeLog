@@ -1,3 +1,8 @@
+2003-07-21  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c: Let URL of manufacturer PPD also appear
+	  in printer/driver combo output.
+
 2003-07-19  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c: Fixed output of printer language info.

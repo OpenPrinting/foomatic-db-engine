@@ -178,6 +178,7 @@ typedef struct comboData {
   xmlChar *make;
   xmlChar *model;
   xmlChar *pcmodel;
+  xmlChar *ppdurl;
   /* Printer properties */
   xmlChar *color;
   xmlChar *ascii;
@@ -753,6 +754,7 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->make = NULL;
   ret->model = NULL;
   ret->pcmodel = NULL;
+  ret->ppdurl = NULL;
   ret->color = (xmlChar *)"0";
   ret->pjl = (xmlChar *)"undef";
   ret->ascii = (xmlChar *)"0";
@@ -816,6 +818,25 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
       if (debug) fprintf(stderr,
 			 "  Model part for PC filename in PPD: %s\n",
 			 ret->pcmodel);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "lang"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "postscript"))) {
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ppd"))) {
+	      ret->ppdurl =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr,
+				 "  URL for the PPD for this printer: %s\n",
+				 ret->ppdurl);
+	    }
+	    cur3 = cur3->next;
+	  }
+	}
+	cur2 = cur2->next;
+      }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "mechanism"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -2657,6 +2678,9 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'pcmodel' => '%s',\n", combo->pcmodel);
   } else {
     printf("  'pcmodel' => undef,\n");
+  }
+  if (combo->ppdurl) {
+    printf("  'ppdurl' => '%s',\n", combo->ppdurl);
   }
   printf("  'color' => %s,\n", combo->color);
   printf("  'ascii' => %s,\n", combo->ascii);
