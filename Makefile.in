@@ -335,6 +335,7 @@ filters-ppds: inplace
 	    mkdir -p $$make; \
 	    mv $$file $$make/; \
 	  done; \
+	  rm -f *.ppd; \
 	); \
 	mv ppd $${packagename}/share; \
 	cp $(LOCAL_FOOMATIC_RIP) $${packagename}/bin; \
