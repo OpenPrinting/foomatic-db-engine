@@ -352,7 +352,7 @@ filters-ppds: inplace
 	${INSTALL} -m 644 $${foomatic_filters_root}/*.1 $${packagename}/share/man/man1 \
 	   || exit 1; \
 	${INSTALL} -m 755 foomatic-filters-ppds-install $${packagename}/install || exit 1; \
-	${INSTALL} -m 644foomatic-filters-ppds-README $${packagename}/README || exit 1; \
+	${INSTALL} -m 644 foomatic-filters-ppds-README $${packagename}/README || exit 1; \
 	${INSTALL} -m 644 COPYING $${packagename}/COPYING || exit 1; \
 	chmod -R a+rX,go-w $${packagename} || exit 1; \
 	rm -f $${packagename}.tar.gz || exit 1; \
