@@ -650,15 +650,21 @@ sub getpdqdata {
     # added by a PPD-driven client application
     my @searchjobforoptions;
     push (@searchjobforoptions, 
-	  "    for opt in \`grep FoomaticOpt \$INPUT | cut -d \" \" -f 3\`; do\n",
-	  "        option=\`echo \$opt | cut -d \"=\" -f 1\`\n",
-	  "        value=\`echo \$opt | cut -d \"=\" -f 2\`\n",
+	  "    for opt in \`grep -n FoomaticOpt \$INPUT | sed 's/ /\\\$/g'`; do\n",
+	  "        linenumber=\`echo \$opt | cut -d \":\" -f 1\`\n",
+          "        setting=\`echo \$opt | cut -d '\$' -f 3\`\n",
+	  "        option=\`echo \$setting | cut -d \"=\" -f 1\`\n",
+	  "        value=\`echo \$setting | cut -d \"=\" -f 2\`\n",
 	  "        case \"\$option\" in\n");
 
     # If we find only *ostScript style options, the job cannot contain
     # "%% FoomaticOpt" lines. Then we remove @searchjobforoptions
     # afterwards because we do not need to examine the job file.
     my $onlygsargs = 1;
+
+    # Do we have a "Custom" setting for the page size?
+    # Then we have to insert the following into the "filter_exec" script.
+    my @setcustompagesize;
 
     # First, compute the various option/value clauses
     for $arg (@{$dat->{'args'}}) {
@@ -673,6 +679,9 @@ sub getpdqdata {
 	    $arg->{'varname'} =~ s![\-\/\.]!\_!g;
 	    my $varn = $arg->{'varname'};
 	    my $gsarg = 1 if ($arg->{'style'} eq 'G');
+	    # 1, if setting "PageSize=Custom" was found
+	    # Then we must add options for page width and height
+	    my $custompagesize = 0;
 
 	    if (!$gsarg) {$onlygsargs = 0};
 
@@ -698,19 +707,72 @@ sub getpdqdata {
 			   : $ev->{'value'});
 		$val =~ s!\"!\\\"!g;
 		my $com = $ev->{'comment'};
-		
 		# stick another choice on driveropts
 		push(@valstmp,
 		     "    choice \"$choicename\" {\n",
 		     "      desc = \"$com\"\n",
 		     "      value = \"$val\"\n",
 		     "    }\n");
-		push(@searchjobforoptions,
-		     "              $choiceshortname)\n",
-		     "                $varn=\"$val\"\n",
-		     "                ;;\n") unless $gsarg;
+		if (($nam eq "PageSize") && 
+		    ($choiceshortname eq "Custom")) {
+		    $custompagesize = 1;
+		    if ($#setcustompagesize < 0) {
+			push(@setcustompagesize,
+			     "      # Custom page size settings\n",
+			     "      # We aren't really checking for legal vals.\n",
+			     "      if [ \"x\${$varn}\" == 'x$val' ]; then\n",
+			     "          val=\"\${$varn}\"\n",
+			     "          case \"\$PageSizeUnit\" in\n",
+			     "              in)\n",
+			     "                  PageWidth=\`echo \"\$PageWidth*72\" | bc -q\`\n",
+			     "                  PageHeight=\`echo \"\$PageHeight*72\" | bc -q\`\n",
+			     "                  ;;\n",
+			     "              cm)\n",
+			     "                  PageWidth=\`echo \"\$PageWidth*72/2.54\" | bc -q\`\n",
+			     "                  PageHeight=\`echo \"\$PageHeight*72/2.54\" | bc -q\`\n",
+			     "                  ;;\n",
+			     "              mm)\n",
+			     "                  PageWidth=\`echo \"\$PageWidth*72/25.4\" | bc -q\`\n",
+			     "                  PageHeight=\`echo \"\$PageHeight*72/25.4\" | bc -q\`\n",
+			     "                  ;;\n",
+			     "              *)\n",
+			     "                  PageWidth=\`echo \"\$PageWidth/1\" | bc -q\`\n",
+			     "                  PageHeight=\`echo \"\$PageHeight/1\" | bc -q\`\n",
+			     "                  ;;\n",
+			     "          esac\n",
+			     "\n",
+			     "          if ( echo \"\$val\" | grep \"\%0\" > /dev/null 2>&1 ); then\n",
+			     "              val=\`echo \"\$val\" | sed \"s/\%0/\$PageWidth/\"\`\n",
+			     "          else\n",
+			     "              val=\`echo \"\$val\" | sed \"s/\\b0\\b/\$PageWidth/\"\`\n",
+			     "          fi\n",
+			     "          if ( echo \"\$val\" | grep \"\%1\" > /dev/null 2>&1 ); then\n",
+			     "              val=\`echo \"\$val\" | sed \"s/\%1/\$PageHeight/\"\`\n",
+			     "          else\n",
+			     "              val=\`echo \"\$val\" | sed \"s/\\b0\\b/\$PageHeight/\"\`\n",
+			     "          fi\n",
+			     "          $varn=\"\$val\"\n",
+			     "      fi\n\n");
+		    }
+		}
+		if (!$gsarg) {
+		    push(@searchjobforoptions,
+			 "              $choiceshortname)\n",
+			 "                $varn=\"$val\"\n");
+		    if (($nam eq "PageSize") && 
+			($choiceshortname eq "Custom")) {
+#		    if ($choiceshortname eq "Custom") {
+			push(@searchjobforoptions,
+			     "                size=\`grep -n \"\" \$INPUT | grep \"^\$[\$linenumber - 2]:\" | cut -d \":\" -f 2\`\n",
+			     "                PageWidth=\`echo \$size | cut -d \" \" -f 1\`\n",
+			     "                PageHeight=\`echo \$size | cut -d \" \" -f 2\`\n",
+			     "                PageSizeUnit=pt\n");
+		    }
+		    push(@searchjobforoptions,
+			 "                ;;\n");
+		}
 	    }
-	    
+
 	    push(@driveropts,
 		 "    default_choice \"" . $nam . "_" . $arg->{'default'} . 
 		 "\"\n",
@@ -720,6 +782,44 @@ sub getpdqdata {
 	    push(@searchjobforoptions,
 		 "            esac\n",
 		 "            ;;\n") unless $gsarg;
+	    
+	    if ($custompagesize) {
+		# Add options to set the custom page size
+		push(@driveropts,
+		     "  argument {\n",
+		     "    var = \"PageWidth\"\n",
+		     "    desc = \"Page Width (for \\\"Custom\\\" page size)\"\n",
+		     "    def_value \"612\"\n",
+		     "    help = \"Minimum value: 0, Maximum value: 100000\"\n",
+		     "  }\n\n",
+		     "  argument {\n",
+		     "    var = \"PageHeight\"\n",
+		     "    desc = \"Page Height (for \\\"Custom\\\" page size)\"\n",
+		     "    def_value \"792\"\n",
+		     "    help = \"Minimum value: 0, Maximum value: 100000\"\n",
+		     "  }\n\n",
+		     "  option {\n",
+		     "    var = \"PageSizeUnit\"\n",
+		     "    desc = \"Unit (for \\\"Custom\\\" page size)\"\n",
+		     "    default_choice \"PageSizeUnit_pt\"\n",
+		     "    choice \"PageSizeUnit_pt\" {\n",
+		     "      desc = \"Points (1/72 inch)\"\n",
+		     "      value = \"pt\"\n",
+		     "    }\n",
+		     "    choice \"PageSizeUnit_in\" {\n",
+		     "      desc = \"Inches\"\n",
+		     "      value = \"in\"\n",
+		     "    }\n",
+		     "    choice \"PageSizeUnit_cm\" {\n",
+		     "      desc = \"cm\"\n",
+		     "      value = \"cm\"\n",
+		     "    }\n",
+		     "    choice \"PageSizeUnit_mm\" {\n",
+		     "      desc = \"mm\"\n",
+		     "      value = \"mm\"\n",
+		     "    }\n",
+		     "  }\n\n");		
+	    }
 	    
 	} elsif ($arg->{'type'} eq 'int' or $arg->{'type'} eq 'float') {
 	    
@@ -745,9 +845,9 @@ sub getpdqdata {
 	    push(@driveropts,
 		 "  argument {\n",
 		 "    var = \"$varn\"\n",
-		 "    desc = \"$nam\"\n",
+		 "    desc = \"$com\"\n",
 		 $defstr,
-		 "    help = \"$com $legal\"\n",
+		 "    help = \"$legal\"\n",
 		 "  }\n\n");
 	    
 	    push(@searchjobforoptions,
@@ -1038,16 +1138,42 @@ sub getpdqdata {
                 push(@doctext, "  Default: -o${name}_$default\n");
             }
             push(@doctext, "  Example: -o${name}_$exarg\n");
+	    if (($name eq "PageSize") &&
+		($#setcustompagesize >= 0)) {
+		push(@doctext,
+		     "\n",
+		     "Option 'PageWidth':\n  An optional float argument.\n",
+		     "  Page Width (for \"Custom\" page size)\n",
+		     "  Range: 0 <= x <= 100000\n",
+		     "  Default: -aPageWidth=612\n",
+		     "  Example: -aPageWidth=123.4\n",
+		     "\n",
+		     "Option 'PageHeight':\n  An optional float argument.\n",
+		     "  Page Height (for \"Custom\" page size)\n",
+		     "  Range: 0 <= x <= 100000\n",
+		     "  Default: -aPageHeight=792\n",
+		     "  Example: -aPageHeight=234.5\n",
+		     "\n",
+		     "Option 'PageSizeUnit':\n  An optional enum argument.\n",
+		     "  Unit (for \"Custom\" page size)\n",
+		     "  Possible choices:\n",
+		     "   o -oPageSizeUnit_pt: Points (1/72 inch)\n",
+		     "   o -oPageSizeUnit_in: Inches\n",
+		     "   o -oPageSizeUnit_cm: cm\n",
+		     "   o -oPageSizeUnit_mm: mm\n",
+		     "  Default: -oPageSizeUnit_pt\n",
+		     "  Example: -oPageSizeUnit_mm\n");
+	    }
         } elsif ($type eq 'int' or $type eq 'float') {
             my ($max, $min) = ($arg->{'max'}, $arg->{'min'});
             my $exarg;
-            if (defined($max)) {
+            if ((defined($min)) && (defined($max))) {
                 push(@doctext, "  Range: $min <= x <= $max\n");
                 $exarg=$max;
             }
             if (defined($default)) {
-                push(@doctext, "  Default: $default\n");
-                $exarg=$default;
+                push(@doctext, "  Default: -aOPT_$name=$default\n");
+                if (!$exarg) { $exarg=$default; }
             }
             if (!$exarg) { $exarg=0; }
             push(@doctext, "  Example: -aOPT_$name=$exarg\n");
@@ -1217,6 +1343,7 @@ sub getpdqdata {
 	  
 	  "  filter_exec {\n",
 	  @searchjobforoptions,
+	  @setcustompagesize,
 	  @pjlfilter,
 	  @psfilter,
 	  @pjlfilter_bot,
@@ -1592,10 +1719,22 @@ EOFPGSZ
     my $blob = join('',@datablob);
     my $opts = join('',@optionblob);
     my $otherstuff = join('',@others);
-    $driver =~ m!(^(.{1,5}))!;
-    my $shortname = uc($1);
+    my $pcfilename;
+    if (($dat->{'pcmodel'}) && ($dat->{'pcdriver'})) {
+	$pcfilename = uc("$dat->{'pcmodel'}$dat->{'pcdriver'}");
+    } else {
+	my $driver = $dat->{'driver'};
+	$driver =~ m!(^(.{1,8}))!;
+	$pcfilename = uc($1);
+    }
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
+    my $pnpmodel;
+    $pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
+	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = $model;
+    my $pnpmake;
+    $pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
+	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = $make;
     my $filename = join('-',($dat->{'make'},
 			     $dat->{'model'},
 			     $dat->{'driver'},
@@ -1609,21 +1748,24 @@ EOFPGSZ
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
     my $nickname = "$make $model, Foomatic + $drivername";
+    my $shortnickname = "$make $model";
 
     my $tmpl = get_tmpl();
     $tmpl =~ s!\@\@HEADCOMMENT\@\@!$headcomment!g;
+    $tmpl =~ s!\@\@SAVETHISAS\@\@!$longname!g;
+    $tmpl =~ s!\@\@PCFILENAME\@\@!$pcfilename!g;
+    $tmpl =~ s!\@\@PNPMAKE\@\@!$pnpmake!g;
+    $tmpl =~ s!\@\@PNPMODEL\@\@!$pnpmodel!g;
     $tmpl =~ s!\@\@MODEL\@\@!$model!g;
     $tmpl =~ s!\@\@NICKNAME\@\@!$nickname!g;
-    $tmpl =~ s!\@\@MAKE\@\@!$make!g;
-    $tmpl =~ s!\@\@SAVETHISAS\@\@!$longname!g;
-    $tmpl =~ s!\@\@NUMBER\@\@!$shortname!g;
+    $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
     $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
     $tmpl =~ s!\@\@COMDATABLOB\@\@!$blob!g;
     #$tmpl =~ s!\@\@PAPERDIMENSION\@\@!$paperdim!g;
     $tmpl =~ s!\@\@PAPERDIMENSION\@\@!!g;
     $tmpl =~ s!\@\@PAPERDIM\@\@!$paperdim!g;
-    
+
     return ($tmpl);
 }
 
@@ -1712,7 +1854,11 @@ sub getgenericppd {
 		# this by an Adobe-complient custom paper size
 		# definition.
 		my $hascustompagesize = 0;
-		my $maxpagewidth = 36;
+
+		# We take very big numbers now, to not impose linits.
+		# Later, when we will have physical demensions of the
+		# printers in the database.
+		my $maxpagewidth = 100000;
 		my $maxpageheight = 100000;
 
 		# Start the PageRegion, ImageableArea, and PaperDimension
@@ -1721,7 +1867,7 @@ sub getgenericppd {
 		    
 		    push(@pageregion,
 			 "*OpenUI *PageRegion: PickOne
-*OrderDependency: $order AnySetup *PageRegion
+*OrderDependency: $order $section *PageRegion
 *DefaultPageRegion: $dat->{'args_byname'}{'PageSize'}{'default'}");
 		    push(@imageablearea, 
 			 "*DefaultImageableArea: $dat->{'args_byname'}{'PageSize'}{'default'}");
@@ -1850,8 +1996,7 @@ sub getgenericppd {
 				      "pop pop pop pop pop
 %% FoomaticOpt: PageSize=Custom");
 			my $custompagesizeheader = "*HWMargins: 0 0 0 0
-*LeadingEdge Short: \"\"
-*DefaultLeadingEdge: Short
+*VariablePaperSize: True
 *MaxMediaWidth: $maxpaperdim
 *MaxMediaHeight: $maxpaperdim
 *NonUIOrderDependency: $order $section *CustomPageSize
@@ -1859,7 +2004,7 @@ sub getgenericppd {
 *End
 *ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 *ParamCustomPageSize Height: 2 points 36 $maxpageheight
-*ParamCustomPageSize Orientation: 3 int 0 3
+*ParamCustomPageSize Orientation: 3 int 0 0
 *ParamCustomPageSize WidthOffset: 4 points 0 0
 *ParamCustomPageSize HeightOffset: 5 points 0 0
 
@@ -2225,14 +2370,25 @@ EOFPGSZ
     my $blob = join('',@datablob);
     my $opts = join('',@optionblob);
     my $otherstuff = join('',@others);
-    $driver =~ m!(^(.{1,5}))!;
-    my $shortname = uc($1);
+    my $pcfilename;
+    if (($dat->{'pcmodel'}) && ($dat->{'pcdriver'})) {
+	$pcfilename = uc("$dat->{'pcmodel'}$dat->{'pcdriver'}");
+    } else {
+	my $driver = $dat->{'driver'};
+	$driver =~ m!(^(.{1,8}))!;
+	$pcfilename = uc($1);
+    }
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
+    my $pnpmodel;
+    $pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
+	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = $model;
+    my $pnpmake;
+    $pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
+	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = $make;
     my $filename = join('-',($dat->{'make'},
 			     $dat->{'model'},
-			     $dat->{'driver'},
-			     "ppd"));;
+			     $dat->{'driver'}));;
     $filename =~ s![ /]!_!g;
     my $longname = "$filename.ppd";
 
@@ -2242,14 +2398,17 @@ EOFPGSZ
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
     my $nickname = "$make $model, Foomatic + $drivername";
+    my $shortnickname = "$make $model";
 
     my $tmpl = get_tmpl();
     $tmpl =~ s!\@\@HEADCOMMENT\@\@!$headcomment!g;
+    $tmpl =~ s!\@\@SAVETHISAS\@\@!$longname!g;
+    $tmpl =~ s!\@\@PCFILENAME\@\@!$pcfilename!g;
+    $tmpl =~ s!\@\@PNPMAKE\@\@!$pnpmake!g;
+    $tmpl =~ s!\@\@PNPMODEL\@\@!$pnpmodel!g;
     $tmpl =~ s!\@\@MODEL\@\@!$model!g;
     $tmpl =~ s!\@\@NICKNAME\@\@!$nickname!g;
-    $tmpl =~ s!\@\@MAKE\@\@!$make!g;
-    $tmpl =~ s!\@\@SAVETHISAS\@\@!$longname!g;
-    $tmpl =~ s!\@\@NUMBER\@\@!$shortname!g;
+    $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
     $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
     $tmpl =~ s!\@\@COMDATABLOB\@\@!$blob!g;
@@ -2307,7 +2466,7 @@ sub htmlify {
 }
 
 # Get documentation for the printer/driver pair to print out. For
-# "Execution Details" section of driver web pages of linuxprinting.org
+# "Execution Details" section of driver web pages on linuxprinting.org
 
 sub getexecdocs {
 
@@ -2453,8 +2612,24 @@ sub getexecdocs {
 			push(@choicelist,
 			     "<LI>$value: $comment (<TT>$placeholder</TT> is left blank)</LI>");
 		    } else {
+			my $widthheight = "";
+			if (($name eq "PageSize") && ($value eq "Custom")) {
+			    my $width = "</TT><I>&lt;Width&gt;</I><TT>";
+			    my $height = "</TT><I>&lt;Height&gt;</I><TT>";
+			    $driverval =~ s/\%0/$width/ or
+                            $driverval =~ s/(\W)0(\W)/$1$width$2/ or
+                            $driverval =~ s/^0(\W)/$width$1/m or
+                            $driverval =~ s/(\W)0$/$1$width/m or
+                            $driverval =~ s/^0$/$width/m;
+                            $driverval =~ s/\%1/$height/ or
+                            $driverval =~ s/(\W)0(\W)/$1$height$2/ or
+                            $driverval =~ s/^0(\W)/$height$1/m or
+                            $driverval =~ s/(\W)0$/$1$height/m or
+                            $driverval =~ s/^0$/$height/m;
+			    $widthheight = ", <I>&lt;Width&gt;</I> and <I>&lt;Height&gt;</I> are the page dimensions in points, 1/72 inches";
+			}
 			push(@choicelist,
-			     "<LI>$value: $comment (<TT>$placeholder</TT> is '<TT>$driverval</TT>')</LI>");
+			     "<LI>$value: $comment (<TT>$placeholder</TT> is '<TT>$driverval</TT>'$widthheight)</LI>");
 		    }
 		} else {
 		    push(@choicelist,
@@ -2719,20 +2894,22 @@ sub get_tmpl {
 *FileVersion:	"1.1"
 *LanguageVersion: English 
 *LanguageEncoding: ISOLatin1
-*PCFileName:	"COM\@\@NUMBER\@\@.PPD"
-*Manufacturer:	"\@\@MAKE\@\@"
-*Product:	"\@\@MODEL\@\@"
+*PCFileName:	"\@\@PCFILENAME\@\@.PPD"
+*Manufacturer:	"\@\@PNPMAKE\@\@"
+*Product:	"\@\@PNPMODEL\@\@"
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
 *cupsFilter:	"application/vnd.cups-postscript 0 cupsomatic"
-*ModelName:     "\@\@MODEL\@\@"
-*ShortNickName: "\@\@MODEL\@\@"
+*ModelName:     "\@\@NICKNAME\@\@"
 *NickName:      "\@\@NICKNAME\@\@"
+*ShortNickName: "\@\@SHORTNICKNAME\@\@"
 *PSVersion:	"(3010.000) 550"
 *PSVersion:	"(3010.000) 651"
 *PSVersion:	"(3010.000) 652"
 *PSVersion:	"(3010.000) 653"
+*PSVersion:	"(3010.000) 704"
+*PSVersion:	"(3010.000) 705"
 *LanguageLevel:	"3"
 *ColorDevice:	True
 *DefaultColorSpace: RGB

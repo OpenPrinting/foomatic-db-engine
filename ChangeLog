@@ -1,3 +1,38 @@
+2002-10-19  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm: Support for custom
+	  page sizes. A choice named "Custom" in the "PageSize" option is
+	  considered as custom page size. Its "<ev_driverval>" should
+	  contain a placeholder "%0" for the page width and "%1" for the
+	  page height (both in points).  Alternatively the
+	  "<ev_driverval>" can contain two zeros ("0") from which the
+	  first will be replaced by the page width and the second by the
+	  page height. PPD files will get Adobe-complient for the custom
+	  page size support. So CUPS and the printing dialog of Mac OS X
+	  should have no problems with the custom paper size. Now custom
+	  paper sizes are available for all spoolers:
+
+	  CUPS: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+	  LPRng: lpr -P huge -Z PageSize=Custom.500x750cm bigposter.ps
+	  GNUlpr: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+	  LPD: lpr -P huge -JPageSize=Custom.500x750cm bigposter.ps
+	  PPR: ppr -P huge -F "*PageSize Custom" -i 500x750cm bigposter.ps
+	  PDQ: pdq -P huge -oPageSize_Custom -aPageWidth=500
+	           -aPageHeight=750 -oPageSizeUnit_cm bigposter.ps
+	  No spooler: directomatic -P huge -o PageSize=Custom.500x750cm
+	           bigposter.ps
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm: Support for unique
+	  PC file names ("*PCFileName" in PPD file) in the Foomatic
+	  PPD files ("<pcmodel>" 6-character string in printer entry,
+	  "<pcdriver>" 2-character string in driver entry).
+
+	* lib/Foomatic/DB.pm: Adobe-compliant PPD file header entries.
+
+	* README: Documentation for custom page sizes, PC file name
+	  fragments ("<pcmodel>", "<pcdriver>), PostScript file sections
+	  ("<arg_section>") in XML database.
+
 2002-10-14  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c, lib/Foomatic/DB.pm: "*OrderDependency"

@@ -675,11 +675,11 @@ There are three main source datafiles; annotated examples:
 source/opt/2.xml
 ================
 
-Every option exists independently from printers or drivers, because
-they might apply to arbitrary combinations of printers and/or drivers.
-In practice, some drivers have wholly unique options (gimp-print/stp,
-for example), while others (lots of generic basic Ghostscript drivers,
-for example) share some options.
+# Every option exists independently from printers or drivers, because
+# they might apply to arbitrary combinations of printers and/or
+# drivers.  In practice, some drivers have wholly unique options
+# (gimp-print/stp, for example), while others (lots of generic basic
+# Ghostscript drivers, for example) share some options.
 
 <option type="enum" id="opt/2">
 
@@ -721,8 +721,13 @@ for example) share some options.
 # option. The order and spot apply to the *driver*'s prototype for
 # <arg_substitution /> (once called commandline) style options, or
 # just the order applies for <arg_postscript /> and <arg_pjl />
-# options.  The user's value gets put into the arg_proto's %s
-# location.
+# options. The order and the <arg_section> go into the "*OrderDependency"
+# line of the appropriate option entry in the PPD file, for this example
+# one would get
+
+#    *OrderDependency: 100 DocumentSetup *PageSize
+
+# When no <arg_section> is given, "AnySetup" is used as a default.
 
 # For <arg_substitution /> options the <arg_proto> is inserted into
 # the driver's command line, at the spot (e. g. "%A") whose letter is
@@ -736,10 +741,13 @@ for example) share some options.
 # command header, these options are ignored when the driver's XML file
 # is marked with a <nopjl /> tag in its <execution> section. Drivers
 # which produce their own PJL and therefore marked with <nopjl /> are
-# for example "hpijs" and "hl1250".
+# for example "hpijs" and "hl1250". The user's value gets put into the
+# <arg_proto>'s %s location.
+
 
   <arg_execution>
    <arg_order>100</arg_order>
+   <arg_section>DocumentSetup</arg_section>
    <arg_spot>Z</arg_spot>
    <arg_postscript />
    <arg_proto>&lt;&lt;/PageSize[%s]/ImagingBBox null&gt;&gt;setpagedevice</arg_proto>
@@ -849,32 +857,78 @@ for example) share some options.
   </enum_vals>
 </option>
 
-For numerical (int, float) and bool options there is no <enum_vals>
-section. Instead of this section numerical options have tags to
-specify minimum and maximum value:
+# To allow custom page sizes to be used one has add a choice with the
+# "<ev_shortname>" being "Custom" to the "PageSize" option (example
+# below). This choice will be treated as the custom page size. When
+# the user selects this choice, he has to provide the width and the
+# height of the page in addition. These values are converted into
+# PostScript points (1/72 inches) and inserted into placeholders in
+# the "<ev_driverval>" of this choice. The "<ev_driverval>" should
+# contain a placeholder "%0" for the page width and "%1" for the page
+# height. Alternatively the "<ev_driverval>" can contain two zeros
+# ("0") from which the first will be replaced by the page width and
+# the second by the page height. Then one gets Adobe-compliant entries
+# for the custom page size in the PPD-O-Matic PPD files and one can
+# set a custom page size with the following commands:
 
-  <arg_max>10.0</arg_max>
-  <arg_min>0.0</arg_min>
+# CUPS: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+# LPRng: lpr -P huge -Z PageSize=Custom.500x750cm bigposter.ps
+# GNUlpr: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+# LPD: lpr -P huge -JPageSize=Custom.500x750cm bigposter.ps
+# PPR: ppr -P huge -F "*PageSize Custom" -i 500x750cm bigposter.ps
+# PDQ: pdq -P huge -oPageSize_Custom -aPageWidth=500
+#          -aPageHeight=750 -oPageSizeUnit_cm bigposter.ps
+# No spooler: directomatic -P huge -o PageSize=Custom.500x750cm
+#	   bigposter.ps
 
-For the %s in the <arg_proto> a number, either the user's choice when
-he has specified this option or the default value is inserted. Only
-numbers between the minimum and the maximum and in case of int options
-only integer numbers are allowed.
+# Here is an example for a cutom page size setting:
 
-Bool options can be set or not be set. There <arg_proto> will be
-inserted if they are set, nothing if they are not set. A %s in the
-<arg_proto> is not allowed, there is nothing to insert for it. As
-<arg_defval> in the option's constraints one can use 0 for not setting
-the option by default or 1 for setting it by default.
+#   <enum_val id="ev/PageSize-Custom">
+#    <ev_longname>
+#     <en>Custom size</en>
+#    </ev_longname>
+#    <!-- A multilingual <comments> block can appear here, too;
+#         it should be treated as documentation for the user. -->
+#    <ev_shortname>
+#     <en>Custom</en>
+#     <!-- Until someone tells me how to learn the user locale in 
+#          backends, the shortname must be monolingual in <en>! -->
+#    </ev_shortname>
+#    <ev_driverval>%0 %1</ev_driverval>
+#   </enum_val>
 
-Bool options need the specification of a name for the case when they
-are not set. This will be used by GUIs and in PPD files:
+# The entry
 
-  <arg_shortname_false>
-    <en>CorrectBlack</en><!-- Backends only know <en> shortnames! -->
-  </arg_shortname_false>
+#    <ev_driverval>0 0</ev_driverval>
 
-This name should not contain spaces, ":", or "/".
+# would have the same effect as the <ev_driverval> of the example.
+
+# For numerical (int, float) and bool options there is no <enum_vals>
+# section. Instead of this section numerical options have tags to
+# specify minimum and maximum value:
+
+#  <arg_max>10.0</arg_max>
+#  <arg_min>0.0</arg_min>
+
+# For the %s in the <arg_proto> a number, either the user's choice
+# when he has specified this option or the default value is
+# inserted. Only numbers between the minimum and the maximum and in
+# case of int options only integer numbers are allowed.
+
+# Bool options can be set or not be set. There <arg_proto> will be
+# inserted if they are set, nothing if they are not set. A %s in the
+# <arg_proto> is not allowed, there is nothing to insert for it. As
+# <arg_defval> in the option's constraints one can use 0 for not
+# setting the option by default or 1 for setting it by default.
+
+# Bool options need the specification of a name for the case when they
+# are not set. This will be used by GUIs and in PPD files:
+
+#  <arg_shortname_false>
+#    <en>CorrectBlack</en><!-- Backends only know <en> shortnames! -->
+#  </arg_shortname_false>
+
+# This name should not contain spaces, ":", or "/".
 
 printer/100576
 ==============
@@ -889,6 +943,22 @@ printer/100576
 
   <make>HP</make>
   <model>LaserJet 4000</model>
+
+# According to the Adobe specifications for PPD files every PPD file
+# must contain a unique DOS-compatible file name (the "*PCFileName"),
+# a file name with an up to 8 characters log base name and an up to 3
+# characters long extension, and upper and lower case letters being
+# considered as equal. As every PPD file is for a printer/driver
+# combo, we let the first 6 characters being provided by the printer
+# entry:
+
+  <pcmodel>HPLJ4K</pcmodel>
+
+# The first two characters should be the manufacturer prefix as listed
+# in Appendix D of Adobe's "PostScript Printer Description (PPD) File
+# Format Specification Version 4.3", available on
+
+# http://partners.adobe.com/asn/developer/pdfs/tn/5003.PPD_Spec_v4.3.pdf
 
 # Various stuff about the machine
 
@@ -1090,6 +1160,15 @@ things, but the two biggies are the prototype and the printers list
 
 <driver id="driver/md2k">
  <name>md2k</name>
+
+# According to the Adobe specifications for PPD files every PPD file
+# must contain a unique DOS-compatible file name (the "*PCFileName"),
+# a file name with an up to 8 characters log base name and an up to 3
+# characters long extension, and upper and lower case letters being
+# considered as equal. As every PPD file is for a printer/driver combo,
+# we let the last 2 characters being provided by the printer entry:
+
+ <pcdriver>M2</pcdriver>
  <url>http://plaza26.mbn.or.jp/~higamasa/gdevmd2k/</url>
  <execution>
 

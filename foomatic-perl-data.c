@@ -146,6 +146,7 @@ typedef struct comboData {
   xmlChar *id;
   xmlChar *make;
   xmlChar *model;
+  xmlChar *pcmodel;
   /* Printer properties */
   xmlChar *color;
   xmlChar *ascii;
@@ -165,6 +166,7 @@ typedef struct comboData {
   xmlChar *snmp_cmd;
   /* Driver */
   xmlChar *driver;
+  xmlChar *pcdriver;
   xmlChar *driver_type;
   xmlChar *driver_comment;
   xmlChar *url;
@@ -476,6 +478,7 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->id = NULL;
   ret->make = NULL;
   ret->model = NULL;
+  ret->pcmodel = NULL;
   ret->color = (xmlChar *)"0";
   ret->pjl = (xmlChar *)"undef";
   ret->ascii = (xmlChar *)"0";
@@ -512,6 +515,10 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->model = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Printer Model: %s\n", ret->model);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "pcmodel"))) {
+      ret->pcmodel = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Model part for PC filename in PPD: %s\n", ret->pcmodel);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "mechanism"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -675,6 +682,10 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->driver = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver name: %s\n", ret->driver);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "pcdriver"))) {
+      ret->pcdriver = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver part of PC file name in PPD: %s\n", ret->pcdriver);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "url"))) {
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -1960,6 +1971,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   printf("  'id' => '%s',\n", combo->id);
   printf("  'make' => '%s',\n", combo->make);
   printf("  'model' => '%s',\n", combo->model);
+  if (combo->pcmodel) {
+    printf("  'pcmodel' => '%s',\n", combo->pcmodel);
+  } else {
+    printf("  'pcmodel' => undef,\n");
+  }
   printf("  'color' => %s,\n", combo->color);
   printf("  'ascii' => %s,\n", combo->ascii);
   printf("  'pjl' => %s,\n", combo->pjl);
@@ -2032,6 +2048,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'snmp_cmd' => undef,\n");
   }
   printf("  'driver' => '%s',\n", combo->driver);
+  if (combo->pcdriver) {
+    printf("  'pcdriver' => '%s',\n", combo->pcdriver);
+  } else {
+    printf("  'pcdriver' => undef,\n");
+  }
   printf("  'type' => '%s',\n", combo->driver_type);
   if (combo->driver_comment) {
     printf("  'comment' => '%s',\n", combo->driver_comment);
