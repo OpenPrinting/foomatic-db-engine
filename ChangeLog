@@ -1,4 +1,10 @@
+2002-12-04  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* *: Tagged CVS for the release of foomatic-db-engine 2.9.0. 
+	  Tag name: "foomatic-db-engine-2_9_0".
+	
 2002-12-03  Till Kamppeter <till.kamppeter@gmx.net>
+
 	* lib/Foomatic/DB.pm, foomatic-perl-data.c: First preparations
 	  for collective options, let these options being skipped for
 	  2.9.0 release, so that collective options can be added to the
