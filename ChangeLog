@@ -1,3 +1,8 @@
+2003-11-19  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* configure.in: Do not do a test run of GhostScript in the /def/fd/3
+	  check if there is no GhostScript available.
+
 2003-10-20  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* configure.in: Added /usr/local/libexec to LIBSEARCHPATH for *BSD

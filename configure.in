@@ -147,10 +147,12 @@ if test "$DEVFD3" = "" ; then
 		DEVFD3="|$CAT >&3"
 		DEVFD0=-
 	fi
-	rm -f gs_out
-	gs -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=laserjet "-sOutputFile=$DEVFD3" ${srcdir}/gsPrint 3>gs_out
-	if test "!" -s gs_out ; then
+	if test "$GS" != "GHOSTSCRIPT_NOT_FOUND" -a "$GSCHECK" != "no" ; then
+	   rm -f gs_out
+	   gs -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=laserjet "-sOutputFile=$DEVFD3" ${srcdir}/gsPrint 3>gs_out
+	   if test "!" -s gs_out ; then
 		AC_MSG_ERROR("ERROR - gs cannot handle -sOutputFile=$OUT" )
+	   fi
 	fi
 fi
 AC_MSG_RESULT(using $DEVFD3)
