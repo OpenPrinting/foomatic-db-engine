@@ -1672,8 +1672,13 @@ sub getgenericppd {
 	my $type = $arg->{'type'};
 	my $com  = $arg->{'comment'};
 	my $default = $arg->{'default'};
+	my $order = $arg->{'order'};
+	my $section = $arg->{'section'};
 	my $idx = $arg->{'idx'};
-	
+
+	# Set default for missing section value
+	if (!defined($section)) {$section = "AnySetup";}
+
 	if ($type eq 'enum') {
 	    # Skip zero or one choice arguments (except "PageSize", a PPD
 	    # file without "PageSize" will break the CUPS environment).
@@ -1681,6 +1686,8 @@ sub getgenericppd {
 		($name eq "PageSize")) {
 		push(@optionblob,
 		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("*OrderDependency: %s %s *%s\n", 
+			     $order, $section, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? $default : 'Unknown')));
@@ -1692,10 +1699,87 @@ sub getgenericppd {
 		    warn "undefined default for $idx/$name on a $whr\n";
 		}
 	    
+		# If this is the page size argument; construct
+		# PageRegion, ImageableArea, and PaperDimension clauses 
+		# from it. Arguably this is all backwards, but what can
+		# you do! ;)
+		my @pageregion;
+		my @imageablearea;
+		my @paperdimension;
+
+		# If we have a paper size named "Custom", or one with
+		# one or both dimensions being zero, we must replace
+		# this by an Adobe-complient custom paper size
+		# definition.
+		my $hascustompagesize = 0;
+		my $maxpagewidth = 36;
+		my $maxpageheight = 100000;
+
+		# Start the PageRegion, ImageableArea, and PaperDimension
+		# clauses
+		if ($name eq "PageSize") {
+		    
+		    push(@pageregion,
+			 "*OpenUI *PageRegion: PickOne
+*OrderDependency: $order AnySetup *PageRegion
+*DefaultPageRegion: $dat->{'args_byname'}{'PageSize'}{'default'}");
+		    push(@imageablearea, 
+			 "*DefaultImageableArea: $dat->{'args_byname'}{'PageSize'}{'default'}");
+		    push(@paperdimension, 
+			 "*DefaultPaperDimension: $dat->{'args_byname'}{'PageSize'}{'default'}");
+		}
+
 		my $v;
 		for $v (@{$arg->{'vals'}}) {
 		    my $psstr = "";
+
+		    if ($name eq "PageSize") {
 		    
+			my $value = $v->{'value'}; # in a PPD, the value 
+			                           # is the PPD name...
+			my $comment = $v->{'comment'};
+
+			# Here we have to fill in the absolute sizes of the 
+			# papers. We consult a table when we could not read
+			# the sizes out of the choices of the "PageSize"
+			# option.
+			my $size = $v->{'driverval'};
+			if (($size !~ /^\s*(\d+)\s+(\d+)\s*$/) &&
+			    # 2 positive integers separated by whitespace
+			    ($size !~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
+			    # "-dDEVICEWIDTHPOINTS=..."/"-dDEVICEHEIGHTPOINTS=..."
+			    $size = getpapersize($value);
+			} else {
+			    $size = "$1 $2";
+			}
+			$size =~ /^\s*(\d+)\s+(\d+)\s*$/;
+			my $width = $1;
+			my $height = $2;
+			if ($maxpagewidth < $width) {
+			    $maxpagewidth = $width;
+			}
+			if ($maxpageheight < $height) {
+			    $maxpageheight = $height;
+			}
+			if (($value eq "Custom") ||
+			    ($width == 0) || ($height == 0)) {
+			    # This page size is either named "Custom" or
+			    # at least one of its dimensions is not fixed
+			    # (=0), so this printer/driver combo must
+			    # support custom page sizes
+			    $hascustompagesize = 1;
+			    # We do not add this size to the PPD file
+			    # because the Adobe standard foresees a
+			    # special code block in the header of the
+			    # PPD file to be inserted when a custom
+			    # page size is requested.
+			    next;
+			}
+			push(@imageablearea,
+			     "*ImageableArea $name/$comment: \"0 0 $size\"");
+			push(@paperdimension,
+			     "*PaperDimension $name/$comment: \"$size\"");
+		    }
 		    if ($arg->{'style'} eq 'G') {
 			# Ghostscript argument; offer up ps for insertion
 			$psstr = sprintf($arg->{'proto'}, 
@@ -1712,15 +1796,79 @@ sub getgenericppd {
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"$psstr\"\n", 
 				 $name, $v->{'value'}, $v->{'comment'}));
+		    # PostScript code is more than one line? Let an "*End"
+		    # line follow
+		    if ($psstr =~ /\n/s) {
+			push(@optionblob, "*End\n");
+		    }
+		    # In modern PostScript interpreters "PageRegion" 
+		    # and "PageSize" are the same option, so we fill 
+		    # in the "PageRegion" the same
+		    # way as the "PageSize" choices.
+		    if ($name eq "PageSize") {
+			push(@pageregion,
+			     sprintf("*PageRegion %s/%s: \"$psstr\"", 
+				     $v->{'value'}, $v->{'comment'}));
+			if ($psstr =~ /\n/s) {
+			    push(@pageregion, "*End");
+			}
+		    }
 		}
 		
 		push(@optionblob,
 		     sprintf("*CloseUI: *%s\n", $name));
+
 		if ($name eq "PageSize") {
-		    push (@optionblob, "\@\@PAPERDIM\@\@");
+		    # Close the PageRegion, ImageableArea, and 
+		    # PaperDimension clauses
+		    push(@pageregion,
+			 "*CloseUI: *PageRegion");
+
+		    my $paperdim = join("\n", 
+					("", @pageregion, "", 
+					 @imageablearea, "",
+					 @paperdimension, ""));
+		    push (@optionblob, $paperdim);
+
+		    # Make the header entries for a custom page size
+		    if ($hascustompagesize) {
+			my $maxpaperdim = 
+			    ($maxpageheight > $maxpagewidth ?
+			     $maxpageheight : $maxpagewidth);
+			# PostScript code from the example 6 in section 6.3
+			# of Adobe's PPD V4.3 specification
+			# http://partners.adobe.com/asn/developer/pdfs/tn/5003.PPD_Spec_v4.3.pdf
+			# If the page size is an option for the command line
+			# of GhostScript, let the values which where put
+			# on the stack being popped and inserta comment
+			# to advise the filter
+			
+			my $pscode = ($arg->{'style'} eq 'G' ?
+				      "pop pop
+2 mod 0 eq {exch} if
+<</PageSize [ 5 -2 roll ] /ImagingBBox null>>setpagedevice" :
+				      "pop pop pop pop pop
+%% FoomaticOpt: PageSize=Custom");
+			my $custompagesizeheader = "*HWMargins: 0 0 0 0
+*LeadingEdge Short: \"\"
+*DefaultLeadingEdge: Short
+*MaxMediaWidth: $maxpaperdim
+*MaxMediaHeight: $maxpaperdim
+*NonUIOrderDependency: $order $section *CustomPageSize
+*CustomPageSize True: \"$pscode\"
+*End
+*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
+*ParamCustomPageSize Height: 2 points 36 $maxpageheight
+*ParamCustomPageSize Orientation: 3 int 0 3
+*ParamCustomPageSize WidthOffset: 4 points 0 0
+*ParamCustomPageSize HeightOffset: 5 points 0 0
+
+";
+			
+			unshift (@optionblob, $custompagesizeheader);
+		    }
 		}
 	    }
-	    
 	} elsif ($type eq 'bool') {
 	    my $name = $arg->{'name'};
 	    my $namef = $arg->{'name_false'};
@@ -1742,9 +1890,13 @@ sub getgenericppd {
 	    }
 	    push(@optionblob,
 		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, $com),
+		 sprintf("*OrderDependency: %s AnySetup *%s\n", 
+			 $order, $name),
 		 sprintf("*Default%s: $defstr\n", $name),
 		 sprintf("*%s True/%s: \"$psstr\"\n", $name, $name),
+		 ($psstr =~ /\n/s ? "*End\n" : ""),
 		 sprintf("*%s False/%s: \"$psstrf\"\n", $name, $namef),
+		 ($psstrf =~ /\n/s ? "*End\n" : ""),
 		 sprintf("*CloseUI: *%s\n", $name));
 	    
 	} elsif ($type eq 'int') {
@@ -1826,6 +1978,8 @@ sub getgenericppd {
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
 		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
+			     $order, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? $default : 'Unknown')));
@@ -1854,6 +2008,11 @@ sub getgenericppd {
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"$psstr\"\n", 
 				 $name, $v, $v));
+		    # PostScript code is more than one line? Let an "*End"
+		    # line follow
+		    if ($psstr =~ /\n/s) {
+			push(@optionblob, "*End\n");
+		    }
 		}
 		
 		push(@optionblob,
@@ -1960,6 +2119,8 @@ sub getgenericppd {
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
 		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
+			     $order, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? 
@@ -1988,6 +2149,11 @@ sub getgenericppd {
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"$psstr\"\n", 
 				 $name, $v, $v));
+		    # PostScript code is more than one line? Let an "*End"
+		    # line follow
+		    if ($psstr =~ /\n/s) {
+			push(@optionblob, "*End\n");
+		    }
 		}
 		
 		push(@optionblob,
@@ -1996,7 +2162,6 @@ sub getgenericppd {
         }
     }
 
-    my $paperdim = "";		# computed as side effect of PageSize
     if (! $dat->{'args_byname'}{'PageSize'} ) {
 	
 	# This is a problem, since CUPS segfaults on PPD files without
@@ -2042,75 +2207,6 @@ sub getgenericppd {
 *PaperDimension A4/A4:	"595 842"
 
 EOFPGSZ
-
-    } else {
-	# We *do* have a page size argument; construct
-	# PageRegion, ImageableArea, and PaperDimension clauses from it.
-	# Arguably this is all backwards, but what can you do! ;)
-
-	my @pageregion;
-	my @imageablearea;
-	my @paperdimension;
-
-	push(@pageregion,
-	     "*OpenUI *PageRegion: PickOne
-*OrderDependency: 10 AnySetup *PageRegion
-*DefaultPageRegion: $dat->{'args_byname'}{'PageSize'}{'default'}");
-	push(@imageablearea, 
-	     "*DefaultImageableArea: $dat->{'args_byname'}{'PageSize'}{'default'}");
-	push(@paperdimension, 
-	     "*DefaultPaperDimension: $dat->{'args_byname'}{'PageSize'}{'default'}");
-
-	for (@{$dat->{'args_byname'}{'PageSize'}{'vals'}}) {
-	    my $name = $_->{'value'}; # in a PPD, the value is the PPD 
-	                              # name...
-	    my $comment = $_->{'comment'};
-
-	    # In modern PostScript interpreters "PageRegion" and "PageSize"
-	    # are the same option, so we fill in the "PageRegion" the same
-	    # way as the "PageSize" choices.
-	    if ($dat->{'args_byname'}{'PageSize'}{'style'} eq 'G') {
-		# Ghostscript argument; offer up ps for insertion
-		$psstr = sprintf($dat->{'args_byname'}{'PageSize'}{'proto'},
-				 (defined($_->{'driverval'})
-				  ? $_->{'driverval'}
-				  : $_->{'value'}));
-	    } else {
-		# Option setting directive for Foomatic filter
-		# 8 "%" because of several "sprintf¨ applied to it
-		# In the end stay 2 "%" to have a PostScript comment
-		$psstr = sprintf("%%%%%%%% FoomaticOpt: PageSize=%s",
-				 $_->{'value'});
-	    }
-	    push(@pageregion,
-		 sprintf("*PageRegion %s/%s: \"$psstr\"", 
-			 $_->{'value'}, $_->{'comment'}));
-	    # Here we have to fill in the absolute sizes of the papers. We
-	    # consult a table when we could not read the sizes out of the
-	    # choices of the "PageSize" option.
-	    my $size = $_->{'driverval'};
-	    my $value = $_->{'value'};
-	    if (($size !~ /^\s*(\d+)\s+(\d+)\s*$/) &&
-		# 2 positive integers separated by whitespace
-		($size !~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
-		# "-dDEVICEWIDTHPOINTS=..."/"-dDEVICEHEIGHTPOINTS=..."
-		$size = getpapersize($value);
-	    } else {
-		$size = "$1 $2";
-	    }
-	    push(@imageablearea,
-		 "*ImageableArea $name/$comment: \"0 0 $size\"");
-	    push(@paperdimension,
-		 "*PaperDimension $name/$comment: \"$size\"");
-	}
-
-	push(@pageregion,
-	     "*CloseUI: *PageRegion");
-
-
-	$paperdim = join("\n", 
-			 ("", @pageregion, "", @imageablearea, "",
-			  @paperdimension, ""));
     }
 
     my @others;
@@ -2158,7 +2254,6 @@ EOFPGSZ
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
     $tmpl =~ s!\@\@COMDATABLOB\@\@!$blob!g;
     $tmpl =~ s!\@\@PAPERDIMENSION\@\@!!g;
-    $tmpl =~ s!\@\@PAPERDIM\@\@!$paperdim!g;
     
     return ($tmpl);
 }

@@ -1,3 +1,24 @@
+2002-10-14  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm: "*OrderDependency"
+	  lines in PPD files, started option group support
+	  ("<arg_section>" and "<arg_group>" tags in the "<arg_execution>"
+	  section of the option XML files).
+
+	* lib/Foomatic/DB.pm: "*End" lines after PPD option setting entries
+	  with multiple-line PostScript code.
+
+	* lib/Foomatic/DB.pm: Support for custom paper sizes as described
+	  in section 6.3 of Adobe's PPD 4.3 specification. If a
+	  printer/driver combo has a choice named "Custom" in its PageSize
+	  option, or a paper size which has at least one dimension being
+	  zero, the combo is assumed to support custom paper sizes and the
+	  PPD file gets supplied with the appropriate definitions. With
+	  CUPS one can specify arbitrary paper sizes on the command line
+	  then
+
+	  lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+	
 2002-10-10  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Set release number of all files to 3.0.

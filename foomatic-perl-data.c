@@ -129,6 +129,8 @@ typedef struct arg {
   xmlChar *style;
   xmlChar *spot;
   xmlChar *order;
+  xmlChar *section;
+  xmlChar *grouppath;
   xmlChar *proto;
   xmlChar *required;
   xmlChar *min_value;
@@ -874,6 +876,8 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
       option->style = NULL;
       option->spot = NULL;
       option->order = NULL;
+      option->section = NULL;
+      option->grouppath = NULL;
       option->proto = NULL;
       option->required = NULL;
       option->min_value = NULL;
@@ -985,6 +989,20 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	      if (debug) fprintf(stderr,
 				 "    Command line insertion order: %s\n",
 				 option->order);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_section"))) {
+	      option->section =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr,
+				 "    Section in PostScript file: %s\n",
+				 option->section);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_group"))) {
+	      option->grouppath =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr,
+				 "    Option Group: %s\n",
+				 option->grouppath);
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_proto"))) {
 	      option->proto =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
@@ -2058,6 +2076,12 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("      'style' => '%s',\n", combo->args[i]->style);
     printf("      'spot' => '%s',\n", combo->args[i]->spot);
     printf("      'order' => '%s',\n", combo->args[i]->order);
+    if (combo->args[i]->section) {
+      printf("      'section' => '%s',\n", combo->args[i]->section);
+    }
+    if (combo->args[i]->grouppath) {
+      printf("      'group' => '%s',\n", combo->args[i]->grouppath);
+    }
     printf("      'proto' => '%s',\n", combo->args[i]->proto);
     if (combo->args[i]->required) {
       printf("      'required' => 1,\n");
