@@ -681,13 +681,15 @@ sub ppdtoperl {
 	    # the entries for the choices
 	    $currentargument = $argname;
 	} elsif (m!^\*(JCL|)CloseUI:\s+\*([^:/\s]+)\s*$!) {
+	    next if !$currentargument;
 	    # "*[JCL]CloseUI *<option>"
 	    my $argname = $2;
-	    # Unmark the current argument to do not mis-interpret any keywords
-	    # as choices
+	    # Unmark the current argument to do not mis-interpret any 
+	    # keywords as choices
 	    $currentargument = "";
 	} elsif ((m!^\*FoomaticRIPOption ([^/:\s]+):\s*(\S+)\s+(\S+)\s+(\S)\s*$!) ||
 		 (m!^\*FoomaticRIPOption ([^/:\s]+):\s*(\S+)\s+(\S+)\s+(\S)\s+(\S+)\s*$!)){
+	    next if !$currentargument;
 	    # "*FoomaticRIPOption <option>: <type> <style> <spot> [<order>]"
 	    # <order> only used for 1-choice enum options
 	    my $argname = $1;
@@ -716,6 +718,7 @@ sub ppdtoperl {
 		$dat->{'args_byname'}{$argname}{'order'} = $order;
 	    }
 	} elsif (m!^\*FoomaticRIPOptionPrototype\s+([^/:\s]+):\s*\"(.*)$!) {
+	    next if !$currentargument;
 	    # "*FoomaticRIPOptionPrototype <option>: <code>"
 	    # Used for numerical options only
 	    my $argname = $1;
@@ -741,6 +744,7 @@ sub ppdtoperl {
 	    $proto .= $1;
 	    $dat->{'args_byname'}{$argname}{'proto'} = unhtmlify($proto);
 	} elsif (m!^\*FoomaticRIPOptionRange\s+([^/:\s]+):\s*(\S+)\s+(\S+)\s*$!) {
+	    next if !$currentargument;
 	    # "*FoomaticRIPOptionRange <option>: <min> <max>"
 	    # Used for numerical options only
 	    my $argname = $1;
@@ -752,6 +756,7 @@ sub ppdtoperl {
 	    $dat->{'args_byname'}{$argname}{'min'} = $min;
 	    $dat->{'args_byname'}{$argname}{'max'} = $max;
 	} elsif (m!^\*OrderDependency:\s*(\S+)\s+(\S+)\s+\*([^:/\s]+)\s*$!) {
+	    next if !$currentargument;
 	    # "*OrderDependency: <order> <section> *<option>"
 	    my $order = $1;
 	    my $section = $2;
@@ -762,6 +767,7 @@ sub ppdtoperl {
 	    $dat->{'args_byname'}{$argname}{'order'} = $order;
 	    $dat->{'args_byname'}{$argname}{'section'} = $section;
 	} elsif (m!^\*Default([^/:\s]+):\s*([^/:\s]+)\s*$!) {
+	    next if !$currentargument;
 	    # "*Default<option>: <value>"
 	    my $argname = $1;
 	    my $default = $2;
@@ -770,6 +776,7 @@ sub ppdtoperl {
 	    # Store the value
 	    $dat->{'args_byname'}{$argname}{'default'} = $default;
 	} elsif (m!^\*$currentargument\s+([^:]+):\s*\"(.*)$!) {
+	    next if !$currentargument;
 	    # "*<option> <choice>[/<translation>]: <code>"
 	    my $settingtrans = $1;
 	    my $line = $2;
@@ -834,6 +841,7 @@ sub ppdtoperl {
 	    }
 	} elsif ((m!^\*FoomaticRIPOptionSetting\s+([^/:=\s]+)=([^/:=\s]+):\s*\"(.*)$!) ||
 		 (m!^\*FoomaticRIPOptionSetting\s+([^/:=\s]+):\s*\"(.*)$!)) {
+	    next if !$currentargument;
 	    # "*FoomaticRIPOptionSetting <option>[=<choice>]: <code>"
 	    # For boolean options <choice> is not given
 	    my $argname = $1;
