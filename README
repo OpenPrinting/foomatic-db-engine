@@ -1,6 +1,6 @@
 
-Foomatic 3.0.0rc2
-=================
+Foomatic 3.0.0
+==============
 
 foomatic-db-engine
 ------------------
@@ -18,6 +18,7 @@ http://www.linuxprinting.org/
 This README contains mainly info for developers. See the file USAGE if
 you want to know how to use Foomatic.
 
+
 Copying
 -------
 
@@ -30,40 +31,38 @@ foomatic-devel@linuxprinting.org
 General discussion happens in the foomatic-devel forum/list thing at
 www.linuxprinting.org.
 
+
 Intro
 -----
 
-This is the development version of Foomatic. See
+This is the stable version of Foomatic. See
 
 http://www.linuxprinting.org/contribute.html#programming
 http://www.linuxprinting.org/pipermail/foomatic-devel/2002q3/thread.html
 http://www.linuxprinting.org/pipermail/foomatic-devel/2002q4/thread.html
 http://www.linuxprinting.org/kpfeifle/LinuxKongress2002/Tutorial/IV.Foomatic-Developer/IV.tutorial-handout-foomatic-development.html
 
+to know more about its development.
+
 Your suggestions, bug reports, patches, ... are welcome on
 
 http://www.linuxprinting.org/newsportal/thread.php3?name=linuxprinting.foomatic.devel
 
-For testing the ongoing development of our web interface, go to
+This version is also the base of our web interface on
 
-http://www.linuxprinting.org/foomatic2.9/
-
-Do not use this package in production environments, it can contain
-severe bugs or even be non-functional.
-
+http://www.linuxprinting.org/
 
 Old roadmap which lead to Foomatic 2.0: 
 http://www.linuxprinting.org/pipermail/foomatic-devel/2001q1/000073.html
 
-This version implements the new foomatic-rip/PPD-based structure of
-the upcoming Foomatic 3.0.
+This version implements the new foomatic-rip/PPD-based architecture.
 
 
 
-New features for Foomatic 3.0
------------------------------
+New features for Foomatic 3.0.x
+-------------------------------
 
-Implemented in 3.0.0rc2:
+Implemented in 3.0.0:
 
  - For all supported spoolers (CUPS, LPRng, LPD, GNUlpr, PPR, PDQ, CPS,
    no spooler) the same PostScript-to-printer's-native-language filter
@@ -303,7 +302,10 @@ Implemented in 3.0.0rc2:
    IDs, for example to not break links to the linuxprinting.org web
    site.
 
-Planned/Roadmap for 3.0.x:
+ - The Foomatic database uses clear-text printer IDs for all printers
+   now.
+
+Planned/Roadmap for future releases in the 3.0.x line:
 
  - Option conflicts: PPDs allow to define conflicts between option settings,
    so that one cannot set up things which the printer cannot do or
@@ -394,7 +396,7 @@ General features
 
 
 The upshot of all this is that you can now make changes easily and run
-the scripts to calculate out whatever your backend needs directly.
+the scripts to calculate out whatever your printer/spooler needs directly.
 
 
 Programs and important files from this package

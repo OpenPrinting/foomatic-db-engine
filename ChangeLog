@@ -1,3 +1,10 @@
+2003-04-29  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* *: Tagged CVS for the release of foomatic-db-engine 3.0.0. 
+	  Tag name: "foomatic-db-engine-3_0_0".
+
+	* README, USAGE: Updated for version 3.0.0.
+
 2003-04-27  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* Makefile.in: Stop if an error occurs when building the PPD package.
