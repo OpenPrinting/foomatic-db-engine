@@ -1833,21 +1833,22 @@ the manufacturer and model names from there are inserted in the
 *LanguageEncoding: ISOLatin1
 *PCFileName:	"PPMTOMD.PPD"
 *Manufacturer:	"Citizen"
-*Product:	"printiva600U"
+*Product:	"(printiva600U)"
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
 *cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
 *%pprRIP:        foomatic-rip other
-*ModelName:     "Citizen printiva600U, Foomatic + ppmtomd"
+*ModelName:     "Citizen printiva600U"
 *NickName:      "Citizen printiva600U, Foomatic + ppmtomd"
-*ShortNickName: "Citizen printiva600U"
+*ShortNickName: "Citizen printiva600U, ppmtomd"
 *PSVersion:	"(3010.000) 550"
 *PSVersion:	"(3010.000) 651"
 *PSVersion:	"(3010.000) 652"
 *PSVersion:	"(3010.000) 653"
 *PSVersion:	"(3010.000) 704"
 *PSVersion:	"(3010.000) 705"
+*PSVersion:	"(3010.000) 800"
 *LanguageLevel:	"3"
 *ColorDevice:	True
 *DefaultColorSpace: RGB
@@ -2158,6 +2159,7 @@ n"
 *FoomaticRIPOptionRange GammaCorrection: 0.10 10.0
 *OrderDependency: 180 AnySetup *GammaCorrection
 *DefaultGammaCorrection: 1.0
+*FoomaticRIPDefaultGammaCorrection: 1.0
 *GammaCorrection 0.1/0.1: "%% FoomaticRIPOptionSetting: GammaCorrection=0.1"
 *GammaCorrection 0.2/0.2: "%% FoomaticRIPOptionSetting: GammaCorrection=0.2"
 *GammaCorrection 0.3/0.3: "%% FoomaticRIPOptionSetting: GammaCorrection=0.3"
@@ -2266,6 +2268,7 @@ n"
 *FoomaticRIPOptionRange GammaSaturation: 0.10 10.0
 *OrderDependency: 250 AnySetup *GammaSaturation
 *DefaultGammaSaturation: 1.0
+*FoomaticRIPDefaultGammaSaturation: 1.0
 *GammaSaturation 0.1/0.1: "%% FoomaticRIPOptionSetting: GammaSaturation=0.1"
 *GammaSaturation 0.2/0.2: "%% FoomaticRIPOptionSetting: GammaSaturation=0.2"
 *GammaSaturation 0.3/0.3: "%% FoomaticRIPOptionSetting: GammaSaturation=0.3"
@@ -2374,6 +2377,7 @@ n"
 *FoomaticRIPOptionRange LFAdjust: -128 127
 *OrderDependency: 200 AnySetup *LFAdjust
 *DefaultLFAdjust: 0
+*FoomaticRIPDefaultLFAdjust: 0
 *LFAdjust -128/-128: "%% FoomaticRIPOptionSetting: LFAdjust=-128"
 *LFAdjust -125/-125: "%% FoomaticRIPOptionSetting: LFAdjust=-125"
 *LFAdjust -120/-120: "%% FoomaticRIPOptionSetting: LFAdjust=-120"
@@ -2435,6 +2439,7 @@ n"
 *FoomaticRIPOptionRange PHAdjust: -50 50
 *OrderDependency: 240 AnySetup *PHAdjust
 *DefaultPHAdjust: 0
+*FoomaticRIPDefaultPHAdjust: 0
 *PHAdjust -50/-50: "%% FoomaticRIPOptionSetting: PHAdjust=-50"
 *PHAdjust -49/-49: "%% FoomaticRIPOptionSetting: PHAdjust=-49"
 *PHAdjust -48/-48: "%% FoomaticRIPOptionSetting: PHAdjust=-48"
@@ -2544,6 +2549,7 @@ n"
 *FoomaticRIPOptionRange XShift: -600 600
 *OrderDependency: 450 AnySetup *XShift
 *DefaultXShift: 0
+*FoomaticRIPDefaultXShift: 0
 *XShift -600/-600: "%% FoomaticRIPOptionSetting: XShift=-600"
 *XShift -580/-580: "%% FoomaticRIPOptionSetting: XShift=-580"
 *XShift -560/-560: "%% FoomaticRIPOptionSetting: XShift=-560"
@@ -2613,6 +2619,7 @@ n"
 *FoomaticRIPOptionRange YShift: -600 600
 *OrderDependency: 460 AnySetup *YShift
 *DefaultYShift: 0
+*FoomaticRIPDefaultYShift: 0
 *YShift -600/-600: "%% FoomaticRIPOptionSetting: YShift=-600"
 *YShift -580/-580: "%% FoomaticRIPOptionSetting: YShift=-580"
 *YShift -560/-560: "%% FoomaticRIPOptionSetting: YShift=-560"
@@ -2760,6 +2767,12 @@ Foomatic keywords
     <name>: Option name;
     <min>, <max>: allowed range for the number.
 
+*FoomaticRIPDefault<name>: <value>
+    (keyword only for numerical options)
+    <name>: Option name;
+    <value>: default value, only needs to be in
+            the allowed range, does not need to be
+	    one of the enumerated choices.
 
 All strings in quotes (Foomatic command line, snippets to insert in
 command line, "<code>" in the keyword descriptions above) are encoded
@@ -2802,35 +2815,51 @@ the Foomatic-specific stuff is stored is much simpler. So one can easier
 read and edit it and one can more easily parse it, especially with 
 non-Perl programs. In addition, the PPD file is shorter.
 
-Also composite options (planned for a later release of Foomatic
-2.9.x) can be described more easily:
+Also composite options can be described more easily:
 
 ----------------------------------------------------------------------------
 
-*OpenUI *DocumentType/Document Type: PickOne
-*FoomaticRIPOption DocumentType: enum Composite C
-*OrderDependency: 20 AnySetup *DocumentType
-*DefaultDocumentType: Office
-*DocumentType Draft/Draft Printout: "%% FoomaticRIPOptionSetting: 
-DocumentType=Draft"
-*FoomaticRIPOptionSetting DocumentType=Draft: "Resolution=300
+*OpenUI *PrintoutMode/Printout Mode: PickOne
+*FoomaticRIPOption PrintoutMode: enum Composite C
+*OrderDependency: 20 AnySetup *PrintoutMode
+*DefaultPrintoutMode: Normal
+*PrintoutMode Draft/Draft (Economy): "%% FoomaticRIPOptionSetting: 
+PrintoutMode=Draft"
+*FoomaticRIPOptionSetting PrintoutMode=Draft: "Resolution=300 &&
 MediaType=Normal Dither=VeryFast"
 *End
-*DocumentType Office/Office Document: "%% FoomaticRIPOptionSetting: 
-DocumentType=Office"
-*FoomaticRIPOptionSetting DocumentType=Office: "Resolution=600
+*PrintoutMode Normal/Normal: "%% FoomaticRIPOptionSetting: 
+PrintoutMode=Normal"
+*FoomaticRIPOptionSetting PrintoutMode=Normal: "Resolution=600 &&
 MediaType=Normal Dither=AdaptiveHybrid"
 *End
-*DocumentType Drawing/High Quality Drawing: "%% 
-FoomaticRIPOptionSetting: DocumentType=Drawing"
-*FoomaticRIPOptionSetting DocumentType=Drawing: "Resolution=1200
+*PrintoutMode High/High Quality: "%% 
+FoomaticRIPOptionSetting: PrintoutMode=High"
+*FoomaticRIPOptionSetting PrintoutMode=High: "Resolution=1200 &&
 MediaType=Inkjet Dither=AdaptiveHybrid"
 *End
-*DocumentType Photo: "%% FoomaticRIPOptionSetting: DocumentType=Photo"
-*FoomaticRIPOptionSetting DocumentType=Photo: "Resolution=1200
+*PrintoutMode Photo/Photo: "%% FoomaticRIPOptionSetting: PrintoutMode=Photo"
+*FoomaticRIPOptionSetting PrintoutMode=Photo: "Resolution=1200 &&
 MediaType=GlossyPhoto Dither=EvenTone"
 *End
-*CloseUI: *DocumentType
+*CloseUI: *PrintoutMode
 
 ----------------------------------------------------------------------------
 
+Remark to the "*FoomaticRIPDefault<name>: <value>" entries for
+numerical options:
+
+Adobe's PPD specs do not support numerical options. Therefore the
+numerical options are mapped to enumerated options in the PPD file and
+their characteristics as a numerical option are stored in
+"*Foomatic..."  keywords. Especially a default value between the
+enumerated fixed values can be used as the default value. Then this
+value must be given by a "*FoomaticRIPDefault<option>: <value>" line
+in the PPD file. But this value is only valid, if the "official"
+default given by a "*Default<option>: <value>" line (it must be one of
+the enumerated values) points to the enumerated value which is closest
+to this value. This way a user can select a default value with a tool
+only supporting PPD files but not Foomatic extensions.  This tool only
+modifies the "*Default<option>: <value>" line and if the
+"*FoomaticRIPDefault<option>: <value>" had always priority, the user's
+change in "*Default<option>: <value>" had no effect.

@@ -821,6 +821,15 @@ sub ppdfromvartoperl {
 	    checkarg ($dat, $argname);
 	    # Store the value
 	    $dat->{'args_byname'}{$argname}{'default'} = $default;
+	} elsif (m!^\*FoomaticRIPDefault([^/:\s]+):\s*([^/:\s]+)\s*$!) {
+	    next if !$currentargument;
+	    # "*FoomaticRIPDefault<option>: <value>"
+	    my $argname = $1;
+	    my $default = $2;
+	    # Make sure that the argument is in the data structure
+	    checkarg ($dat, $argname);
+	    # Store the value
+	    $dat->{'args_byname'}{$argname}{'fdefault'} = $default;
 	} elsif (m!^\*$currentargument\s+([^:]+):\s*\"(.*)$!) {
 	    next if !$currentargument;
 	    # "*<option> <choice>[/<translation>]: <code>"
@@ -997,6 +1006,10 @@ sub ppdfromvartoperl {
 	}
     }
 
+    # Set the defaults for the numerical options, taking into account
+    # the "*FoomaticRIPDefault<option>: <value>" if they apply
+    numericaldefaults($dat);
+
     # Some clean-up
     checklongnames($dat);
     generalentries($dat);
@@ -1059,9 +1072,24 @@ sub ppdgetdefaults {
 		$this->{'dat'}{'args_byname'}{$argname}{'default'} =
 		    $default;
 	    }
+	} elsif (m!^\*FoomaticRIPDefault([^/:\s]+):\s*([^/:\s]+)\s*$!) {
+	    # "*FoomaticRIPDefault<option>: <value>"
+	    my $argname = $1;
+	    my $default = $2;
+	    if (defined($this->{'dat'}{'args_byname'}{$argname})) {
+		# Store the value
+		$this->{'dat'}{'args_byname'}{$argname}{'fdefault'} =
+		    $default;
+	    }
 	}
     }
+
     close PPD;
+
+    # Set the defaults for the numerical options, taking into account
+    # the "*FoomaticRIPDefault<option>: <value>" if they apply
+    numericaldefaults($dat);
+
 }
 
 sub ppdsetdefaults {
@@ -1105,6 +1133,11 @@ sub ppdsetdefaults {
 	    $this->{'dat'}{'args_byname'}{'PageSize'}{'default'}
     }
 
+    # Numerical options: Set the "classical" default values
+    # ("*Default<option>: <value>") to the value enumerated in the
+    # list which is closest to the current default value.
+    setnumericaldefaults($this->{'dat'}); 
+
     # Set the defaults in the PPD file to the current default
     # settings in the data structure
     for my $arg (@{$this->{'dat'}{'args'}}) {
@@ -1119,8 +1152,15 @@ sub ppdsetdefaults {
 			 (lc($def) eq 'no') || (lc($def) eq 'false')) {
 		    $def='False';
 		}
+	    } elsif ($arg->{'type'} =~ /^(int|float)$/) {
+		if (defined($arg->{'cdefault'})) {
+		    $def = $arg->{'cdefault'};
+		    undef $arg->{'cdefault'};
+		}
+		$fdef = $arg->{'default'};
+		$ppd =~ s!^(\*FoomaticRIPDefault$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$fdef$3!m;
 	    }
-	    $ppd =~ s!^(\*Default$name:\s*)([^/:\s\r]+)(\s*\r?)$!$1$def$3!m;
+	    $ppd =~ s!^(\*Default$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$def$3!m;
 	}
     }
 
@@ -1438,6 +1478,91 @@ sub sortoptions {
 	for my $i (@sortedvalslist) {
 	    my $val = $arg->{'vals_byname'}{$i};
 	    push (@{$arg->{'vals'}}, $val);
+	}
+    }
+
+}
+
+sub numericaldefaults {
+
+    my ($dat) = @_;
+
+    # Adobe's PPD specs do not support numerical
+    # options. Therefore the numerical options are mapped to
+    # enumerated options in the PPD file and their characteristics
+    # as a numerical option are stored in "*Foomatic..."
+    # keywords. Especially a default value between the enumerated
+    # fixed values can be used as the default value. Then this
+    # value must be given by a "*FoomaticRIPDefault<option>:
+    # <value>" line in the PPD file. But this value is only valid,
+    # if the "official" default given by a "*Default<option>:
+    # <value>" line (it must be one of the enumerated values)
+    # points to the enumerated value which is closest to this
+    # value. This way a user can select a default value with a
+    # tool only supporting PPD files but not Foomatic extensions.
+    # This tool only modifies the "*Default<option>: <value>" line
+    # and if the "*FoomaticRIPDefault<option>: <value>" had always
+    # priority, the user's change in "*Default<option>: <value>"
+    # had no effect.
+
+    for $arg (@{$dat->{'args'}}) {
+	if ($arg->{'fdefault'}) {
+	    if ($arg->{'default'}) {
+		next if $arg->{'type'} !~ /^(int|float)$/;
+		next if ($arg->{'fdefault'} < $arg->{'min'}) ||
+		    ($arg->{'fdefault'} > $arg->{'max'});
+		my $mindiff = abs($arg->{'max'} - $arg->{'min'});
+		my $closestvalue;
+		for $val (@{$arg->{'vals'}}) {
+		    if (abs($arg->{'fdefault'} - $val->{'value'}) <
+			$mindiff) {
+			$mindiff = 
+			    abs($arg->{'fdefault'} - $val->{'value'});
+			$closestvalue = $val->{'value'};
+		    }
+		}
+		if (($arg->{'default'} == $closestvalue) ||
+		    (abs($arg->{'default'} - $closestvalue) /
+		     $closestvalue < 0.001)) {
+		    $arg->{'default'} = $arg->{'fdefault'};
+		}
+	    } else {
+		$arg->{'default'} = $arg->{'fdefault'};
+	    }
+	    undef $arg->{'fdefault'};
+	}
+    }
+    
+}
+
+sub setnumericaldefaults {
+
+    my ($dat) = @_;
+
+    for $arg (@{$dat->{'args'}}) {
+	if ($arg->{'default'}) {
+	    next if $arg->{'type'} !~ /^(int|float)$/;
+	    if ($arg->{'default'} < $arg->{'min'}) {
+		$arg->{'default'} = $arg->{'min'};
+		$arg->{'cdefault'} = $arg->{'default'};
+	    } elsif ($arg->{'cdefault'} > $arg->{'max'}) {
+		$arg->{'default'} = $arg->{'max'};
+		$arg->{'cdefault'} = $arg->{'default'};
+	    } elsif (defined($arg->{'vals_byname'}{$arg->{'default'}})) {
+		$arg->{'cdefault'} = $arg->{'default'};
+	    } else {
+		my $mindiff = abs($arg->{'max'} - $arg->{'min'});
+		my $closestvalue;
+		for $val (@{$arg->{'vals'}}) {
+		    if (abs($arg->{'default'} - $val->{'value'}) <
+			$mindiff) {
+			$mindiff = 
+			    abs($arg->{'default'} - $val->{'value'});
+			$closestvalue = $val->{'value'};
+		    }
+		}
+		$arg->{'cdefault'} = $closestvalue;
+	    }
 	}
     }
 

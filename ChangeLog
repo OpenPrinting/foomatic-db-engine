@@ -1,3 +1,11 @@
+2003-03-05  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: completed support for
+	  "FoomaticRIPDefault..." keywords in numerical options (see
+  http://www.linuxprinting.org/pipermail/foomatic-devel/2003q1/001250.html).
+
+	* README: Documented "FoomaticRIPDefault..." PPD keyword.
+
 2003-02-25  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: "<ppdentry>"s are now cleaned up before
