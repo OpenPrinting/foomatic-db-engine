@@ -3937,8 +3937,11 @@ sub set_default_options {
 			      'string') || 
 			     ($dest->{'args_byname'}{$optname}{'type'} eq
 			      'password')) {
-			    $dest->{'args_byname'}{$optname}{'default'} = 
-				$optvalue;
+			$optvalue = Foomatic::DB::checkoptionvalue
+			    ($dest, $optname, $optvalue, 0);
+			$dest->{'args_byname'}{$optname}{'default'} = 
+			    $optvalue
+			    if defined($optvalue);
 		    } else {
 			if (defined($dest->{'args_byname'}{$optname}{'vals_byname'}{$optvalue})) {
 			    $dest->{'args_byname'}{$optname}{'default'} = 

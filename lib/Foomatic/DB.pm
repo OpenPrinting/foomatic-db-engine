@@ -414,6 +414,8 @@ sub sortvals {
 			# Default setting
 			"default",
 			"printerdefault",
+			# "Neutral" setting
+			"None\$",
 			# Paper sizes
 			"letter\$",
 			#"legal",
@@ -835,6 +837,61 @@ sub ppdfromvartoperl {
 	    checkarg ($dat, $argname);
 	    # Store the value
 	    $dat->{'args_byname'}{$argname}{'maxlength'} = $maxlength;
+	} elsif (m!^\*FoomaticRIPOptionAllowedChars\s+([^/:\s]+):\s*\"(.*)$!) {
+	    # "*FoomaticRIPOptionAllowedChars <option>: <code>"
+	    # Used for string options only
+	    my $argname = $1;
+	    my $line = $2;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $code = "";
+	    while ($line !~ m!\"!) {
+		if ($line =~ m!&&$!) {
+		    # line continues in next line
+		    $code .= substr($line, 0, -2);
+		} else {
+		    # line ends here
+		    $code .= "$line\n";
+		}
+		# Read next line
+		$i ++;
+		$line = $ppd[$i];
+		chomp $line;
+	    }
+	    $line =~ m!^([^\"]*)\"!;
+	    $code .= $1;
+	    # Make sure that the argument is in the data structure
+	    checkarg ($dat, $argname);
+	    # Store the value
+	    $dat->{'args_byname'}{$argname}{'allowedchars'} = unhtmlify($code);
+	} elsif (m!^\*FoomaticRIPOptionAllowedRegExp\s+([^/:\s]+):\s*\"(.*)$!) {
+	    # "*FoomaticRIPOptionAllowedRegExp <option>: <code>"
+	    # Used for string options only
+	    my $argname = $1;
+	    my $line = $2;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $code = "";
+	    while ($line !~ m!\"!) {
+		if ($line =~ m!&&$!) {
+		    # line continues in next line
+		    $code .= substr($line, 0, -2);
+		} else {
+		    # line ends here
+		    $code .= "$line\n";
+		}
+		# Read next line
+		$i ++;
+		$line = $ppd[$i];
+		chomp $line;
+	    }
+	    $line =~ m!^([^\"]*)\"!;
+	    $code .= $1;
+	    # Make sure that the argument is in the data structure
+	    checkarg ($dat, $argname);
+	    # Store the value
+	    $dat->{'args_byname'}{$argname}{'allowedregexp'} =
+		unhtmlify($code);
 	} elsif (m!^\*OrderDependency:\s*(\S+)\s+(\S+)\s+\*([^:/\s]+)\s*$!) {
 	    next if !$currentargument;
 	    # "*OrderDependency: <order> <section> *<option>"
@@ -1199,6 +1256,7 @@ sub ppdsetdefaults {
 			 (lc($def) eq 'no') || (lc($def) eq 'false')) {
 		    $def='False';
 		}
+		$def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
 	    } elsif ($arg->{'type'} =~ /^(int|float)$/) {
 		if (defined($arg->{'cdefault'})) {
 		    $def = $arg->{'cdefault'};
@@ -1207,6 +1265,7 @@ sub ppdsetdefaults {
 		$fdef = $arg->{'default'};
 		$fdef = checkoptionvalue($this->{'dat'}, $name, $fdef, 1);
 		$ppd =~ s!^(\*FoomaticRIPDefault$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$fdef$3!m;
+		$def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
 	    } elsif ($arg->{'type'} =~ /^(string|password)$/) {
 		$def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
 		# An empty string cannot be an option name in a PPD file,
@@ -1224,13 +1283,14 @@ sub ppdsetdefaults {
 		} else {
 		    $def =~ s/\W+/_/g;
 		    $def =~ s/^_+|_+$//g;
+		    $def = '_' if ($def eq '');
 		    $defcom =~ s/:/ /g;
 		    $defcom =~ s/^ +| +$//g;
 		}
 		# The default string is not available as an enumerated choice
 		# ...
-		if (($ppd !~ m!^\s*\*$arg->{name}\s+$def[/:]!m) ||
-		    ($ppd !~ m!^\s*\*FoomaticRIPOptionSetting\s+$arg->{name}=$def:!m)) {
+		if (($ppd !~ m!^\s*\*$arg->{name}\s+${def}[/:]!m) &&
+		    ($ppd !~ m!^\s*\*FoomaticRIPOptionSetting\s+$arg->{name}=${def}:!m)) {
 		    # ... build an appropriate PPD entry ...
 		    my $sprintfproto = $arg->{'proto'};
 		    $sprintfproto =~ s/\%(?!s)/\%\%/g;
@@ -1278,7 +1338,6 @@ sub ppdsetdefaults {
 		    }
 		}
 	    }
-	    $def = checkoptionvalue($this->{'dat'}, $name, $def, 1);
 	    $ppd =~ s!^(\*Default$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$def$3!m;
 	}
     }
@@ -1478,7 +1537,6 @@ sub checkoptionvalue {
 	} elsif ($forcevalue) {
 	    # This maps Unknown to mean False.  Good?  Bad?
 	    # It was done so in Foomatic 2.0.x, too.
-	    my $name = $arg->{'name'};
 	    return 0;
 	}
     } elsif ($arg->{'type'} eq 'enum') {
@@ -1492,7 +1550,6 @@ sub checkoptionvalue {
 	    return $value;
 	} elsif ($forcevalue) {
 	    # wtf!?  that's not a choice!
-	    my $name = $arg->{'name'};
 	    # Return the first entry of the list
 	    my $firstentry = $arg->{'vals'}[0]{'value'};
 	    return $firstentry;
@@ -1503,7 +1560,6 @@ sub checkoptionvalue {
 	    ($value >= $arg->{'min'})) {
 	    return $value;
 	} elsif ($forcevalue) {
-	    my $name = $arg->{'name'};
 	    my $newvalue;
 	    if ($value > $arg->{'max'}) {
 		$newvalue = $arg->{'max'}
@@ -1516,8 +1572,7 @@ sub checkoptionvalue {
 	     ($arg->{'type'} eq 'password')) {
 	if (defined($arg->{'vals_byname'}{$value})) {
 	    return $value;
-	} elsif ((!defined($arg->{'maxlength'})) ||
-		 (length($value) <= $arg->{'maxlength'})) {
+	} elsif (stringvalid($dat, $argname, $value)) {
 	    # Check whether the string is one of the enumerated choices
 	    my $sprintfproto = $arg->{'proto'};
 	    $sprintfproto =~ s/\%(?!s)/\%\%/g;
@@ -1531,10 +1586,53 @@ sub checkoptionvalue {
 	    # No matching choice? Return the original string
 	    return $value;
 	} elsif ($forcevalue) {
-	    return substr($value, 0, $arg->{'maxlength'});
+	    my $str = substr($value, 0, $arg->{'maxlength'});
+	    if (stringvalid($dat, $argname, $str)) {
+		return $str;
+	    } elsif ($#{$arg->{'vals'}} >= 0) {
+		# First list item
+		my $firstentry = $arg->{'vals'}[0]{'value'};
+		return $firstentry;
+	    } else {
+		# Empty string
+		return 'None';
+	    }
 	}
     }
     return undef;
+}
+
+sub stringvalid {
+
+    ## Checks whether a user-supplied value for a string option is valid
+    ## It must be within the length limit, should only contain allowed
+    ## characters and match the given regexp
+
+    # Option and string
+    my ($dat, $argname, $value) = @_;
+
+    my $arg = $dat->{'args_byname'}{$argname};
+
+    # Maximum length
+    return 0 if (defined($arg->{'maxlength'}) &&
+		 (length($value) > $arg->{'maxlength'}));
+
+    # Allowed characters
+    if ($arg->{'allowedchars'}) {
+	my $chars = $arg->{'allowedchars'};
+	$chars =~ s/(?<!\\)((\\\\)*)\//$2\\\//g;
+	return 0 if $value !~ /^[$chars]*$/;
+    }
+
+    # Regular expression
+    if ($arg->{'allowedregexp'}) {
+	my $regexp = $arg->{'allowedregexp'};
+	$regexp =~ s/(?<!\\)((\\\\)*)\//$2\\\//g;
+	return 0 if $value !~ /$regexp/;
+    }
+
+    # All checks passed
+    return 1;
 }
 
 sub checkoptions {
@@ -2016,6 +2114,7 @@ sub getppd {
 	    } else {
 		$arg->{'default'} =~ s/\W+/_/g;
 		$arg->{'default'} =~ s/^_+|_+$//g;
+		$arg->{'default'} = '_' if ($arg->{'default'} eq '');
 	        $defcom =~ s/:/ /g;
 		$defcom =~ s/^ +| +$//g;
 	    }
@@ -2103,6 +2202,35 @@ sub getppd {
 		    $stringextralines1 .= sprintf
 			 ("*FoomaticRIPOptionMaxLength %s: %s\n",
 			  $name, $arg->{'maxlength'});
+		}
+
+		if ($arg->{'allowedchars'}) {
+		    my $header = sprintf
+			("*FoomaticRIPOptionAllowedChars %s",
+			 $name);
+		    my $entrystr = ripdirective($header, 
+						$arg->{'allowedchars'}) . "\n";
+		    $stringextralines1 .= $entrystr;
+		    # Stuff to insert into command line/job is more than one
+		    # line? Let an "*End" line follow
+		    if ($entrystr =~ /\n.*\n/s) {
+			$stringextralines1 .= "*End\n";
+		    }
+		}
+
+		if ($arg->{'allowedregexp'}) {
+		    my $header = sprintf
+			("*FoomaticRIPOptionAllowedRegExp %s",
+			 $name);
+		    my $entrystr = ripdirective($header, 
+						$arg->{'allowedregexp'}) .
+						    "\n";
+		    $stringextralines1 .= $entrystr;
+		    # Stuff to insert into command line/job is more than one
+		    # line? Let an "*End" line follow
+		    if ($entrystr =~ /\n.*\n/s) {
+			$stringextralines1 .= "*End\n";
+		    }
 		}
 
 	    }

@@ -1,3 +1,31 @@
+2003-04-21  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm, foomatic-configure.in:
+	  added restriction for allowed strings by means of lists of
+	  allowed characters (XML: '<arg_allowedchars>...</arg_allowedchars>',
+	  PPD: '*FoomaticRIPOptionAllowedChars <option>: "..."') and Perl
+	  regular expressions (XML: '<arg_allowedregexp>...
+	  </arg_allowedregexp>',
+	  PPD: '*FoomaticRIPOptionAllowedRegExp <option>: "..."'). The
+	  allowed characters are checked by a '/^[...]*$/' expression in
+	  the Perl scripts, so ranges with '-', forbidden characters with
+	  a leading '^', or special characters as '\w', '\d', '\x07', ...
+	  are allowed. Regular expressions are applied via a '/.../'
+	  expression. These restrictions are done for security reasons, to
+	  avoid for example a string like "|| rm -rf * ||" in a command line
+	  option.
+
+	  The string 'None' is always mapped to the empty string,
+	  as PPD files and the command of some spoolers do not accept an
+	  empty string as argument value. For the default value of a string
+	  option always an enumerated choice in the PPD file is created,
+	  should the string contain characters which are not allowed in
+	  choice names on PPD files ir not easy to enter on the command line,
+	  the offending characters are replaced by '_' in the choice name,
+	  the 'driverval' will still use the original string.
+
+	  Several bug fixes done for the string options.
+	
 2003-04-13  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.0rc1. 

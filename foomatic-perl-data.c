@@ -164,6 +164,8 @@ typedef struct arg {
   xmlChar *min_value;
   xmlChar *max_value;
   xmlChar *max_length;
+  xmlChar *allowed_chars;
+  xmlChar *allowed_regexp;
   xmlChar *default_value;
   /* Choices for enumerated options */
   int     num_choices;
@@ -1264,6 +1266,8 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
       option->min_value = NULL;
       option->max_value = NULL;
       option->max_length = NULL;
+      option->allowed_chars = NULL;
+      option->allowed_regexp = NULL;
       option->default_value = NULL;
       option->num_choices = 0;
       option->choices = NULL;
@@ -1433,6 +1437,20 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	  if (debug) fprintf(stderr,
 			     "    Maximum string length: %s\n",
 			     option->max_length);
+	} else if ((!xmlStrcmp(cur2->name,
+			       (const xmlChar *) "arg_allowedchars"))) {
+	  option->allowed_chars = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr,
+			     "    Allowed characters in string: %s\n",
+			     option->allowed_chars);
+	} else if ((!xmlStrcmp(cur2->name,
+			       (const xmlChar *) "arg_allowedregexp"))) {
+	  option->allowed_regexp = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr,
+			     "    String must match Perl regexp: %s\n",
+			     option->allowed_regexp);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_defval"))) {
 	  option->default_value = 
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
@@ -2733,6 +2751,13 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     }
     if (combo->args[i]->max_length) {
       printf("      'maxlength' => '%s',\n", combo->args[i]->max_length);
+    }
+    if (combo->args[i]->allowed_chars) {
+      printf("      'allowedchars' => '%s',\n", combo->args[i]->allowed_chars);
+    }
+    if (combo->args[i]->allowed_regexp) {
+      printf("      'allowedregexp' => '%s',\n",
+	     combo->args[i]->allowed_regexp);
     }
     if (combo->args[i]->default_value) {
       printf("      'default' => '%s',\n", combo->args[i]->default_value);
