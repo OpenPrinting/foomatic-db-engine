@@ -40,36 +40,42 @@ for $printer (@{$db->{'overview'}}) {
     } else {
 	print " (No default driver defined)";
     }
-    #Sort drivers appropriate to ranking list
-    my @sorted = sort sortdrivers @{$printer->{'drivers'}};
-    print ": @sorted --> $sorted[0]\n";
-    $printer->{'driver'} = $sorted[0];
-    if ($printer->{'driver'}) {
-	open PRINTERENTRY, "< $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be read!\n";
-	my  @printerentryfield = <PRINTERENTRY>;
-	close PRINTERENTRY;
-	
-	my $printerentry = join ('', @printerentryfield);
-	if ($printerentry =~ m!<driver>(.+)</driver>!s) {
-	    $printerentry =~ 
-	      s!<driver>(.+)</driver>!<driver>$printer->{'driver'}</driver>!sg;
-	} elsif ($printerentry =~ m=(<!\-\-unknown preferred "driver"\-\->)=s){
-	    $printerentry =~ 
-	      s=(<!\-\-unknown preferred "driver"\-\->)=\n  <driver>$printer->{'driver'}</driver>=sg;
-	} elsif ($printerentry =~ m!<unverified\s*/>!s) {
-	    $printerentry =~
-		s!<unverified\s*/>!<unverified />\n  <driver>$printer->{'driver'}</driver>!sg;
-	} elsif ($printerentry =~ m!</functionality>!s) {
-	    $printerentry =~
-		s!</functionality>!</functionality>\n  <driver>$printer->{'driver'}</driver>!sg;
-	} else {
-	    $printerentry =~
-		s!</model>!</model>\n  <driver>$printer->{'driver'}</driver>!sg;
-	}
-	open PRINTERENTRY, "> $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be written!\n";
-	print PRINTERENTRY $printerentry;
-	close PRINTERENTRY;
+    if ($printer->{'functionality'} eq 'F') {
+	# If the printer is a "Paperweight", do not correct the
+	# default driver, remove the wrong setting and skip the 
+	# printer
+	$printer->{'driver'} = "";
+	print ": --> Skipping \"Paperweight\"\n";
+    } else {
+	#Sort drivers appropriate to ranking list
+	my @sorted = sort sortdrivers @{$printer->{'drivers'}};
+	print ": @sorted --> $sorted[0]\n";
+	$printer->{'driver'} = $sorted[0];
     }
+    open PRINTERENTRY, "< $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be read!\n";
+    my  @printerentryfield = <PRINTERENTRY>;
+    close PRINTERENTRY;
+	
+    my $printerentry = join ('', @printerentryfield);
+    if ($printerentry =~ m!<driver>(.*)</driver>!s) {
+	$printerentry =~ 
+	  s!<driver>(.+)</driver>!<driver>$printer->{'driver'}</driver>!sg;
+    } elsif ($printerentry =~ m=(<!\-\-unknown preferred "driver"\-\->)=s){
+	$printerentry =~ 
+	  s=(<!\-\-unknown preferred "driver"\-\->)=\n  <driver>$printer->{'driver'}</driver>=sg;
+    } elsif ($printerentry =~ m!<unverified\s*/>!s) {
+	$printerentry =~
+	  s!<unverified\s*/>!<unverified />\n  <driver>$printer->{'driver'}</driver>!sg;
+    } elsif ($printerentry =~ m!</functionality>!s) {
+	$printerentry =~
+	  s!</functionality>!</functionality>\n  <driver>$printer->{'driver'}</driver>!sg;
+    } else {
+	$printerentry =~
+	  s!</model>!</model>\n  <driver>$printer->{'driver'}</driver>!sg;
+    }
+    open PRINTERENTRY, "> $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be written!\n";
+    print PRINTERENTRY $printerentry;
+    close PRINTERENTRY;
 }
 
 exit 0;
@@ -270,6 +276,8 @@ sub sortdrivers ($$) {
 			"lbp8",
 			"oki182",
 			"ibmpro",
+			"gdi",
+			"pbmtozjs",
 			# Japanese printer drivers
 			"rpdl",
 			"pr201",

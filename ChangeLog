@@ -1,3 +1,10 @@
+2002-12-05  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-preferred-driver.in: Added the "gdi" and "pbmtozjs"
+	  drivers to the ranking in "foomatic-preferred-driver", tolerate
+	  not having a preferred driver when there is a "Paperweight" with
+	  drivers assigned to it.
+	
 2002-12-04  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 2.9.0. 
