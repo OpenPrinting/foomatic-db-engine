@@ -2708,6 +2708,8 @@ sub getppd {
 			$foomaticstr = ripdirective($header, $cmdval) . 
 			    "\n";
 		    }
+		    # Code supposed to be inserted into the PostScript
+		    # data when this choice is selected.
 		    push(@optionblob,
 			 sprintf("*%s %s/%s: \"%s\"\n", 
 				 $name, $v->{'value'}, $v->{'comment'},
@@ -2717,6 +2719,11 @@ sub getppd {
 		    if ($psstr =~ /\n/s) {
 			push(@optionblob, "*End\n");
 		    }
+		    # If we have a command line or JCL option, insert the
+		    # code here. For security reasons command line snippets
+		    # cannot be inserted into the "official" choice entry,
+		    # otherwise the appropriate RIP filter could execute
+		    # arbitrary code.
 		    push(@optionblob, $foomaticstr);
 		    # Stuff to insert into command line/job is more than one
 		    # line? Let an "*End" line follow
@@ -2775,7 +2782,7 @@ sub getppd {
 			} else {
 			    my $a = $arg->{'vals_byname'}{'Custom'};
 			    my $optstyle = ($arg->{'style'} eq 'J' ? 
-					    "JCL" : "CommandLine");
+					    "JCL" : "CmdLine");
 			    my $header = sprintf
 				("*FoomaticRIPOptionSetting %s=%s",
 				 $name, $a->{'value'});
