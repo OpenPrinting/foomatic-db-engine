@@ -2,25 +2,24 @@
 .\"
 .TH FOOMATIC-COMPILEDB 1 "2001-05-07" "Foomatic Project"
 .SH NAME
-foomatic-compiledb \- compile the foomatic driver database
+foomatic-compiledb \- Compile the Foomatic printer/driver database
 .SH SYNOPSIS
-.BI foomatic-compiledb \ [ \-f \ ]\ [ \-j \ n\ ]\ [\ driver\ ...\ \ ]
+.BI foomatic-compiledb \ \fB[ \ \-t \ \fItype\fB \ \fB] \ \fB[ \ \fB\-f \ \fB]\ \fB[ \ \fB\-j \ \fIn\fB \ \fB] \ \fB[\ \ \fIdriver\fB \ \fB...\ \ \fB]\fR
 
 .SH DESCRIPTION
 .B foomatic-compiledb
-generates all Foomatic data files for a given spooler (or Foomatic combo
-XML files) and either all drivers/printers, or a selected range of drivers.
-It generally should not be necessary except for people who want to generate
-a set of Foomatic data files for distribution. For configuring single
-printers foomatic-datafile and especially foomatic-configure
-will automagically compute just what they need.
+generates all PPD files or Foomatic combo XML files for all possible
+printer/driver combos, or only for a selected range of drivers.  It
+generally should not be necessary except for people who want to
+generate a set of Foomatic data files for distribution. For
+configuring single printers \fBfoomatic-ppdfile(1)\fR and especially
+\fBfoomatic-configure(1)\fR will automagically compute just what they
+need.
 
 .SS Options
 .TP 10
 .BI \-t \ type
-Output file type, one of ppd, cups, lprng, lpd, ppr, pdq, direct, oldcups, xml.
-Note: "oldcups" are the old-style CUPS-O-Matic PPDs (for XPP 1.0 and older, 
-KDE 2.x).
+Output file type, either ppd or xml.
 
 .TP 10
 .BI \-f
@@ -34,8 +33,8 @@ n = number of work processes to run
 .I driver ...  
 only generate data files for these driver(s)
 
-.\".SH SEE ALSO
-.\".IR foomatic-XXX (1),
+.SH SEE ALSO
+.IR foomatic-ppdfile (1), foomatic-configure (1)
 
 .SH EXIT STATUS
 .B foomatic-compiledb

@@ -15,9 +15,7 @@ if ($opt_h) {
     print STDERR <<EOF;
 compile_db [ -f ] [ -t type ] [ -j n ] [driver1] [driver2] ...
  -f       force: proceed even if the destination directory exists
- -t type  output file type: ppd, cups, lprng, lpd, ppr, pdq, direct, 
-          oldcups, xml
-          Note: "oldcups" are the old-style CUPS-O-Matic PPDs.
+ -t type  output file type: ppd or xml
  -j n     n==number of work processes to run at the same time
  driver1 driver2 ...  
           only compile the database for these drivers
@@ -26,7 +24,7 @@ EOF
     exit 0;
 }
 
-# Default file type are generic PPD files
+# Default file type are PPD files
 if (!$opt_t) {
     $opt_t = "ppd";
 }
@@ -38,27 +36,7 @@ if (($opt_t eq "ppd") || ($opt_t eq "cups") || ($opt_t eq "ppr")) {
     $filetype = "ppd";
     $destdir = "ppd";
     $suffix = ".ppd";
-    print STDERR "Generating generic PPD files (PPD-O-Matic)...\n";
-} elsif ($opt_t eq "oldcups") {
-    $filetype = "oldcups";
-    $destdir = "cups-ppd";
-    $suffix = "-cups.ppd";
-    print STDERR "Generating old CUPS PPD files (CUPS-O-Matic)...\n";
-} elsif (($opt_t eq "lpd") || ($opt_t eq "lprng")) {
-    $filetype = "lpd";
-    $destdir = "lpd-descr";
-    $suffix = ".foo";
-    print STDERR "Generating LPD printer description files (LPD-O-Matic)...\n";
-} elsif ($opt_t eq "pdq") {
-    $filetype = "pdq";
-    $destdir = "pdq-config";
-    $suffix = ".pdq";
-    print STDERR "Generating PDQ configuration files (PDQ-O-Matic)...\n";
-} elsif ($opt_t eq "direct") {
-    $filetype = "direct";
-    $destdir = "direct-descr";
-    $suffix = ".foo";
-    print STDERR "Generating printer description files for spooler-less printing\n(Direct-O-Matic)...\n";
+    print STDERR "Generating Foomatic PPD files ...\n";
 } elsif ($opt_t eq "xml") {
     $filetype = "xml";
     $destdir = "combo-xml";
@@ -72,7 +50,7 @@ if (($opt_t eq "ppd") || ($opt_t eq "cups") || ($opt_t eq "ppr")) {
 my $pwd = `pwd`;
 chomp $pwd;
 print STDERR "\nStoring files in directory $pwd/$destdir.\n";
-mkdir $destdir or $opt_f or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
+mkdir $destdir or $force or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
 
 # Compute the overview
 $db->get_overview();
@@ -174,17 +152,7 @@ sub spawn_child {
 		@data = $db->get_combo_data_xml($driver, $printer);
 	    } else {
 		$db->getdat($driver, $printer);
-		if ($filetype eq 'oldcups') {
-		    @data = $db->getcupsppd();
-		} elsif ($filetype eq 'pdq') {
-		    @data = $db->getpdqdata();
-		} elsif ($filetype eq 'lpd') {
-		    @data = $db->getlpddata();
-		} elsif ($filetype eq 'ppd') {
-		    @data = $db->getgenericppd();
-		} elsif ($filetype eq 'direct') {
-		    @data = $db->getlpddata();
-		}
+		@data = $db->getppd();
 	    }
 	    open OUTPUT, "> $filename" ||
 		die "Cannot write $filename!";

@@ -8,7 +8,7 @@ printing system.
 .B foomatic-configure
 [\fIOPTION\fR]...
 
-.BI foomatic-configure\ \-n \ queuename \ [\ \-N \ description \ ]\ \ [\ \-L \ location \ ]\ \ [\ \-c \ connect \ ]\ \ [\ \-d \ driver \ ]\ \ [\ \-p \ printer \ ]\ \ [\ \-s \ spooler \ ]\ \ [\ \-C \ [\ sourcespooler\ ]\ sourcequeue \ ]\ \ [\ \-o \ option1=value1 \ \-o \ option2 \ ...\ ]\ [\ \-q\ ]\ [\ \--oldppd\ ]\
+.BI foomatic-configure\ \-n \ queuename \ [\ \-N \ description \ ] \ [\ \-L \ location \ ] \ [\ \-c \ connect \ ] \ [\ \-d \ driver \ ] \ [\ \-p \ printer \ ] \ [\ \--ppd \ ppdfile \ ] \ [\ \-s \ spooler \ ] \ \fB[\ \fB\-C \ \fB[\ \fIsourcespooler\fB\ \fB]\ \fIsourcequeue\fB \ \fB] \ \fB[\ \fB\-o \ \fIoption1\fB=\fIvalue1\fB \ \fB\-o \ \fIoption2\fB \ \fB...\ \fB]\ \fB[\ \fB\-q\ \fB]\
 
 .BI foomatic-configure\ \-D\ \-n \ queuename \ [\ \-s \ spooler \ ]\ [\ \-q\ ]
 
@@ -16,7 +16,7 @@ printing system.
 
 .BI foomatic-configure\ \-Q\ \ [\ \-s \ spooler \ ]\ [\ \-n \ queuename \ ]\ [\ \-r\ ]
 
-.BI foomatic-configure\ \-P\ \ [\ \-s \ spooler \ ]\ [\ \-n \ queuename \ ]\ [\ index \ ]
+.BI foomatic-configure\ \-P\ \ [\ \-s \ spooler \ ]\ [\ \-n \ queuename \ ] \ \fB[\ \fB\-d \ \fIdriver \ \fB] \ \fB[\ \fB\-p \ \fIprinter \ \fB] \ \fB[\ \fB\--ppd \ \fIppdfile \ \fB] \ \fB[\ \fIindex \ \fB]
 
 .BI foomatic-configure\ \-X\ \-p \ printer \ |\ \-d \ driver \ |
 .BI \-p \ printer \ \-d \ driver
@@ -29,14 +29,20 @@ printing system.
 
 .SH DESCRIPTION
 .B foomatic-configure 
-is a program to establish and configure print queues, drivers,
-spoolers, etc using the foomatic database and companion filters.
+is a program to set up and configure print queues for every known
+spooler (CUPS, LPRng, LPD, GNUlpr, PPR, PDQ. CPS, no spooler) and
+every valid printer/driver combo in the Foomatic database or every PPD
+file coming with PostScript printers. As RIP filter (Raster Image
+Processor, translation from PostScript to the native language of the
+printer) always \fBfoomatic-rip(1)\fR will be used, except for PPD
+files of PostScript printers under CUPS or PPR, they will be used
+without RIP filter.
 
 It also comprises half of a programatic API for user tools: you can
 learn and control everything about the static properties of print
-queues here.  With the sister program foomatic-printjob, you can do
-everything related to print queue dynamic state: submit jobs, and
-query, cancel, reorder, and redirect them.
+queues here. With the sister program \fBfoomatic-printjob(1)\fR, you
+can do everything related to the print queue's dynamic state: submit
+jobs, and query, cancel, reorder, and redirect them.
 
 .SS Options
 .TP 10
@@ -58,6 +64,9 @@ Foomatic database name for desired printer driver
 .BI \-p \ printer
 Foomatic id for printer
 .TP 10
+.BI \--ppd \ ppdfile
+PPD file, for example the one supplied by the manufacturer of a PostScript printer
+.TP 10
 .BI \-s \ spooler
 Explicit spooler type (cups, lpd, lprng, pdq, ppr, direct)
 .TP 10
@@ -66,9 +75,6 @@ Set the default of option to value
 .TP 10
 .BI \-o \ option
 Turn on option by default
-.TP 10
-.BI \--oldppd
-Use the old CUPS-O-Matic PPD files for CUPS queues (default are the PPD-O-Matic PPDs)
 .TP 10
 .BI \-D
 Set this queue as the default queue (just give \fB\-n\fP \fIqueuename\fP)
@@ -101,18 +107,18 @@ Run quietly
 .SS Commands
 No commands, just options
 
-.SH FILES
-.TP 25
-@$sysdeps{'foo-etc'}@/lpd/<queue>
-.TP 25
-@$sysdeps{'foo-etc'}@/<queue>.xml
-.TP 25
-@$sysdeps{'lpd-pcap'}@
-The systems list of configured printers.
-.PD 0
+.\".SH FILES
+.\".TP 25
+.\"@$sysdeps{'foo-etc'}@/lpd/<queue>
+.\".TP 25
+.\"@$sysdeps{'foo-etc'}@/<queue>.xml
+.\".TP 25
+.\"@$sysdeps{'lpd-pcap'}@
+.\"The systems list of configured printers.
+.\".PD 0
 
 .SH SEE ALSO
-.IR foomatic-printjob (1),
+.IR foomatic-printjob (1), \ foomatic-rip (1)
 
 .SH EXIT STATUS
 .B foomatic-configure

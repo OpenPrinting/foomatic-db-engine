@@ -1,0 +1,43 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-PPDFILE 1 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-ppdfile \- Generate a PPD file for a given printer/driver combo
+.SH SYNOPSIS
+.B foomatic-ppdfile \-d <driver> \-p <printerid>
+
+
+
+.SH DESCRIPTION
+.B foomatic-ppdfile
+will compute the spooler-independent Foomatic PPD file for any valid
+printer/driver combo available in the Foomatic database, both for
+printing with \fBfoomatic-rip(1)\fR and for applications/clients being
+able to access the printer's options.  The PPD file is returned on
+standard ouput.
+
+
+.SS Options
+.TP 10
+.BI \-d
+driver name
+
+.TP 10
+.BI \-p
+printer id
+
+.SH SEE ALSO
+.IR foomatic-rip (1)
+
+.SH EXIT STATUS
+.B foomatic-ppdfile
+returns 0 on success, 1 otherwise.
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+None so far.
+
+Please send bug reports to foomatic-devel@linuxprinting.org.

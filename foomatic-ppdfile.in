@@ -1,0 +1,34 @@
+#!@PERL@
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+use Getopt::Std;
+
+getopts("d:p:ht:f");
+help() if $opt_h;
+my $driver = $opt_d;
+my $poid   = $opt_p;
+
+if (defined($driver) and defined($poid)) {
+
+    my $db = Foomatic::DB->new();
+    # Get all the data about this driver/printer pair
+    $db->getdat($driver, $poid);
+
+    my @data;
+
+    @data = $db->getppd();
+    
+    print @data;
+}
+
+exit 0;
+
+sub help {
+    print <<HELP;
+foomatic-ppdfile -d <driver> -p <printerid>
+ -d: driver name
+ -p: printer id
+HELP
+
+}

@@ -158,7 +158,7 @@ AC_PATH_DIRS(LOCALLIBDIR,.,./foomatic-db,./foomatic-db*:./db:../foomatic-db*)
 dnl AC_OUTPUT(Makefile src/Makefile)
 AC_OUTPUT(Makefile makeDefaults makeMan
 foomatic-configure foomatic-printjob foomatic-kitload
-foomatic-datafile foomatic-preferred-driver foomatic-cleanupdrivers
+foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
 foomatic-getpjloptions foomatic-addpjloptions
 foomatic-compiledb foomatic-fix-xml foomatic-ppdload)
 
