@@ -2080,9 +2080,13 @@ sub getppd (  $ $ $ ) {
     my $header = "*FoomaticRIPCommandLine";
     my $cmdline = $dat->{'cmd'};
     my $cmdlinestr = ripdirective($header, $cmdline);
-    push(@optionblob, "$cmdlinestr\n");
-    if ($cmdlinestr =~ /\n/s) {
-	push(@optionblob, "*End\n");
+    if ($cmdline) {
+	# Insert the "*FoomaticRIPCommandLine" directive, but only if
+	# the command line prototype is not empty
+	push(@optionblob, "$cmdlinestr\n");
+	if ($cmdlinestr =~ /\n/s) {
+	    push(@optionblob, "*End\n");
+	}
     }
 
     # Search for composite options and prepare the member options

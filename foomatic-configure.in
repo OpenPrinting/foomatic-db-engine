@@ -350,6 +350,8 @@ sub getoldqueuedata {
 				       $config->{'printer'});
 	    die "That printer and driver combination is not possible.\n"
 		if (!$possible);
+	    die "The driver database entry does not contain sufficient data to build a PPD file.\n"
+		if (!$db->{'dat'}{'cmd'});
 	    $newfoomaticdata = 1;
 	    # Overtake the former default settings
 	    if ($olddatablob) {overtake_defaults($olddatablob)};
@@ -4158,6 +4160,8 @@ sub print_perl_combo_data {
 				   $config->{'printer'});
 	die "That printer and driver combination is not possible.\n"
 	    if (!$possible);
+	die "The driver database entry does not contain sufficient data to build a PPD file.\n"
+	    if (!$db->{'dat'}{'cmd'});
 	# Generate the PPD and extract it to Perl again (to get in the
 	# composite options)
 	my $ppd = $db->getppd($config->{'shortgui'});

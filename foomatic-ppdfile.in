@@ -15,88 +15,95 @@ my $showmatch   = $opt_P;
 my $debug = 0;
 
 my $db = Foomatic::DB->new();
-    $db->get_overview();
-    my $printer;
-    my @drivers = $db->get_driverlist();
-    if( $showall or $showmatch ){
-	for $printer (@{$db->{'overview'}}) {
-	    my $pr = $printer->{'make'};
-	    my $model = $printer->{'model'};
-	    my $name = "$pr $model";
-	    my $driver = ($printer->{'driver'} || "No Default Driver");
-	    my $dlist = "";
-	    my $dcount = 0;
-	    if( $printer->{'drivers'} ){
-		$dcount = @{$printer->{'drivers'}};
-		for my $d (@{$printer->{'drivers'}}) {
-		    $dlist .= "$d ";
-		}
-	    }
-	    if( not defined($showmatch) or "$name" =~ m{$showmatch}o ){
-		print "$name Id='$printer->{'id'}' Driver='$driver'";
-		if ($dcount > 1){
-		    print " CompatibleDrivers='$dlist'";
-		}
-	    print "\n";
-	    }
-	}
-	exit 0;
-    }
-
-    help() if( not defined( $poid ) );
-
-    my $lcname = lc( $poid );
-    my $pentry;
+$db->get_overview();
+my $printer;
+my @drivers = $db->get_driverlist();
+if( $showall or $showmatch ){
     for $printer (@{$db->{'overview'}}) {
-	my $name = lc( $printer->{'id'} );
-	    print "compare '$lcname' to '$name'\n" if $debug;
-	if( $name eq $lcname ){
-	    $pentry = $printer;
-	    last;
+	my $pr = $printer->{'make'};
+	my $model = $printer->{'model'};
+	my $name = "$pr $model";
+	my $driver = ($printer->{'driver'} || "No Default Driver");
+	my $dlist = "";
+	my $dcount = 0;
+	if( $printer->{'drivers'} ){
+	    $dcount = @{$printer->{'drivers'}};
+	    for my $d (@{$printer->{'drivers'}}) {
+		$dlist .= "$d ";
+	    }
+	}
+	if( not defined($showmatch) or "$name" =~ m{$showmatch}o ){
+	    print "$name Id='$printer->{'id'}' Driver='$driver'";
+	    if ($dcount > 1){
+		print " CompatibleDrivers='$dlist'";
+	    }
+	    print "\n";
 	}
     }
-
-    print "found " . Dumper($pentry) if $debug;
-    die "printer '$poid' not found" if( not defined $pentry );
-
-    if (not defined($driver) ) {
-	$driver = $pentry->{'driver'};
-	if( not defined( $driver ) ){
-	    die "printer '$poid' does not have default driver";
-	}
-    }
-
-    my $found = 0;
-    for my $d (@{$pentry->{'drivers'}}) {
-	last if ($found = ($driver eq $d));
-    }
-    if( not $found ){
-	warn "WARNING: printer '$poid' and driver '$driver' are not compatible\n";
-    }
-    $found = 0;
-    for my $d (@drivers) {
-	last if ($found = ($driver eq $d));
-    }
-    if( not $found ){
-	die "ERROR: driver '$driver' not in database\n";
-    }
-
-    # If the user supplies an old numerical printer ID, translate it to
-    # a new clear-text ID
-    $poid = Foomatic::DB::translate_printer_id($poid);
-
-    my $db = Foomatic::DB->new();
-    # Get all the data about this driver/printer pair
-    $db->getdat($driver, $poid);
-
-    my @data;
-
-    @data = $db->getppd($opt_w);
-    die "ERROR: no PPD file for printer '$poid' and driver '$driver'\n" if not @data;
-    
-    print @data;
-
     exit 0;
+}
+
+help() if( not defined( $poid ) );
+
+my $lcname = lc( $poid );
+my $pentry;
+for $printer (@{$db->{'overview'}}) {
+    my $name = lc( $printer->{'id'} );
+    print "compare '$lcname' to '$name'\n" if $debug;
+    if( $name eq $lcname ){
+	$pentry = $printer;
+	last;
+    }
+}
+
+print "found " . Dumper($pentry) if $debug;
+die "printer '$poid' not found" if( not defined $pentry );
+
+if (not defined($driver) ) {
+    $driver = $pentry->{'driver'};
+    if( not defined( $driver ) ){
+	die "printer '$poid' does not have default driver";
+    }
+}
+
+my $found = 0;
+for my $d (@{$pentry->{'drivers'}}) {
+    last if ($found = ($driver eq $d));
+}
+if( not $found ){
+    warn "WARNING: printer '$poid' and driver '$driver' are not compatible\n";
+}
+$found = 0;
+for my $d (@drivers) {
+    last if ($found = ($driver eq $d));
+}
+if( not $found ){
+    die "ERROR: driver '$driver' not in database\n";
+}
+
+# If the user supplies an old numerical printer ID, translate it to
+# a new clear-text ID
+$poid = Foomatic::DB::translate_printer_id($poid);
+
+my $db = Foomatic::DB->new();
+# Get all the data about this driver/printer pair
+my $possible = $db->getdat($driver, $poid);
+# Stop if the printer is not supported by the given driver
+die "That printer and driver combination is not possible.\n"
+    if (!$possible);
+# Stop if the driver entry has an empty command line prototype
+die "The driver database entry does not contain sufficient data to build a PPD file.\n"
+    if (!$db->{'dat'}{'cmd'});
+
+my @data;
+
+@data = $db->getppd($opt_w);
+die "ERROR: no PPD file for printer '$poid' and driver '$driver'\n"
+    if not @data;
+
+print @data;
+
+exit 0;
 
 sub help {
     print <<HELP;
@@ -108,8 +115,9 @@ $0 [-h][-A][-d <driver>] [-p <printerid>]
  -P <regexpr>   : show all Printer ID's whose names and model
                   matched by the RE.  For example:
                    -P HP will match all names with HP in them
- -w: Generate PPD which is compatible with the CUPS PostScript
-     driver for Windows (GUI strings are limited to 39 characters).
+ -w             : Generate PPD which is compatible with the CUPS PostScript
+                  driver for Windows (GUI strings are limited to 39 
+                  characters).
  -h             : show help information
 
   If the driver is not specified then the default driver for the

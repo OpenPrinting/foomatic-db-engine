@@ -1,3 +1,9 @@
+2004-11-30  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in, foomatic-ppdfile.in,
+	  foomatic-compiledb.in, lib/Foomatic/DB.pm: Let Foomatic not
+	  generate PPD files with blank "*FoomaticRIPCommandLine" entry.
+
 2004-09-14  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.2. 
@@ -12,7 +18,7 @@
 	  auto-detection ID string for the "*Manufacturer: ..." tag of the
 	  PPD files, as in the IDs the manufacturer names
 	  often do not comply with the Adobe specs (as "Hewlett-Packard",
-	  "HP" has to be used.
+	  here "HP" has to be used).
 
 2004-07-20  Till Kamppeter <till.kamppeter@gmx.net>
 

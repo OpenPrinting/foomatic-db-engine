@@ -184,7 +184,11 @@ sub spawn_child {
 	    if ($filetype eq 'xml') {
 		@data = $db->get_combo_data_xml($driver, $printer);
 	    } else {
-		$db->getdat($driver, $printer);
+		my $possible = $db->getdat($driver, $printer);
+		# Do not create a PPD file if the printer/driver combo
+		# is not possible or if the renderer command line is
+		# empty
+		next if (!$possible) or (!$db->{'dat'}{'cmd'});
 		@data = $db->getppd();
 	    }
 	    open OUTPUT, "> $filename" ||
