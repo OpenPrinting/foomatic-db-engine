@@ -1324,7 +1324,7 @@ sub query_cups {
     }
 
     # Query the default printer
-    my $default;
+    my $default = '';
     if (!defined($config->{'queue'})) {
 	open DEFAULT, "$sysdeps->{'cups-lpstat'} -d |" or
 	    die "Could not run $sysdeps->{'cups-lpstat'}!\n";
@@ -2867,8 +2867,8 @@ sub load_cups_printersconf {
 		    $p = {};
 		} elsif (defined($p->{'name'})) {
 		    # Inside <Printer ...> block
-		    $line =~ m!^\s*(\S+)\s+(\S.*)$!;
-		    if ($1 ne '') {$p->{$1} = $2};
+		    if (($line =~ m!^\s*(\S+)\s+(\S.*)$!) and
+			($1 ne '')) {$p->{$1} = $2};
 		} else {
 		    # Outside <Printer ...> block
 		    die "Line $linecount in $sysdeps->{'cups-pconf'} " .
