@@ -2327,8 +2327,10 @@ EOFPGSZ
 			     $dat->{'model'},
 			     $dat->{'driver'}));;
     $filename =~ s![ /\(\)]!_!g;
+    $filename =~ s![\+]!plus!g;
     $filename =~ s!__+!_!g;
     $filename =~ s!_$!!;
+    $filename =~ s!_-!-!;
     $filename =~ s!^_!!;
     my $longname = "$filename.ppd";
 
