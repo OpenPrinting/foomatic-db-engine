@@ -3112,6 +3112,49 @@ EOFPGSZ
     # Remove forbidden characters (Adobe PPD spec 4.3 section 5.3)
     $modelname =~ s/[^A-Za-z0-9 \.\/\-\+]//gs;
     my $shortnickname = "$make $model, $drivername";
+    if (length($shortnickname) > 31) {
+	my %parts;
+	$parts{'make'} = $make;
+	$parts{'model'} = $model;
+	$parts{'driver'} = $drivername;
+	for my $part (qw/model make driver/) {
+	    my @words = split(/(?<=[a-zA-Z])(?![a-zA-Z])|(?<=[a-z])(?=[A-Z])/,
+			      $parts{$part});
+	    for (@words) {
+		next if ($_ !~ /[a-zA-Z]{4,}$/);
+		my $abbreviated = 0;
+	        while (1) {
+		    chop;
+		    $abbreviated ++;
+		    $parts{$part} = join('', @words);
+		    $shortnickname =
+			"$parts{'make'} $parts{'model'}, $parts{'driver'}";
+		    last if (((length($shortnickname) <= 30) &&
+			      ($abbreviated != 1)) ||
+			     ($_ !~ /[a-zA-Z]{2,}$/) ||
+			     (length($parts{'make'}) <= 3));
+		}
+		if ($abbreviated) {
+		    $_ .= '.';
+		}
+		$parts{$part} = join('', @words);
+		$shortnickname =
+		    "$parts{'make'} $parts{'model'}, $parts{'driver'}";
+		last if (length($shortnickname) <= 31);
+	    }
+	    last if (length($shortnickname) <= 31);
+	}
+	while ((length($shortnickname) > 31) &&
+	       (length($parts{'model'}) > 3)) {
+	    $parts{'model'} =~
+		s/(?<=[a-zA-Z0-9])[^a-zA-Z0-9]+[a-zA-Z0-9]*$//;
+	    $shortnickname =
+		"$parts{'make'} $parts{'model'}, $parts{'driver'}";
+	}
+	if (length($shortnickname) > 31) {
+	    $shortnickname = substr($shortnickname, 0, 31);
+	}
+    }
 
     my $color;
     if ($dat->{'color'}) {

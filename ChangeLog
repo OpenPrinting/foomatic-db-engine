@@ -1,3 +1,9 @@
+2003-04-23  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Auto-abbreviation of "*ShortNickName"s in
+	  the PPD files so that they are not longer than 31 characters to
+	  fulfill the Adobe specs.
+
 2003-04-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.0rc2. 
