@@ -154,6 +154,7 @@ typedef struct arg {
   xmlChar *idx;
   xmlChar *option_type;
   xmlChar *style;
+  xmlChar *substyle;
   xmlChar *spot;
   xmlChar *order;
   xmlChar *section;
@@ -1252,6 +1253,7 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
       option->idx = NULL;
       option->option_type = NULL;
       option->style = NULL;
+      option->substyle= NULL;
       option->spot = NULL;
       option->order = NULL;
       option->section = NULL;
@@ -1337,24 +1339,34 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	  while (cur3 != NULL) {
 	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_substitution"))) {
 	      option->style = (xmlChar *)"C";
+	      option->substyle = NULL;
 	      if (debug)
 		fprintf(stderr,
 			"    Option style: Command line Substitution\n");
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_postscript"))) {
 	      option->style = (xmlChar *)"G";
+	      option->substyle = NULL;
 	      if (debug)
 		fprintf(stderr,
 			"    Option style: PostScript code\n");
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_pjl"))) {
 	      option->style = (xmlChar *)"J";
+	      option->substyle = NULL;
 	      if (debug)
 		fprintf(stderr,
 			"    Option style: PJL command\n");
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_composite"))) {
 	      option->style = (xmlChar *)"X";
+	      option->substyle = NULL;
 	      if (debug)
 		fprintf(stderr,
 			"    Option style: Composite option\n");
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_forced_composite"))) {
+	      option->style = (xmlChar *)"X";
+	      option->substyle = (xmlChar *)"F";
+	      if (debug)
+		fprintf(stderr,
+			"    Option style: Forced composite option\n");
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_spot"))) {
 	      option->spot =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
@@ -2687,6 +2699,9 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("      'idx' => '%s',\n", combo->args[i]->idx);
     printf("      'type' => '%s',\n", combo->args[i]->option_type);
     printf("      'style' => '%s',\n", combo->args[i]->style);
+    if (combo->args[i]->substyle) {
+      printf("      'substyle' => '%s',\n", combo->args[i]->substyle);
+    }
     printf("      'spot' => '%s',\n", combo->args[i]->spot);
     printf("      'order' => '%s',\n", combo->args[i]->order);
     if (combo->args[i]->section) {

@@ -1,3 +1,21 @@
+2003-04-02  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm: Introduced "Forced
+	  composite options", composite options where the user cannot set
+	  the individual member options, but only the composite option
+	  (the user is forced to use the composite option). This allows
+	  options acting at two or more places, for example a "PageSize"
+	  option for a driver which is a filter translating GhostScript
+	  bitmap output to the printer's language. One lets one member
+	  option be an option inserting PostScript code for the page size
+	  into the PostScript input data stream, and another member option
+	  insert the correct bitmap size into the filter's command
+	  line. The user sees only the composite option and sets the paper
+	  size with it as usual. In the XML database, forced composite
+	  options are defined as usual composite options, only difference
+	  is that in the XML entry for the composite option
+	  "<arg_forced_composite>" instead of "<arg_composite>" is used.
+
 2003-03-30  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-combo-xml.c: Allow printer/driver combo XML generation

@@ -668,6 +668,10 @@ sub ppdfromvartoperl {
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, "PageSize");
 	    checkarg ($dat, "PageRegion");
+	    # "PageSize" and "PageRegion" must be both user-visible as they are
+	    # options required by the PPD spec
+	    undef $dat->{'args_byname'}{"PageSize"}{'hidden'};
+	    undef $dat->{'args_byname'}{"PageRegion"}{'hidden'};
 	    # Make sure that the setting is in the data structure
 	    checksetting ($dat, "PageSize", $setting);
 	    checksetting ($dat, "PageRegion", $setting);
@@ -727,6 +731,9 @@ sub ppdfromvartoperl {
 	    }
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, $argname);
+	    # This option has a non-Foomatic keyword, so this is not
+	    # a hidden option
+	    undef $dat->{'args_byname'}{$argname}{'hidden'};
 	    # Store the values
 	    $dat->{'args_byname'}{$argname}{'comment'} = $translation;
 	    $dat->{'args_byname'}{$argname}{'group'} = $currentgroup;
@@ -755,7 +762,6 @@ sub ppdfromvartoperl {
 	    $currentargument = "";
 	} elsif ((m!^\*FoomaticRIPOption ([^/:\s]+):\s*(\S+)\s+(\S+)\s+(\S)\s*$!) ||
 		 (m!^\*FoomaticRIPOption ([^/:\s]+):\s*(\S+)\s+(\S+)\s+(\S)\s+(\S+)\s*$!)){
-	    next if !$currentargument;
 	    # "*FoomaticRIPOption <option>: <type> <style> <spot> [<order>]"
 	    # <order> only used for 1-choice enum options
 	    my $argname = $1;
@@ -784,7 +790,6 @@ sub ppdfromvartoperl {
 		$dat->{'args_byname'}{$argname}{'order'} = $order;
 	    }
 	} elsif (m!^\*FoomaticRIPOptionPrototype\s+([^/:\s]+):\s*\"(.*)$!) {
-	    next if !$currentargument;
 	    # "*FoomaticRIPOptionPrototype <option>: <code>"
 	    # Used for numerical options only
 	    my $argname = $1;
@@ -811,7 +816,6 @@ sub ppdfromvartoperl {
 	    $proto .= $1;
 	    $dat->{'args_byname'}{$argname}{'proto'} = unhtmlify($proto);
 	} elsif (m!^\*FoomaticRIPOptionRange\s+([^/:\s]+):\s*(\S+)\s+(\S+)\s*$!) {
-	    next if !$currentargument;
 	    # "*FoomaticRIPOptionRange <option>: <min> <max>"
 	    # Used for numerical options only
 	    my $argname = $1;
@@ -830,6 +834,9 @@ sub ppdfromvartoperl {
 	    my $argname = $3;
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, $argname);
+	    # This option has a non-Foomatic keyword, so this is not
+	    # a hidden option
+	    undef $dat->{'args_byname'}{$argname}{'hidden'};
 	    # Store the values
 	    $dat->{'args_byname'}{$argname}{'order'} = $order;
 	    $dat->{'args_byname'}{$argname}{'section'} = $section;
@@ -840,10 +847,12 @@ sub ppdfromvartoperl {
 	    my $default = $2;
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, $argname);
+	    # This option has a non-Foomatic keyword, so this is not
+	    # a hidden option
+	    undef $dat->{'args_byname'}{$argname}{'hidden'};
 	    # Store the value
 	    $dat->{'args_byname'}{$argname}{'default'} = $default;
 	} elsif (m!^\*FoomaticRIPDefault([^/:\s]+):\s*([^/:\s]+)\s*$!) {
-	    next if !$currentargument;
 	    # "*FoomaticRIPDefault<option>: <value>"
 	    my $argname = $1;
 	    my $default = $2;
@@ -865,6 +874,9 @@ sub ppdfromvartoperl {
 	    }
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, $currentargument);
+	    # This option has a non-Foomatic keyword, so this is not
+	    # a hidden option
+	    undef $dat->{'args_byname'}{$argname}{'hidden'};
 	    # Make sure that the setting is in the data structure (enum
 	    # options)
 	    my $bool =
@@ -918,7 +930,6 @@ sub ppdfromvartoperl {
 	    }
 	} elsif ((m!^\*FoomaticRIPOptionSetting\s+([^/:=\s]+)=([^/:=\s]+):\s*\"(.*)$!) ||
 		 (m!^\*FoomaticRIPOptionSetting\s+([^/:=\s]+):\s*\"(.*)$!)) {
-	    next if !$currentargument;
 	    # "*FoomaticRIPOptionSetting <option>[=<choice>]: <code>"
 	    # For boolean options <choice> is not given
 	    my $argname = $1;
@@ -1280,6 +1291,10 @@ sub checkarg {
     $dat->{'args_byname'}{$argname}{'style'} = 'G';
     # Default prototype for code to insert, used by enum options
     $dat->{'args_byname'}{$argname}{'proto'} = '%s';
+    # Mark option as hidden by default, as options consisting of only Foomatic
+    # keywords are hidden. As soon as the PPD parser finds a non-Foomatic
+    # keyword, it removes this mark
+    $dat->{'args_byname'}{$argname}{'hidden'} = 1;
 }
 
 sub checksetting {
@@ -1670,6 +1685,10 @@ sub getppd {
 	my $order = $arg->{'order'};
 	my $section = $arg->{'section'};
 
+	# The "PageRegion" option is generated automatically, so ignore an
+	# already existing "PageRegion". 
+	next if $name eq "PageRegion";
+
 	# Set default for missing section value
 	if (!defined($section)) {$arg->{'section'} = "AnySetup";}
 
@@ -1698,10 +1717,10 @@ sub getppd {
 			if ($s !~ /=/) {
 			    if ($s =~ /^[Nn][Oo]$m$/) {
 				$v->{'driverval'} =~
-				    s/(^|\s)$s(\s|$)/$1$m=false$2/;
+				    s/(^|\s)$s($|\s)/$1$m=false$2/;
 			    } else {
 				$v->{'driverval'} =~ 
-				    s/(^|\s)$s(\s|$)/$1$m=true$2/;
+				    s/(^|\s)$s($|\s)/$1$m=true$2/;
 			    }
 			}
 		    } else {
@@ -1717,7 +1736,9 @@ sub getppd {
 	# which will be the default. Make also sure that the composite
 	# option will be inserted into the PostScript code before all its
 	# members are inserted (by means of the section and the order
-	# number).
+	# number). Check also all members if they are hidden, if so, this
+	# composite option is a forced composite option.
+	my $nothiddenmemberfound = 0;
 	for my $m (@members) {
 	    my $a = $dat->{'args_byname'}{$m};
 
@@ -1765,33 +1786,58 @@ sub getppd {
 		}
 	    }
 
+	    # Is this member option hidden?
+	    if (!$a->{'hidden'}) {
+		$nothiddenmemberfound = 1;
+	    }
+
+	    # In case of a forced composite option mark the member option
+	    # as hidden.
+	    if ($arg->{'substyle'} eq 'F') {
+		$a->{'hidden'} = 1;
+	    }
+
 	    # Do not add a "From<Composite>" choice to an option with only
 	    # one choice
 	    next if $#{$a->{'vals'}} < 1;
 
-	    # Add "From<Composite>" choice
-	    # setting record
-	    my $rec;
-	    $rec->{'value'} = "From$name";
-	    $rec->{'comment'} = "Controlled by '$com'";
-	    # We mark the driverval as invalid with a non-printable
-	    # character, this means that the code to insert will be an
-	    # empty string in the PPD.
-	    $rec->{'driverval'} = "\x01";
-	    # Insert record as the first item in the 'vals' array
-	    unshift(@{$a->{'vals'}}, $rec);
-	    # Update 'vals_byname' hash
-	    $a->{'vals_byname'}{$rec->{'value'}} = $a->{'vals'}[0];
-	    for (my $i = 1; $i <= $#{$a->{'vals'}}; $i ++) {
-		$a->{'vals_byname'}{$a->{'vals'}[$i]{'value'}} =
-		    $a->{'vals'}[$i];
+	    if (!defined($a->{'vals_byname'}{"From$name"})) {
+		# Add "From<Composite>" choice
+		# setting record
+		my $rec;
+		$rec->{'value'} = "From$name";
+		$rec->{'comment'} = "Controlled by '$com'";
+		# We mark the driverval as invalid with a non-printable
+		# character, this means that the code to insert will be an
+		# empty string in the PPD.
+		$rec->{'driverval'} = "\x01";
+		# Insert record as the first item in the 'vals' array
+		unshift(@{$a->{'vals'}}, $rec);
+		# Update 'vals_byname' hash
+		$a->{'vals_byname'}{$rec->{'value'}} = $a->{'vals'}[0];
+		for (my $i = 1; $i <= $#{$a->{'vals'}}; $i ++) {
+		    $a->{'vals_byname'}{$a->{'vals'}[$i]{'value'}} =
+			$a->{'vals'}[$i];
+		}
+	    } else {
+		# Only update the values
+		$a->{'vals_byname'}{"From$name"}{'value'} = "From$name";
+		$a->{'vals_byname'}{"From$name"}{'comment'} =
+		    "Controlled by '$com'";
+		$a->{'vals_byname'}{"From$name"}{'driverval'} = "\x01";
 	    }
 
 	    # Set default to the new "From<Composite>" choice
-	    $a->{'default'} = $rec->{'value'};
+	    $a->{'default'} = "From$name";
+	}
+
+	# If all member options are hidden, this composite option is
+	# a forced composite option and has to be marked appropriately
+	if (!$nothiddenmemberfound) {
+	    $arg->{'substyle'} = 'F';
 	}
     }
- 
+
     # Sort options with "sortargs" function after they were re-grouped
     # due to the composite options
     my @sortedarglist = sort sortargs @{$dat->{'args'}};
@@ -1822,6 +1868,10 @@ sub getppd {
 			   "Unknown"))));
 	next if $optstyle eq "Unknown";
 
+	# The "PageRegion" option is generated automatically, so ignore an
+	# already existing "PageRegion". 
+	next if $name eq "PageRegion";
+
 	# The command prototype should not be empty, set default
 	if (!$cmd) {
 	    $cmd = "%s";
@@ -1839,8 +1889,9 @@ sub getppd {
 
 	# Only take into account the groups of options which will be
 	# visible user interface options in the PPD.
-	if (($type ne 'enum') || ($#{$arg->{'vals'}} > 0) ||
-	    ($name eq "PageSize") || ($arg->{'style'} eq 'G')) {
+	if ((($type ne 'enum') || ($#{$arg->{'vals'}} > 0) ||
+	     ($name eq "PageSize") || ($arg->{'style'} eq 'G')) &&
+	    (!$arg->{'hidden'})){
 	    # Find the level on which the group path of the current option
 	    # (@group) differs from the group path of the last option
 	    # (@groupstack).
@@ -1876,10 +1927,12 @@ sub getppd {
 	    # since a PPD file without "PageSize" will break the CUPS
 	    # environment and also do not skip PostScript options. For
 	    # skipped options with one choice only "*Foomatic..."
-	    # definitions will be used.
-	    if ((1 < scalar(@{$arg->{'vals'}})) ||
-		($name eq "PageSize") ||
-		($arg->{'style'} eq 'G')) {
+	    # definitions will be used. Skip also the hidden member
+	    # options of a forced composite option.
+	    if (((1 < scalar(@{$arg->{'vals'}})) ||
+		 ($name eq "PageSize") ||
+		 ($arg->{'style'} eq 'G')) &&
+		(!$arg->{'hidden'})) {
 
 		push(@optionblob,
 		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com));
@@ -1956,7 +2009,7 @@ sub getppd {
 			# the sizes out of the choices of the "PageSize"
 			# option.
 			my $size = $v->{'driverval'};
-			if (($size !~ /^\s*(\d+)\s+(\d+)\s*$/) &&
+			if (($size !~ /(\d+)\s+(\d+)/) &&
 			    # 2 positive integers separated by whitespace
 			    ($size !~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
 			    # "-dDEVICEWIDTHPOINTS=..."/"-dDEVICEHEIGHTPOINTS=..."
@@ -2160,31 +2213,41 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 				 "*VariablePaperSize: False\n\n");
 		    }
 		}
-	    } elsif ((1 == scalar(@{$arg->{'vals'}})) &&
-		($arg->{'style'} ne 'G')) {
-		# Enumerated choice option with one single choice
+	    } elsif (((1 == scalar(@{$arg->{'vals'}})) &&
+		      ($arg->{'style'} ne 'G')) ||
+		     ($arg->{'hidden'})) {
+		# non-PostScript enumerated choice option with one single 
+		# choice or hidden memeber option of forced composite
+		# option
 
-		# For non-PostScript options insert line with option
-		# properties
-		my $v = $arg->{'vals'}[0];
-		my $header = sprintf
-		    ("*FoomaticRIPOptionSetting %s=%s",
-		     $name, $v->{'value'});
-		my $cmdval =
-		    sprintf($cmd,
-			    (defined($v->{'driverval'})
-			     ? $v->{'driverval'}
-			     : $v->{'value'}));
-		my $foomaticstr = ripdirective($header, $cmdval) . "\n";
-		# Stuff to insert into command line/job is more
-		# than one line? Let an "*End" line follow
-		if ($foomaticstr =~ /\n.*\n/s) {
-		    $foomaticstr .= "*End\n";
+		# Insert line with option properties
+		my $foomaticstrs = '';
+		for my $v (@{$arg->{'vals'}}) {
+		    my $header = sprintf
+			("*FoomaticRIPOptionSetting %s=%s",
+			 $name, $v->{'value'});
+		    my $cmdval = '';
+		    # For the "From<Composite>" setting the command line
+		    # value is not made use of, so leave it blank then.
+		    if ($v->{'driverval'} ne "\x01") {
+			$cmdval =
+			    sprintf($cmd,
+				    (defined($v->{'driverval'})
+				     ? $v->{'driverval'}
+				     : $v->{'value'}));
+		    }
+		    my $foomaticstr = ripdirective($header, $cmdval) . "\n";
+		    # Stuff to insert into command line/job is more
+		    # than one line? Let an "*End" line follow
+		    if ($foomaticstr =~ /\n.*\n/s) {
+			$foomaticstr .= "*End\n";
+		    }
+		    $foomaticstrs .= $foomaticstr;
 		}
 		push(@optionblob, sprintf
 		     ("\n*FoomaticRIPOption %s: enum %s %s %s\n",
 		      $name, $optstyle, $spot, $order),
-		     $foomaticstr);
+		     $foomaticstrs);
 	    }
 	} elsif ($type eq 'bool') {
 	    my $name = $arg->{'name'};
@@ -3933,7 +3996,7 @@ sub get_javascript2 {
     return $javascript;
 }
 
-################################3
+#################################
 #################################
 
 
