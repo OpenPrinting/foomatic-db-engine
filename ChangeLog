@@ -1,3 +1,8 @@
+2005-01-21  Tim Waugh <twaugh@redhat.com >
+
+	* lib/Foomatic/DB.pm: Fixed "uninitialized value" warning (RH
+	  bug #145605).
+
 2004-11-30  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in, foomatic-ppdfile.in,

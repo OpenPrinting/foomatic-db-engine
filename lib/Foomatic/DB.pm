@@ -3428,7 +3428,7 @@ EOFPGSZ
     $tmpl =~ s!\@\@NICKNAME\@\@!$nickname!g;
     $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
     $tmpl =~ s!\@\@COLOR\@\@!$color!g;
-    $tmpl =~ s!\@\@IEEE1284\@\@!$ieee1284!g;
+    $tmpl =~ s!\@\@IEEE1284\@\@!$ieee1284!g if $ieee1284;
     $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
     $tmpl =~ s!\@\@EXTRALINES\@\@!$extralines!g;
