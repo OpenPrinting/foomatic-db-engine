@@ -29,6 +29,9 @@
 
 	* README, USAGE, TODO: Updated pacckage documentation for the
 	  Foomatic 2.9.0 release.
+
+	* etc/printcap: Removed this file, it is not needed for the
+	  package.
 	
 2002-11-27  Till Kamppeter <till.kamppeter@gmx.net>
 
