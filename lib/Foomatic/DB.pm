@@ -522,6 +522,8 @@ sub ppdtoperl {
 
     my $dat = {};              # data structure for the options
     my $currentargument = "";  # We are currently reading this argument
+    my $currentgroup = "";     # We are currently in this group/subgroup
+    my @currentgrouptrans;     # Translation/long name for group/subgroup
     my $isfoomatic = 0;        # Do we have a Foomatic PPD?
 
     # If we have an old Foomatic 2.0.x PPD file, read its built-in Perl
@@ -650,6 +652,24 @@ sub ppdtoperl {
 		$dat->{'args_byname'}{'PageSize'}{'vals_byname'}{$setting}{'driverval'} = $code;
 		$dat->{'args_byname'}{'PageRegion'}{'vals_byname'}{$setting}{'driverval'} = $code;
 	    }
+	} elsif (m!^\*Open(Sub|)Group:\s*([^\s/]+)(/(.*)|)$!) {
+	    # "*Open[Sub]Group: <group>[/<translation>]
+	    my $group = $2;
+	    my $grouptrans = $4;
+	    if (!$grouptrans) {
+		$grouptrans = longname($group);
+	    }
+	    if ($currentgroup) {
+		$currentgroup .= "/";
+	    }
+	    $currentgroup .= $group;
+	    push(@currentgrouptrans, $grouptrans);
+	} elsif (m!^\*Close(Sub|)Group:\s*([^\s/]+)$!) {
+	    # "*Close[Sub]Group: <group>"
+	    my $group = $2;
+	    $currentgroup =~ s!$group$!!;
+	    $currentgroup =~ s!/$!!;
+	    pop(@currentgrouptrans);
 	} elsif (m!^\*(JCL|)OpenUI\s+\*([^:]+):\s*(\S+)\s*$!) {
 	    # "*[JCL]OpenUI *<option>[/<translation>]: <type>"
 	    my $argnametrans = $2;
@@ -666,6 +686,9 @@ sub ppdtoperl {
 	    checkarg ($dat, $argname);
 	    # Store the values
 	    $dat->{'args_byname'}{$argname}{'comment'} = $translation;
+	    $dat->{'args_byname'}{$argname}{'group'} = $currentgroup;
+	    @{$dat->{'args_byname'}{$argname}{'grouptrans'}} =
+		@currentgrouptrans;
 	    # Set the argument type only if not defined yet, a
 	    # definition in "*FoomaticRIPOption" has priority
 	    if (!defined($dat->{'args_byname'}{$argname}{'type'})) {

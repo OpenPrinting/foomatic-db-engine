@@ -1,8 +1,12 @@
-2003-01-27  Till Kamppeter <till.kamppeter@gmx.net>
+2003-01-28  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* COPYING: Added file containing the GPL.
 
 	* lib/Foomatic/DB.pm: When parsing the PPD file with the
 	  "ppdtoperl()" fonts, "ImageableArea", "PaperDimension", ...  do
-	  not entwr as options in the Perl data structure any more.
+	  not entwr as options in the Perl data structure any more. In
+	  addition, the parser puts also information about option groups
+	  into the structure.
 	
 2003-01-26  Till Kamppeter <till.kamppeter@gmx.net>
 
