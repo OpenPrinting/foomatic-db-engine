@@ -1,3 +1,10 @@
+2002-12-15  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Let "getppd()" put the member options of a
+	  composite option into a main group and not into a subgroup of
+	  the group where the composite option is located. Most frontends
+	  do not support subroups.
+
 2002-12-14  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: use longname of composite option in the

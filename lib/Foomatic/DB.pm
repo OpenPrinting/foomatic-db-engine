@@ -1503,7 +1503,12 @@ sub member { my $e = shift; foreach (@_) { $e eq $_ and return 1 } 0 };
 # for all spoolers.  Built from the standard data; you must call getdat()
 # first.
 sub getppd {
-    my ($db) = @_;
+
+    # If $members_in_subgroup is set, the member options of a composite
+    # option go into a subgroup of the group where the composite option
+    # is located. Otherwise the member options go into a new main group
+    my ($db, $members_in_subgroup) = @_;
+
     die "you need to call getdat first!\n" 
 	if (!defined($db->{'dat'}));
 
@@ -1566,9 +1571,11 @@ sub getppd {
 	for my $m (@members) {
 	    my $a = $dat->{'args_byname'}{$m};
 
-	    # The group should be a subgroup of the group where the
-	    # composite option is located, named as the composite option
-	    if ($group) {
+	    # If $members_in_subgroup is set, the group should be a
+	    # subgroup of the group where the composite option is
+	    # located, named as the composite option. Otherwise the
+	    # group will get a new main group.
+	    if (($members_in_subgroup) && ($group)) {
 		$a->{'group'} = "$group/$name";
 	    } else {
 		$a->{'group'} = "$name";
