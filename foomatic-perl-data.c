@@ -323,10 +323,8 @@ perlquote(xmlChar *str) { /* I - Original string */
   int offset = 0;
 
   dest = xmlStrdup(str);
-  while (((const xmlChar *)s = 
-	  xmlStrchr((const xmlChar *)(dest + offset), '\'')) ||
-	 ((const xmlChar *)s = 
-	  xmlStrchr((const xmlChar *)(dest + offset), '\\'))) {
+  while ((s = xmlStrchr((const xmlChar *)(dest + offset), '\'')) ||
+	 (s = xmlStrchr((const xmlChar *)(dest + offset), '\\'))) {
     offset = s - dest;
     dest = (xmlChar *)realloc((xmlChar *)dest, 
 			      sizeof(xmlChar) * (xmlStrlen(dest) + 2));

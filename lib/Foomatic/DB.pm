@@ -288,9 +288,19 @@ sub sortargs {
 			"mastergamma",
 			"stpgamma",
 			"gammablack",
+			"blackgamma",
 			"gammacyan",
+			"cyangamma",
 			"gammamagenta",
+			"magentagamma",
 			"gammayellow",
+			"yellowgamma",
+			"gammared",
+			"redgamma",
+			"gammagreen",
+			"greengamma",
+			"gammablue",
+			"bluegamma",
 			"gamma",
 			"density",
 			"stpdensity",
@@ -314,7 +324,13 @@ sub sortargs {
 			"magenta",
 			"stpmagenta",
 			"yellow",
-			"stpyellow"
+			"stpyellow",
+			"red",
+			"stpred",
+			"green",
+			"stpgreen",
+			"blue",
+			"stpblue"
 			);
 
     my @standardgroups = (

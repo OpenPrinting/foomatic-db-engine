@@ -150,7 +150,7 @@ idlist_t /* O - pointer to the printer ID translation table */
 	  newitem->newid = newid;
 	  newitem->next = NULL;
 	  if (currentitem) {
-	    (idlist_t *)(currentitem->next) = newitem;
+	    currentitem->next = newitem;
 	  } else {
 	    idlist = newitem;
 	  }
@@ -1169,7 +1169,7 @@ parse(const char **data, /* I/O - Data to process */
 		    plistpointer->drivers = NULL;
 		    plistpointer->next = NULL;
 		    if (plistpreventry != NULL)
-		      (printerlist_t *)(plistpreventry->next) = plistpointer;
+		      plistpreventry->next = plistpointer;
 		    else 
 		      *printerlist = plistpointer;
 		  }
@@ -1185,7 +1185,7 @@ parse(const char **data, /* I/O - Data to process */
 		  strcpy(dlistpointer->name, cdriver);
 		  dlistpointer->next = NULL;
 		  if (dlistpreventry != NULL)
-		    (driverlist_t *)(dlistpreventry->next) = dlistpointer;
+		    dlistpreventry->next = dlistpointer;
 		  else 
 		    plistpointer->drivers = dlistpointer;
 		}

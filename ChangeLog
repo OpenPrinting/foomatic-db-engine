@@ -1,3 +1,9 @@
+2004-03-24  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Added entries to sortargs() function to
+	  support drivers with RGB processing and Gimp-Print 5.0.x support
+	  for new CMYRBK (additional red and blue ink) printers.
+
 2004-03-04  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Read paper size with unit out of the driverval
