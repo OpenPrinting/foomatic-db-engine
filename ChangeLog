@@ -1,3 +1,8 @@
+2003-01-04  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c: Parse data about unprintable margins in
+	  printer, driver, and combo XML files.
+
 2002-12-31  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Allow boolean options to be used as member

@@ -75,6 +75,25 @@
  */
 
 /*
+ * Records for the unprintable margins data
+ */
+
+typedef struct marginRecord {
+  xmlChar *pagesize;
+  xmlChar *unit;
+  xmlChar *absolute;
+  xmlChar *left;
+  xmlChar *right;
+  xmlChar *top;
+  xmlChar *bottom;
+} marginRecord, *marginRecordPtr;
+  
+typedef struct margins {
+  int     num_marginRecords;
+  marginRecordPtr *marginRecords;
+} margins, *marginsPtr;
+
+/*
  * Records for the data of the overview
  */
 
@@ -151,6 +170,7 @@ typedef struct comboData {
   xmlChar *color;
   xmlChar *ascii;
   xmlChar *pjl;
+  marginsPtr printermargins;
   /* Printer auto-detection */
   xmlChar *par_mfg;
   xmlChar *par_mdl;
@@ -172,6 +192,7 @@ typedef struct comboData {
   xmlChar *url;
   xmlChar *cmd;
   xmlChar *nopjl;
+  marginsPtr drivermargins;
   /* Driver options */
   int     num_args;
   argPtr  *args;
@@ -194,6 +215,7 @@ typedef struct printerEntry {
   xmlChar *refill;
   xmlChar *ascii;
   xmlChar *pjl;
+  marginsPtr printermargins;
   /* Printer auto-detection */
   xmlChar *par_mfg;
   xmlChar *par_mdl;
@@ -231,6 +253,7 @@ typedef struct driverEntry {
   xmlChar *url;
   xmlChar *driver_type;
   xmlChar *cmd;
+  marginsPtr drivermargins;
   xmlChar *comment;
   int     num_printers;
   drvPrnEntryPtr *printers;
@@ -262,6 +285,140 @@ perlquote(xmlChar *str) { /* I - Original string */
 }
 
 /*
+ * Functions to fill in the unprintable margin data structure with the
+ * data parsed from the XML input
+ */
+
+static void
+parseMarginEntry(xmlDocPtr doc,   /* I - The whole combo data tree */
+		 xmlNodePtr node, /* I - Node of XML tree to work on */
+		 int entrytype,   /* I - 0: General, 1: Page size 
+				     exzception */
+		 marginsPtr ret,  /* O - C data structure of Foomatic
+					  overview */
+		 xmlChar *language, /* I - User language */
+		 int debug) { /* I - Debug mode flag */
+  xmlNodePtr     cur1;  /* XML node currently worked on */
+  xmlChar        *pagesize;
+  marginRecordPtr marginRec;
+
+  /* Allocate memory for the margin record */
+  ret->num_marginRecords ++;
+  ret->marginRecords =
+    (marginRecordPtr *)realloc
+    ((marginRecordPtr *)(ret->marginRecords), 
+     sizeof(marginRecordPtr) * ret->num_marginRecords);
+  marginRec = (marginRecordPtr) malloc(sizeof(marginRecord));
+  if (marginRec == NULL) {
+    fprintf(stderr,"Out of memory!\n");
+    xmlFreeDoc(doc);
+    exit(1);
+  }
+  ret->marginRecords[ret->num_marginRecords-1] = marginRec;
+  memset(marginRec, 0, sizeof(marginRecord));
+
+  /* Initialization of entries */
+  marginRec->pagesize = NULL;
+  marginRec->unit = NULL;
+  marginRec->absolute = NULL;
+  marginRec->left = NULL;
+  marginRec->right = NULL;
+  marginRec->top = NULL;
+  marginRec->bottom = NULL;
+
+  /* Get page size */
+  if (entrytype > 0) {
+    pagesize = xmlGetProp(node, (const xmlChar *) "PageSize");
+    if (pagesize != NULL) {
+      marginRec->pagesize = perlquote(pagesize);
+      if (debug) fprintf(stderr, "    Margins for page size %s\n", 
+			 marginRec->pagesize);
+    } else {
+      fprintf(stderr,"Page size missing!\n");
+      xmlFreeDoc(doc);
+      exit(1);
+    }
+  } else {
+    if (debug) fprintf(stderr, "    General Margins\n");
+  }
+
+  /* Go through subnodes */
+  cur1 = node->xmlChildrenNode;
+  while (cur1 != NULL) {
+    if ((!xmlStrcmp(cur1->name, (const xmlChar *) "unit"))) {
+      marginRec->unit = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Unit: %s\n", marginRec->unit);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "absolute"))) {
+      marginRec->absolute = (xmlChar *)"1";
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Absolute values\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "relative"))) {
+      marginRec->absolute = (xmlChar *)"0";
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Relative values\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "left"))) {
+      marginRec->left = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Left margin: %s\n",
+			 marginRec->left);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "right"))) {
+      marginRec->right = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Right margin: %s\n",
+			 marginRec->right);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "top"))) {
+      marginRec->top = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Top margin: %s\n",
+			 marginRec->top);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "bottom"))) {
+      marginRec->bottom = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "      Bottom margin: %s\n",
+			 marginRec->bottom);
+    }
+    cur1 = cur1->next;
+  }
+}
+
+static void
+parseMargins(xmlDocPtr doc,   /* I - The whole combo data tree */
+	     xmlNodePtr node, /* I - Node of XML tree to work on */
+	     marginsPtr *ret, /* O - C data structure of Foomatic
+				 overview */
+	     xmlChar *language, /* I - User language */
+	     int debug) { /* I - Debug mode flag */
+  xmlNodePtr     cur1;  /* XML node currently worked on */
+
+  /* Allocate memory for the margins data structure */
+  *ret = (marginsPtr) malloc(sizeof(margins));
+  if (*ret == NULL) {
+    fprintf(stderr,"Out of memory!\n");
+    xmlFreeDoc(doc);
+    exit(1);
+  }
+  memset(*ret, 0, sizeof(margins));
+
+  /* Initialization of entries */
+  (*ret)->num_marginRecords = 0;
+  (*ret)->marginRecords = NULL;
+
+  if (debug) fprintf(stderr, "  Unprintable margins\n");
+
+  /* Go through subnodes */
+  cur1 = node->xmlChildrenNode;
+  while (cur1 != NULL) {
+    if ((!xmlStrcmp(cur1->name, (const xmlChar *) "general"))) {
+      parseMarginEntry(doc, cur1, 0, *ret, language, debug);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "exception"))) {
+      parseMarginEntry(doc, cur1, 1, *ret, language, debug);
+    }
+    cur1 = cur1->next;
+  }
+}
+
+/*
  * Function to fill in the Foomatic overview data structure with the
  * data parsed from the XML input
  */
@@ -280,7 +437,7 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   xmlChar        *charset;
   overviewPrinterPtr printer;
 
-  /* Allocate memory for the option */
+  /* Allocate memory for the printer */
   ret->num_overviewPrinters ++;
   ret->overviewPrinters =
     (overviewPrinterPtr *)realloc
@@ -482,6 +639,7 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->color = (xmlChar *)"0";
   ret->pjl = (xmlChar *)"undef";
   ret->ascii = (xmlChar *)"0";
+  ret->printermargins = NULL;
   ret->par_mfg = NULL;
   ret->par_mdl = NULL;
   ret->par_des = NULL;
@@ -525,6 +683,8 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "color"))) {
 	  ret->color = (xmlChar *)"1";
 	  if (debug) fprintf(stderr, "  Color printer\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
+	  parseMargins(doc, cur2, &(ret->printermargins), language, debug);
 	}
 	cur2 = cur2->next;
       }
@@ -665,6 +825,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->url = NULL;
   ret->cmd = NULL;
   ret->nopjl = (xmlChar *)"0";
+  ret->drivermargins = NULL;
 
   /* Get driver ID */
   id = xmlGetProp(node, (const xmlChar *) "id");
@@ -733,6 +894,8 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  if (debug) fprintf(stderr, "  Driver command line:\n\n    %s\n\n",
 			     ret->cmd);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
+	  parseMargins(doc, cur2, &(ret->drivermargins), language, debug);
      	}
 	cur2 = cur2->next;
       }
@@ -1091,6 +1254,7 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   ret->color = (xmlChar *)"0"; 
   ret->maxxres = NULL;
   ret->maxyres = NULL;
+  ret->printermargins = NULL;
   ret->refill = NULL;
   ret->ascii = NULL;
   ret->pjl = (xmlChar *)"0";
@@ -1190,6 +1354,8 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	    }
 	    cur3 = cur3->next;
 	  }
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
+	  parseMargins(doc, cur2, &(ret->printermargins), language, debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "consumables"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
@@ -1400,6 +1566,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->url = NULL;
   ret->driver_type = NULL;
   ret->cmd = NULL;
+  ret->drivermargins = NULL;
   ret->comment = NULL;
   ret->num_printers = 0;
   ret->printers = NULL;
@@ -1444,6 +1611,8 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  if (debug) fprintf(stderr, "  Driver command line:\n\n    %s\n\n",
 			     ret->cmd);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
+	  parseMargins(doc, cur2, &(ret->drivermargins), language, debug);
      	}
 	cur2 = cur2->next;
       }
@@ -1966,6 +2135,42 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 }
 
 void
+generateMarginsPerlData(marginsPtr margins, /* I/O - Foomatic margins data
+					       parsed from XML input */
+			int debug) { /* Debug flag */
+
+  int i; /* loop variable */
+  
+  for (i = 0; i < margins->num_marginRecords; i ++) {
+    if (margins->marginRecords[i]->pagesize) {
+      printf("    '%s' => {\n", margins->marginRecords[i]->pagesize);
+    } else {
+      printf("    '_general' => {\n");
+    }
+    if (margins->marginRecords[i]->unit) {
+      printf("      'unit' => '%s',\n", margins->marginRecords[i]->unit);
+    }
+    if (margins->marginRecords[i]->absolute) {
+      printf("      'absolute' => '%s',\n", 
+	     margins->marginRecords[i]->absolute);
+    }
+    if (margins->marginRecords[i]->left) {
+      printf("      'left' => '%s',\n", margins->marginRecords[i]->left);
+    }
+    if (margins->marginRecords[i]->right) {
+      printf("      'right' => '%s',\n", margins->marginRecords[i]->right);
+    }
+    if (margins->marginRecords[i]->top) {
+      printf("      'top' => '%s',\n", margins->marginRecords[i]->top);
+    }
+    if (margins->marginRecords[i]->bottom) {
+      printf("      'bottom' => '%s',\n", margins->marginRecords[i]->bottom);
+    }
+    printf("    },\n");
+  }
+}
+
+void
 generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
 					     parsed from XML input */
 		      int debug) { /* Debug flag */
@@ -1984,6 +2189,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   printf("  'color' => %s,\n", combo->color);
   printf("  'ascii' => %s,\n", combo->ascii);
   printf("  'pjl' => %s,\n", combo->pjl);
+  if (combo->printermargins) {
+    printf("  'printermargins' => {\n");
+    generateMarginsPerlData(combo->printermargins, debug);
+    printf("  },\n");
+  }
   if (combo->par_mfg) {
     printf("  'pnp_mfg' => '%s',\n", combo->par_mfg);
     printf("  'par_mfg' => '%s',\n", combo->par_mfg);
@@ -2078,6 +2288,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'drivernopjl' => %s,\n", combo->nopjl);
   } else {
     printf("  'drivernopjl' => 0,\n");
+  }
+  if (combo->drivermargins) {
+    printf("  'drivermargins' => {\n");
+    generateMarginsPerlData(combo->drivermargins, debug);
+    printf("  },\n");
   }
   if (combo->maxspot > 0) {
     printf("  'maxspot' => '%s',\n", combo->maxspot);
@@ -2187,6 +2402,11 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   if (printer->maxyres) {
     printf("  'maxyres' => '%s',\n", printer->maxyres);
   }
+  if (printer->printermargins) {
+    printf("  'margins' => {\n");
+    generateMarginsPerlData(printer->printermargins, debug);
+    printf("  },\n");
+  }
   if (printer->refill) {
     printf("  'refill' => '%s',\n", printer->refill);
   }
@@ -2281,6 +2501,11 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   if (driver->cmd) {
     printf("  'cmd' => '%s',\n", driver->cmd);
   }
+  if (driver->drivermargins) {
+    printf("  'margins' => {\n");
+    generateMarginsPerlData(driver->drivermargins, debug);
+    printf("  },\n");
+  }
   if (driver->comment) {
     printf("  'comment' => '%s',\n", driver->comment);
   }
@@ -2365,11 +2590,12 @@ main(int argc, char **argv) { /* I - Command line arguments */
 	j = 2;
 	while (argv[i][j] != '\0') {
 	  if (argv[i][j] == 'v') debug++;
+	  j++;
 	}
 	break;
       case '?' :
       case 'h' : /* Help */
-	fprintf(stderr, "Usage: foomatic-perl-data [ -O ] [ -C ] [ -P ] [ -D ]\n                          [ -o option=setting ] [ -o ... ] [ -l language ]\n                          [ -v ] [ filename ]\n");
+	fprintf(stderr, "Usage: foomatic-perl-data [ -O ] [ -C ] [ -P ] [ -D ]\n                          [ -o option=setting ] [ -o ... ] [ -l language ]\n                          [ -v ] [ -vv ] [ filename ]\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   -O           Parse overview XML data\n");
 	fprintf(stderr, "   -C           Parse printer/driver combo XML data (default)\n");
@@ -2382,6 +2608,7 @@ main(int argc, char **argv) { /* I - Command line arguments */
 	fprintf(stderr, "                (English). If the text in the requested language is missing,\n");
 	fprintf(stderr, "                english text will be returned.\n");
 	fprintf(stderr, "   -v           Verbose (debug) mode\n");
+	fprintf(stderr, "   -vv          Very verbose (debug) mode\n");
 	fprintf(stderr, "   filename     Read input from a file and not from standard input\n");
 	fprintf(stderr, "\n");
 	exit(1);
