@@ -1,0 +1,124 @@
+
+Building the foomatic-filters-ppds package
+------------------------------------------
+
+The foomatic-filters-ppds package is a simple way to use Foomatic
+
+Till Kamppeter <till.kamppeter@gmx.net>
+
+http://www.linuxprinting.org/
+
+
+Introduction
+------------
+
+This package is intended to be a complete but simplified version of
+Foomatic which does not need any compilation of C programs nor any Perl
+libraries except the standard ones coming with the Perl
+interpreter. Also "make" is not needed to use this package.
+
+This file describes how to build the package.
+
+
+What is required
+----------------
+
+You need at least
+
+foomatic-db-engine
+foomatic-filter
+foomatic-db
+
+To include support for HPIJS
+
+foomatic-db-hpijs
+
+To include support for GIMP-Print
+
+GIMP-Print from http://gimp-print.sf.net/
+
+To include support for Omni
+
+Omni from
+http://www-124.ibm.com/developerworks/oss/linux/projects/omni/
+
+
+How to build
+------------
+
+Uncompress all foomatic packages in one directory:
+
+tar -xvzf foomatic-db-engine*.tar.gz
+tar -xvzf foomatic-filters*.tar.gz
+tar -xvzf foomatic-db*.tar.gz
+
+Build the packages:
+
+cd foomatic-filters*
+make_configure # (only if you downloaded from CVS)
+./configure
+make inplace
+cd ..
+
+cd foomatic-db-engine*
+make_configure # (only if you downloaded from CVS)
+./configure
+make inplace
+cd ..
+
+Add support for HPIJS (optional):
+
+tar -xvzf foomatic-db-hoijs*.tar.gz
+cd foomatic-db-hoijs*
+make_configure # (only if you downloaded from CVS)
+./configure
+make inplace
+cd ../foomatic-db-engine*
+./foomatic-kitload -f -k ../foomatic-db-hoijs*/db/source/
+cd ..
+
+Add support for GIMP-Print (optional, <...> is the GIMP-Print source
+code directory):
+
+cd foomatic-db-engine*
+./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gimp-print
+./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gimp-print-ijs
+cd ..
+
+Add support for Omni (optional):
+
+cd foomatic-db-engine*
+export PATH=$PATH:/opt/Omni/bin
+/opt/Omni/bin/OmniFoomaticGenerator
+./foomatic-kitload -k foomatic-db/db/source
+cd ..
+
+Exclude unwished drivers or printers from being packaged by deleting
+their XML files:
+
+cd foomatic-db*/db/source
+rm -f driver/hpdj.xml
+rm -f driver/stp.xml
+rm -f driver/lxm3200?.xml
+rm -f driver/lxm3200.xml
+...
+cd ../../..
+
+Clean up:
+
+cd foomatic-db-engine*
+./foomatic-cleanupdrivers
+./foomatic-preferred-driver
+
+Now build the complete package:
+
+make filters-ppds
+
+This will take some time for getting all PPD files built, as result
+one gets a tarball with a name like
+
+foomatic-filters-ppds*.tar,gz
+
+This is the ready-to-use package. Read its README file to know how to
+use it.
+
