@@ -1,24 +1,18 @@
-This is the Debian GNU/Linux prepackaged version of the foomatic printing
-utils.
+This is the Debian prepackaged version of the foomatic printing utils.
 
-It was packaged by Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>
-from sources obtained from:  http://www.linuxprinting.org/
+It was originally packaged by Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>.
+It is now maintained by Chris Lawrence <lawrencc@debian.org>.
 
-Foomatic is copyright (c) Grant Taylor <gtaylor@picante.com>
-unless otherwise specified.
+The current package was produced from sources obtained from:
+http://www.linuxprinting.org/download/foomatic/
 
-This is the original copyright notice:
+Upstream Authors: Grant Taylor <gtaylor@picante.com>,
+                  Till Kamppeter <till.kamppeter@gmx.net>
 
-	This is under the GPL, except for Foomatic/GrovePath.pm, which was Perl
-	Artistic and still is.  See http://www.gnu.org/.
+License:
 
-	If you spot a data error, send mail describing the bug to
-	foomatic-devel@linuxprinting.org
+"This package and also the other Foomatic packages needed to run this
+are under the GPL. See http://www.gnu.org/."
 
-	General discussion happens in the foomatic-devel forum/list thing at
-	www.linuxprinting.org.
-
-
-On Debian GNU/Linux systems, the complete text of the GNU General
-Public License can be found in `/usr/share/common-licenses/GPL' 
-and the Artistic License in `/usr/share/common-licenses/Artistic'.
+On Debian systems, the complete text of the GNU General Public License
+can be found in `/usr/share/common-licenses/GPL'.

@@ -1,3 +1,403 @@
+foomatic-db-engine (3.0.2-20041204-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat,  4 Dec 2004 12:26:22 -0600
+
+foomatic-db-engine (3.0.2-2) unstable; urgency=low
+
+  * Fix segmentation fault in foomatic-combo-xml -O.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Fri, 17 Sep 2004 23:35:18 -0500
+
+foomatic-db-engine (3.0.2-1) unstable; urgency=high
+
+  * New upstream release.
+  * Bumped to urgency high to keep synchronized with foomatic-filters.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 14 Sep 2004 20:40:35 -0500
+
+foomatic-db-engine (3.0.1-20040506-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Thu,  6 May 2004 22:55:29 -0500
+
+foomatic-db-engine (3.0.1-20040312-1) unstable; urgency=low
+
+  * New upstream release.
+    + Eliminates gratuitous Perl warning.  (Closes: #236370)
+  * Fix build if backported to woody (its Perl apparently doesn't use
+    PERL_INSTALLDIRS the same way).  (Closes: #237714)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Fri, 12 Mar 2004 20:51:06 -0600
+
+foomatic-db-engine (3.0.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Fri, 20 Feb 2004 22:16:09 -0600
+
+foomatic-db-engine (3.0.0-20040203-2) unstable; urgency=high
+
+  * Allow (but ignore) obsolete -t option.  (Closes: #230209)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon,  9 Feb 2004 10:58:30 -0600
+
+foomatic-db-engine (3.0.0-20040203-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue,  3 Feb 2004 20:24:36 -0600
+
+foomatic-db-engine (3.0.0-20040114-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Chris Lawrence <lawrencc@debian.org>  Wed, 14 Jan 2004 23:07:57 -0600
+
+foomatic-db-engine (3.0.0-20031118-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 18 Nov 2003 15:18:31 -0600
+
+foomatic-db-engine (3.0.0-20030907-3) unstable; urgency=low
+
+  * Fix build with pbuilder.  (Closes: #215071)
+  * Supply debian/rules CFLAGS to configure script.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 14 Oct 2003 07:16:57 -0500
+
+foomatic-db-engine (3.0.0-20030907-2) unstable; urgency=low
+
+  * Ensure either wget or curl is installed to avoid ugly error messages
+    that confuse certain frontends.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon, 22 Sep 2003 19:56:57 -0500
+
+foomatic-db-engine (3.0.0-20030907-1) unstable; urgency=low
+
+  * New upstream release.
+  * Look for netcat (nc) in /bin instead of /usr/bin.  (Closes: #208180)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sun,  7 Sep 2003 12:11:22 -0500
+
+foomatic-db-engine (3.0.0-20030628-4) unstable; urgency=low
+
+  * Force deprecated debian/* files from upstream to be removed even if
+    debian/rules clean hasn't been run.  (Closes: #202508)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat,  9 Aug 2003 23:03:02 -0500
+
+foomatic-db-engine (3.0.0-20030628-3) unstable; urgency=medium
+
+  * Initialize newid and oldid in foomatic-combo-xml.c; this should fix a
+    segfault only observed on alpha(?).  (See #200555)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Wed,  9 Jul 2003 18:07:26 -0500
+
+foomatic-db-engine (3.0.0-20030628-2) unstable; urgency=low
+
+  * Update README.Debian, since foomatic-filters-ppds is now available.
+  * Fix a bug in foomatic-configure that made it behave oddly when trying
+    to update a queue that was defined by a non-Foomatic PPD file.  (This
+    solves some serious issues in foomatic-gui and will be sent upstream.)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue,  1 Jul 2003 19:19:04 -0500
+
+foomatic-db-engine (3.0.0-20030628-1) unstable; urgency=low
+
+  * New upstream release.
+  * Generated PPD files are now compatible with Windows PostScript
+    drivers.  You will need to regenerate any needed PPD files with
+    foomatic-configure or the foomatic-gui frontend.  (Closes: #192308)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat, 28 Jun 2003 16:54:15 -0500
+
+foomatic-db-engine (3.0.0-6) unstable; urgency=low
+
+  * Fix bashisms in configure and debian/rules.  (Closes: #199180)
+  * Remove versioning from perl build dependency.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat, 28 Jun 2003 16:48:32 -0500
+
+foomatic-db-engine (3.0.0-5) unstable; urgency=low
+
+  * Include a brief README.Debian in the foomatic-bin transition package.
+    (Closes: #195866)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 10 Jun 2003 17:50:45 -0500
+
+foomatic-db-engine (3.0.0-4) unstable; urgency=low
+
+  * Improve man page for foomatic-printjob.
+  * Implement foomatic-printjob -h -P <queue>.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 27 May 2003 15:48:58 -0500
+
+foomatic-db-engine (3.0.0-3) unstable; urgency=low
+
+  * Add note to README.Debian about the necessity of reloading the CUPS
+    daemon after a new PPD has been installed.
+  * Add a presubj file for bug/reportbug.
+  * Update TODO.Debian.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat, 10 May 2003 10:06:20 -0500
+
+foomatic-db-engine (3.0.0-2) unstable; urgency=low
+
+  * Add note to README.Debian about foomatic-filters-ppds.
+  * Suggest foomatic-gui in foomatic-db-engine.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Fri,  9 May 2003 14:19:19 -0500
+
+foomatic-db-engine (3.0.0-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat,  3 May 2003 23:11:34 -0500
+
+foomatic-db-engine (2.9-20030423-4) unstable; urgency=medium
+
+  * Build foomatic-bin in the binary-indep target.  (Closes: #191511)
+  * foomatic-bin is a dependency package for backwards-compatibility;
+    hence, there are not supposed to be any binaries in it.  (Closes: #191520)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat,  3 May 2003 22:55:45 -0500
+
+foomatic-db-engine (2.9-20030423-3) unstable; urgency=low
+
+  * Downgrade foomatic-db-hpijs to a suggestion.
+  * Add foomatic-db-gimp-print as a suggestion.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Thu, 24 Apr 2003 14:36:35 -0500
+
+foomatic-db-engine (2.9-20030423-2) unstable; urgency=low
+
+  * Silently ignore an empty printers.conf file in foomatic-configure.
+    (Closes: #187580)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Wed, 23 Apr 2003 20:03:14 -0500
+
+foomatic-db-engine (2.9-20030423-1) unstable; urgency=high
+
+  * New upstream release.  (Same as 3.0.0rc2)
+  * Package description improved.  (Closes: #189497)
+  * From the upstream changelog:
+    - Security bug in string and password options fixed: In Foomatic
+      3.0.0rc1 the user could use arbitrary characters in a string option,
+      so there was for example possible that for an option supposed to be
+      inserted into the filter command line a user could enter a string
+      like "|| rm -rf * ||".
+  
+      This is now blocked by the possibility to specify in the Foomatic
+      data which characters are allowed and/or a regular expression, which
+      has to be matched by the string, in the Foomatic data for a string or
+      password option. See the section "String and Password Options" in the
+      README file of the "foomatic-db-engine" package for more details.
+
+    (This only affects the 2.9 series of foomatic.  woody is unaffected.)
+  
+ -- Chris Lawrence <lawrencc@debian.org>  Wed, 23 Apr 2003 19:34:10 -0500
+
+foomatic-db-engine (2.9-3.0.0rc1-1) unstable; urgency=low
+
+  * New upstream release of release candidate for Foomatic 3.0.0.
+  * Did I mention foomatic-gui? http://blog.lordsutch.com/?topic=13
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sun, 13 Apr 2003 22:11:25 -0500
+
+foomatic (2.0.2-20021202-1) unstable; urgency=low
+
+  * New upstream release.
+    + Allow embedding of fonts in PostScript driver without changing the
+      PostScript level.
+    + DeskJet 3325 support.
+    + Improvements to file handling in foomatic-gswrapper.
+  * Did I mention foomatic-gui? http://blog.lordsutch.com/?topic=13
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon,  2 Dec 2002 16:48:50 -0600
+
+foomatic (2.0.2-20021127-1) unstable; urgency=low
+
+  * New upstream release.
+    + GIMP-Print 4.2.4 support.
+    + Addtional HP printers supported.
+  * My GUI frontend is at http://blog.lordsutch.com/?topic=13
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 26 Nov 2002 23:30:24 -0600
+
+foomatic (2.0.2-20021124-3) unstable; urgency=low
+
+  * Don't remap CUPS' autodetection URIs into file: URIs, since that makes
+    them no longer valid.  (e.g. usb://HP/Photosmart%20P1100?serial=blah)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Tue, 26 Nov 2002 14:52:14 -0600
+
+foomatic (2.0.2-20021124-2) unstable; urgency=low
+
+  * Fix buglet introduced in 2.0.2-20021117-2 that stopped
+    foomatic-configure -Q -s cups from working as root.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon, 25 Nov 2002 23:29:50 -0600
+
+foomatic (2.0.2-20021124-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Chris Lawrence <quango@watervalley.net>  Sun, 24 Nov 2002 17:57:47 -0600
+
+foomatic (2.0.2-20021120-1) unstable; urgency=low
+
+  * New upstream CVS snapshot release.
+    + Add margins when printing plain text.
+    + Fix option parsing bug.  (Closes: #169767)
+      (This may also fix #169509 and #169623, but I'm not sure.)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Wed, 20 Nov 2002 00:26:18 -0600
+
+foomatic (2.0.2-20021117-3) unstable; urgency=low
+
+  * Use grep instead of strings to figure out if lpr is the GNU one or
+    not.  (Closes: #169637)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon, 18 Nov 2002 13:08:56 -0600
+
+foomatic (2.0.2-20021117-2) unstable; urgency=low
+
+  * Fix foomatic-configure when no printers are defined.  (Closes: #166555)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon, 18 Nov 2002 09:41:54 -0600
+
+foomatic (2.0.2-20021117-1) unstable; urgency=low
+
+  * New upstream release.
+    + Fixed custom paper size support code.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sun, 17 Nov 2002 04:34:21 -0600
+
+foomatic (2.0.2-20021114-1) unstable; urgency=low
+
+  * New upstream release.
+  * Dropped dependencies on various perl libraries, as
+    foomatic-perl-data.c implements what is needed by foomatic.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Thu, 14 Nov 2002 04:08:32 -0600
+
+foomatic (2.0.2-20021031-2) unstable; urgency=low
+
+  * Backed out -sDEVICE=ljet4, since Till says it's not needed.
+    Hopefully #145032 will stay fixed regardless.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Thu, 31 Oct 2002 17:34:03 -0600
+
+foomatic (2.0.2-20021031-1) unstable; urgency=medium
+
+  * New upstream snapshot release.  Notable changes:
+    + Variable page size support fix for generated PPD files.
+    + KDE Printing Manager now generates PPD-O-Matic PPDs.
+  * Remove duplicated text in the foomatic-perl-data man page.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Thu, 31 Oct 2002 17:06:30 -0600
+
+foomatic (2.0.2-20021026-1) unstable; urgency=medium
+
+  * New maintainer.
+  * Since it's now maintained, close all NMU-fixed bugs with this upload.
+  * New upstream CVS snapshot based on 2.0.2:
+    + Use -dPARANOIDSAFER instead of -dSAFER.
+      (There are some mild security issues associated with -dSAFER.  For
+       details see http://www.linuxprinting.org/.)
+    + Now supports hpijs-rss (included in Debian hpijs 1.2.2 and later).
+      Use the hpijs-rss driver instead of hpijs for the extra features to be
+      enabled.
+    + GIMP-Print 4.2.3 support.
+    + Numerous driver updates; see the upstream changelog or
+      http://www.linuxprinting.org/ for details.
+  * Improved package descriptions.  I still don't think they're ideal for
+    a "newbie," but they're a bit better.
+  * Depend on foomatic-db | foomatic-db-gimp-print | foomatic-data, as the
+    package is downright useless without a database.
+  * Someone should code a cool frontend... :-)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat, 26 Oct 2002 16:20:03 -0500
+
+foomatic (2.0-20020911-0.4) unstable; urgency=low
+
+  * Depend on the current perl or libstorable-perl.  (Closes: #161066)
+
+ -- Chris Lawrence <lawrencc@debian.org>  Mon, 16 Sep 2002 14:14:41 -0500
+
+foomatic (2.0-20020911-0.3) unstable; urgency=low
+
+  * NMU #3.
+  * Oops, forgot to regenerate configure.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat, 14 Sep 2002 13:19:04 -0500
+
+foomatic (2.0-20020911-0.2) unstable; urgency=low
+
+  * Add #include <string.h> to aclocal.m4 tests for libxml and libxml2.
+    Should fix build failures on ia64.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Sat, 14 Sep 2002 12:54:49 -0500
+
+foomatic (2.0-20020911-0.1) unstable; urgency=low
+
+  * NMU.
+  * New upstream bugfix release.  (Closes: #158917)
+  * Remove libstorable-perl dependencies.  (Closes: #159191, #159192)
+  * Update build dependency, since libstorable-perl isn't in perl 5.6.1.
+  * Add EPSON LQ 570+ to st800 driver list.  (Closes: #143544)
+  * Add -sDEVICE=ljet4 to the ljet4 driver entry.  (Closes: #145032)
+  * Suppress warnings when the backup file isn't present.  (Closes: #146937)
+  * Fix location of PDQ printrc file.  (Closes: #150125)
+  * Ensure we build with rlpr, netcat, and wget/curl support.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Wed, 11 Sep 2002 17:55:40 -0500
+
+foomatic (2.0-20020829-0.1) unstable; urgency=low
+
+  * NMU.
+  * New upstream release.
+  * No longer ship gimp-print drivers in foomatic-db; they can be found in
+    foomatic-db-gimp-print.
+  * Recommend hpijs.
+
+ -- Chris Lawrence <lawrencc@debian.org>  Thu, 29 Aug 2002 19:25:58 -0500
+
+foomatic (0.20020408-4) unstable; urgency=high
+
+  * Changed debian/rules to use libxml2.
+  * Changed an instruction in debian/foomatic-bin.config so that it works with
+    the bash version 2.03 from potato, closes: 142227.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Wed, 24 Apr 2002 20:48:53 +0200
+
+foomatic (0.20020408-3) unstable; urgency=high
+
+  * Added manpages for foomatic-fix-xml and foomatic-perl-data.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Mon, 22 Apr 2002 15:26:30 +0200
+
+foomatic (0.20020408-2) unstable; urgency=high
+
+  * Added gimp-print-db as foomatic-db-gimpprint isn't available.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Sun, 14 Apr 2002 15:32:23 +0200
+
+foomatic (0.20020408-1) unstable; urgency=high
+
+  * New upstream version, closes: 140165, 142799, 144268.
+  * Include the old stp driver again, as libgimpprint4.3.0 didn't make it into
+    woody the package lacked gimp-print and stp, which made it rather useless.
+  * Corrected section number of foomatic-compiledb and foomatic-datafile
+    manpages.
+  * Added README.Debian.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Mon,  8 Apr 2002 22:52:54 +0200
+
 foomatic (0.20020213-8) unstable; urgency=low
 
   * The previous version was accidentally built as a native Package.
@@ -107,4 +507,3 @@ foomatic (0.20011206-1) unstable; urgency=low
   * Initial Release
 
  -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Tue, 20 Mar 2001 23:55:22 +0100
-

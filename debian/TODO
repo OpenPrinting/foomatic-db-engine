@@ -1,9 +1,8 @@
-Check why Defaults.pm isn't installed in the libdir by lib/Makefile.
+Possible future plans:
 
-Check if the ghostscript packages provide all necessary drivers.
+- Complete the manpages.
 
-Complete the manpages.
+- Package foomatic-filters-ppds?
 
-Provide a simple way to generate custom debian packages containing
-datafiles for selected printers/drivers. This is what the virtual
-package foomatic-data is intended for.
+- Provide a simple way to generate custom debian packages containing
+  datafiles for selected printers/drivers?

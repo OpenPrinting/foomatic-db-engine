@@ -1,30 +1,52 @@
-Source: foomatic
+Source: foomatic-db-engine
 Section: text
 Priority: optional
-Maintainer: Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>
-Standards-Version: 3.5.6
-Build-Depends: debhelper (> 3.0.19), perl (>= 5.6.0-16)
+Maintainer: Chris Lawrence <lawrencc@debian.org>
+Standards-Version: 3.6.1
+Build-Depends: debhelper (>> 4), perl, libxml2-dev
+
+Package: foomatic-db-engine
+Architecture: any
+Pre-Depends: bash (>= 2.05)
+Depends: ${perl:Depends}, ${shlibs:Depends}, foomatic-db, foomatic-filters, wget | curl
+Recommends: netcat
+Suggests: foomatic-db-hpijs, foomatic-db-gimp-print, foomatic-gui
+Conflicts: foomatic-bin (<< 2.9), foomatic-db (<< 2.9)
+Replaces: foomatic-bin (<< 2.9)
+Description: linuxprinting.org printer support - programs
+ Foomatic is a printing system designed to make it easier to set up
+ common printers for use with Debian (and other operating systems).
+ It provides the "glue" between a print spooler (like CUPS or lpr) and
+ your actual printer, by telling your computer how to process files
+ sent to the printer.
+ .
+ This package contains the architecture-dependent programs needed to
+ set up and maintain the foomatic system.  You will also need one or
+ more database packages.  The foomatic-db package includes drivers for
+ most common printers using Ghostscript as the print processor, as
+ well as some common glue code used in other filter systems.
+ .
+ foomatic-db-hpijs includes support for photo-quality printing with
+ Hewlett-Packard and some other consumer inkjets using the HPIJS
+ backend developed by HP.
+ .
+ foomatic-db-gimp-print includes support for photo-quality printing
+ with many consumer inkjets (including those from HP and Epson).
+ .
+ foomatic-gui provides a GNOME-based setup tool for Foomatic printer
+ queues using the command-line tools provided in this package.
+ .
+ Home Page: http://www.linuxprinting.org/
 
 Package: foomatic-bin
-Architecture: any
-Depends: debconf (>= 0.5.00), ${perl:Depends}, libstorable-perl, libxml-grove-perl, libxml-twig-perl
-Recommends: gs | gs-aladdin, cupsys | lpr | lprng | pdq, foomatic-data, a2ps | mpage | enscript
-Conflicts: cupsomatic-ppd (<< 0.20010420-4)
-Replaces: cupsomatic-ppd (<< 0.20010420-4)
-Description: Printer/Driver database and print system - binaries
- Foomatic is a printer and driver database with PPD generator and filter 
- backends for various Printing systems from cups over lp* to pdq.
- .
- These are the architecture dependent files, i.e. the filter scripts
- and perl libraries.
-
-Package: foomatic-db
 Architecture: all
-Provides: foomatic-data
-Depends: libstorable-perl, libxml-grove-perl, libxml-twig-perl, foomatic-bin
-Description: Printer/Driver database and print system - main database
- Foomatic is a printer and driver database with PPD generator and filter 
- backends for various Printing systems from cups over lp* to pdq.
+Depends: foomatic-db (>> 2.9), foomatic-db-hpijs, foomatic-db-engine, foomatic-filters
+Description: linuxprinting.org printer support - transition package
+ Release 3.0 of foomatic has reorganized the foomatic printing system.
+ This package is provided to facilitate a smooth upgrade from Foomatic
+ 2.0 or earlier.
  .
- This package contains the database.
-
+ Once you have installed the dependencies of this package, this
+ package can be safely purged from your system.
+ .
+ Home Page: http://www.linuxprinting.org/
