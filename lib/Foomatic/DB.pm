@@ -3107,11 +3107,16 @@ EOFPGSZ
     # evil special case.
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
-    my $nickname = "$make $model, Foomatic + $drivername$driverrecommended";
+    # Do not use "," or "+" in the *ShortNickName to make the Windows
+    # PostScript drivers happy
+    my $nickname =
+	"$make $model Foomatic/$drivername$driverrecommended";
     my $modelname = "$make $model";
     # Remove forbidden characters (Adobe PPD spec 4.3 section 5.3)
     $modelname =~ s/[^A-Za-z0-9 \.\/\-\+]//gs;
-    my $shortnickname = "$make $model, $drivername";
+    # Do not use "," or "+" in the *ShortNickName to make the Windows
+    # PostScript drivers happy
+    my $shortnickname = "$make $model ($drivername)";
     if (length($shortnickname) > 31) {
 	# ShortNickName too long? Shorten it.
 	my %parts;
@@ -3144,14 +3149,14 @@ EOFPGSZ
 		    # Stop if the ShostNickName has 30 characters or less
 		    # (we have still to add the abbreviation point), if there
 		    # is only one letter left, or if the manufacturer name
-		    # is reduced to three characters. Do not accept an
+		    # is reduced to four characters. Do not accept an
 		    # abbreviation of one character, as, taking the
 		    # abbreviation point into account, it does not save
 		    # a character.
 		    last if (((length($shortnickname) <= 30) &&
 			      ($abbreviated != 1)) ||
 			     ($_ !~ /[a-zA-Z]{2,}$/) ||
-			     (length($parts{'make'}) <= 3));
+			     (length($parts{'make'}) <= 4));
 		}
 		#Abbreviation point
 		if ($abbreviated) {
