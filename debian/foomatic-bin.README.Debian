@@ -1,0 +1,12 @@
+foomatic-bin for Debian
+-----------------------
+
+The foomatic-bin package is provided for upgrade purposes from
+Foomatic 2.0; it can safely be purged from your system after its
+dependencies have been installed.
+
+For additional information on the Foomatic printing system, please see
+/usr/share/doc/foomatic-db-engine/README.Debian or
+http://www.linuxprinting.org/foomatic.html
+
+ -- Chris Lawrence <lawrencc@debian.org>, Tue, 10 Jun 2003 17:49:37 -0500

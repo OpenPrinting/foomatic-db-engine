@@ -1,0 +1,11 @@
+In your bug report, please include the following information:
+
+- The spooler you are using (CUPS, lpd, LPRng, etc.).
+- The printer make and model.
+- Which driver you are using (hpijs, GIMP-Print, cdj*, etc.).
+- How you installed the printer PPD file (foomatic-configure, manually
+  following the HOWTO's instructions, foomatic-gui, etc.).
+
+If you are using CUPS and have just installed a new non-PostScript
+printer, please try reloading the CUPS daemon before filing a report; use:
+# invoke-rc.d cupsys reload
