@@ -1,3 +1,11 @@
+2003-03-10  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Fixed bug of USB device files names not
+	  correctly sorted by "cups_generate_usb_device_lists()" function.
+	  This cause wrong make/model-related URIs to be assigned to the
+	  device files (at least with three or more connected USB
+	  printers).
+
 2003-03-05  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: completed support for

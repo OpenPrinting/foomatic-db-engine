@@ -3124,9 +3124,11 @@ sub cups_generate_usb_device_lists {
 
     # Actual devices
     my @usbdevices;
-    for my $pattern ("/dev/usb/lp*", "/dev/usb/usblp*", "/dev/usb/lp*") {
-	open F, "ls -1 $pattern |" or next;
-	@usbdevices = grep { chomp } <F>;
+    for my $pattern ("/dev/usb/lp*", "/dev/usb/usblp*") {
+	open F, "ls -1 $pattern 2>/dev/null |" or next;
+	@usbdevices = sort { Foomatic::DB::normalizename($a) cmp 
+			     Foomatic::DB::normalizename($b) } 
+	              grep { chomp } <F>;
 	close F;
 	last if $#usbdevices >= 0;
     }
@@ -3149,7 +3151,7 @@ sub cups_usb_device_uri_to_printer_uri {
     # the printer currently connected
     my ($device) = @_;
     return $device if $device =~ m!^//!;
-    my @devicelists = cups_generate_usb_device_lists;
+    my @devicelists = cups_generate_usb_device_lists();
     return $device if (($#{$devicelists[0]} < 0) ||
 		       ($#{$devicelists[1]} < 0));
     for (my $i = 0; $i <= $#{$devicelists[0]}; $i ++) {
@@ -3168,7 +3170,7 @@ sub cups_usb_printer_uri_to_device_uri {
     my ($device) = @_;
     return $device if $device =~ m!^/[^/]!;
     $device =~ s/ /\%20/g;
-    my @devicelists = cups_generate_usb_device_lists;
+    my @devicelists = cups_generate_usb_device_lists();
     return $device if (($#{$devicelists[0]} < 0) ||
 		       ($#{$devicelists[1]} < 0));
     for (my $i = 0; $i <= $#{$devicelists[1]}; $i ++) {
