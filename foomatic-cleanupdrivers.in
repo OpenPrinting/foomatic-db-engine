@@ -8,6 +8,8 @@
 my $libdir;
 if ($#ARGV > -1) {
     $libdir = $ARGV[0];
+} elsif ($ENV{FOOMATICDB}) {
+    $libdir = $ENV{FOOMATICDB};
 } else {
     $libdir = "/usr/share/foomatic";
 }

@@ -29,6 +29,7 @@ EOH
 
 # Library directory; typically /usr/share/foomatic or somesuch.
 \$libdir = '$ENV{LIBDIR}';
+\$libdir = \$ENV\{FOOMATICDB\} if \$ENV\{FOOMATICDB\};
 
 # Binary directory; typically /usr/bin or somesuch.
 \$bindir = '$ENV{BINDIR}';
@@ -107,6 +108,7 @@ EOF
 
 # Library directory; typically /usr/share/foomatic or somesuch.
 \$libdir = '$pwd/$ENV{LOCAL_LIBDIR}';
+\$libdir = \$ENV\{FOOMATICDB\} if \$ENV\{FOOMATICDB\};
 
 # Binary directory; typically /usr/bin or somesuch.
 \$bindir = '$pwd';

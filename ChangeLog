@@ -1,4 +1,10 @@
-2004-11-30  Till Kamppeter <till.kamppeter@gmx.net>
+2004-01-28  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* makeDefaults.in, foomatic-cleanupdrivers.in: Allow use of an
+	  alternative Foomatic database location specifying it with the
+	  FOOMATICDB environment variable.
+
+2004-01-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed Tim Waugh's fix. It made an
 	  "@@IEEE1284@@" appear in the PPD file when for a printer
