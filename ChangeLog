@@ -1,3 +1,8 @@
+2002-11-29  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* README: Added list of implemented and planned features for
+	  Foomatic 3.0.
+
 2002-11-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* Makefile.in, configure.in: Fixed connection to the other Foomatic
