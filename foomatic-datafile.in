@@ -23,6 +23,8 @@ if (defined($driver) and defined($poid)) {
     my @data;
 
     if ($type eq 'cups') {
+	@data = $db->getgenericppd();
+    } elsif ($type eq 'cupsold') {
 	@data = $db->getcupsppd();
     } elsif ($type eq 'pdq') {
 	@data = $db->getpdqdata();
@@ -39,7 +41,7 @@ if (defined($driver) and defined($poid)) {
     } elsif ($type eq 'direct') {
 	@data = $db->getlpddata();
     } else {
-	die "Unknown type $type!  Specify cups, pdq, lpd, lprng, mf, ppr, direct, or ppd.\n";
+	die "Unknown type $type!  Specify cups, pdq, lpd, lprng, mf, ppr, direct, ppd, or cupsold.\n";
     }
     
     print @data;
@@ -49,7 +51,7 @@ exit 0;
 
 sub help {
     print <<HELP;
-foomatic-datafile -t cups|pdq|lpd|lprng|mf|ppr|direct|ppd -d <driver> -p <printerid> [-f]
+foomatic-datafile -t cups|pdq|lpd|lprng|mf|ppr|direct|ppd|cupsold -d <driver> -p <printerid> [-f]
  -t: datafile type
  -d: driver name
  -p: printer id

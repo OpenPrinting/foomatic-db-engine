@@ -4,7 +4,7 @@
 .SH NAME
 foomatic-datafile \- <put a short description here>
 .SH SYNOPSIS
-.B foomatic-datafile \-t cups|pdq|lpd|mf|ppr|ppd \-d <driver> \-p <printerid> [-f]
+.B foomatic-datafile \-t cups|pdq|lpd|lprng|mf|ppr|direct|ppd|cupsold \-d <driver> \-p <printerid> [-f]
 
 
 

@@ -1,3 +1,15 @@
+2002-10-28  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-datafile.in: Changed meaning of the "-t" settings:
+	  "cups" produces a PPD-O-Matic PPD now and "cupsold" the old
+	  CUP-O-Matic PPD. All other choices behave the same as before.
+	  This leads to the KDE Printing Manager generating PPD-O-Matic
+	  PPDs.
+
+	* foomatic-datafile.1.in: Updated man page to mention the choices
+	  "cupsold", "lprng", and "direct" for the "-t" option of
+	  "foomatic-datafile".
+	
 2002-10-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-preferred-driver.in: Added new drivers: "hpijs-rss",
