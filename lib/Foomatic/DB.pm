@@ -1855,6 +1855,84 @@ sub checklongnames {
 # member( $a, @b ) returns 1 if $a is in @b, 0 otherwise.
 sub member { my $e = shift; foreach (@_) { $e eq $_ and return 1 } 0 };
 
+
+sub setgroupandorder {
+
+    # Set group of member options. Make also sure that the composite
+    # option will be inserted into the PostScript code before all its
+    # # members are inserted (by means of the section and the order #
+    # number).
+
+    # The composite option to be treated ($arg)
+    my ($db, $arg, $members_in_subgroup) = @_;
+    
+    # The Perl data structure of the current printer/driver combo.
+    my $dat = $db->{'dat'};
+
+    # Here we are only interested in composite options, skip the others
+    return if $arg->{'style'} ne 'X';
+
+    my $name = $arg->{'name'};
+    my $group = $arg->{'group'};
+    my $order = $arg->{'order'};
+    my $section = $arg->{'section'};
+    my @members = @{$arg->{'members'}};
+
+    for my $m (@members) {
+	my $a = $dat->{'args_byname'}{$m};
+
+	# If $members_in_subgroup is set, the group should be a
+	# subgroup of the group where the composite option is
+	# located, named as the composite option. Otherwise the
+	# group will get a new main group.
+	if (($members_in_subgroup) && ($group)) {
+	    $a->{'group'} = "$group/$name";
+	} else {
+	    $a->{'group'} = "$name";
+	}
+
+	# If the member is composite, call this function on it recursively.
+	# This sets the groups of the members of this composite member option
+	# and also sets the section and order number of this composite
+	# member, so that we can so that we can set section and order of the
+	# currently treated option
+	$db->setgroupandorder($a, $members_in_subgroup)
+	    if $a->{'style'} eq 'X';
+
+	# Determine section and order number for the composite option
+	# Order of the DSC sections of a PostScript file
+	my @sectionorder = ("JCLSetup", "Prolog", "DocumentSetup", 
+			    "AnySetup", "PageSetup");
+
+	# Set default for missing section value in member
+	if (!defined($a->{'section'})) {$a->{'section'} = "AnySetup";}
+	my $minsection;
+	for my $s (@sectionorder) {
+	    if (($s eq $arg->{'section'}) || ($s eq $a->{'section'})) {
+		$minsection = $s;
+		last;
+	    }
+	}
+
+	# If the current member option is in an earlier section,
+	# put also the composite option into it. Do never put the
+	# composite option into the JCL setup because in the JCL
+	# header PostScript comments are not allowed.
+	$arg->{'section'} = ($minsection ne "JCLSetup" ?
+			     $minsection : "Prolog");
+
+	# Let the order number of the composite option be less
+	# than the order number of the current member
+	if ($arg->{'order'} >= $a->{'order'}) {
+	    $arg->{'order'} = $a->{'order'} - 1;
+	    if ($arg->{'order'} < 0) {
+		$arg->{'order'} = 0;
+	    }
+	}
+    }
+}
+
+
 # Return a generic Adobe-compliant PPD for the "foomatic-rip" filter script
 # for all spoolers.  Built from the standard data; you must call getdat()
 # first.
@@ -1943,58 +2021,27 @@ sub getppd {
 		}
 	    }
 	}
-	# Set group of member options and add a "From<Composite>" choice
-	# which will be the default. Make also sure that the composite
-	# option will be inserted into the PostScript code before all its
-	# members are inserted (by means of the section and the order
-	# number). Check also all members if they are hidden, if so, this
-	# composite option is a forced composite option.
+
+	# Add the member list to the data structure of the composite
+	# option. We nned it for the recursive setting of group names
+	# and order numbers
+	$arg->{'members'} = \@members;
+
+	# Add a "From<Composite>" choice which will be the
+	# default. Check also all members if they are hidden, if so,
+	# this composite option is a forced composite option.
 	my $nothiddenmemberfound = 0;
 	for my $m (@members) {
 	    my $a = $dat->{'args_byname'}{$m};
+
+	    # Mark this member as being a member of the current
+	    # composite option
+	    $a->{'memberof'} = $name;
 
 	    # Convert boolean options to enumerated choice options, so
 	    # that we can add the "From<Composite>" choice.
 	    if ($a->{'type'} eq 'bool') {
 		booltoenum($dat, $a->{'name'});
-	    }
-
-	    # If $members_in_subgroup is set, the group should be a
-	    # subgroup of the group where the composite option is
-	    # located, named as the composite option. Otherwise the
-	    # group will get a new main group.
-	    if (($members_in_subgroup) && ($group)) {
-		$a->{'group'} = "$group/$name";
-	    } else {
-		$a->{'group'} = "$name";
-	    }
-
-	    # Determine section and order number for the composite option
-	    # Order of the DSC sections of a PostScript file
-	    my @sectionorder = ("JCLSetup", "Prolog", "DocumentSetup", 
-				"AnySetup", "PageSetup");
-	    # Set default for missing section value in member
-	    if (!defined($a->{'section'})) {$a->{'section'} = "AnySetup";}
-	    my $minsection;
-	    for my $s (@sectionorder) {
-		if (($s eq $arg->{'section'}) || ($s eq $a->{'section'})) {
-		    $minsection = $s;
-		    last;
-		}
-	    }
-	    # If the current member option is in an earlier section,
-	    # put also the composite option into it. Do never put the
-	    # composite option into the JCL setup because in the JCL
-	    # header PostScript comments are not allowed.
-	    $arg->{'section'} = ($minsection ne "JCLSetup" ?
-				 $minsection : "Prolog");
-	    # Let the order number of the composite option be less
-	    # than the order number of the current member
-	    if ($arg->{'order'} >= $a->{'order'}) {
-		$arg->{'order'} = $a->{'order'} - 1;
-		if ($arg->{'order'} < 0) {
-		    $arg->{'order'} = 0;
-		}
 	    }
 
 	    # Is this member option hidden?
@@ -2047,6 +2094,15 @@ sub getppd {
 	if (!$nothiddenmemberfound) {
 	    $arg->{'substyle'} = 'F';
 	}
+    }
+
+    # Now recursively set the groups and the order sections and numbers
+    # for all composite options and their members.
+    for $arg (@{$dat->{'args'}}) {
+	# The recursion should only be started in composite options
+	# which are not member of another composite option.
+	$db->setgroupandorder($arg, $members_in_subgroup) 
+	    if ($arg->{'style'} eq 'X') and (!$arg->{'memberof'});
     }
 
     # Sort options with "sortargs" function after they were re-grouped

@@ -1,3 +1,8 @@
+2003-08-01  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm, README: Made it possible to define nested
+	  composite options.
+
 2003-07-21  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* README, configure.in, Makefile.in, foomatic-ppdload.in,
