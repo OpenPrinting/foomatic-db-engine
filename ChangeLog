@@ -1,3 +1,18 @@
+2003-03-28  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-replaceoldprinterids.in: Script to replace references
+	  to old numerical PostGreSQL (or otherwise obsolete) printer IDs
+	  by the current ones.
+
+	* configure.in, Makefile.in: Added build instructions for new
+	  "foomatic-replaceoldprinterids" script.
+
+	* README: Documentation for new "foomatic-replaceoldprinterids"
+	  script.
+
+	* USAGE: Adapted for new printer IDs, bug fix in example for PDQ,
+	  raised version to 3.0.0rc1.
+
 2003-03-27  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-nonumericalids.in: Script to change the old numerical
@@ -7,7 +22,8 @@
 	* configure.in, Makefile.in: Added build instructions for new
 	  "foomatic-nonumericalids" script.
 
-	* README: Documentation for new "foomatic-nonumericalids" script.
+	* README: Documentation for new "foomatic-nonumericalids" script,
+	  raised version to 3.0.0rc1.
 
 	* foomatic-configure.in, foomatic-ppdfile.in, lib/Foomatic/DB.pm:
 	  Added facility to translate old numerical printer IDs to the new

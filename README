@@ -699,6 +699,15 @@ foomatic-nonumericalids
   you can change the IDs with this script. With a translation table it
   is assured that one can still use the old IDs.
 
+foomatic-replaceoldprinterids
+
+  Replaces references to old numerical or otherwise obsolete printer
+  IDs in arbitrary files. By default it uses the db/oldprinterids file
+  of the current Foomatic database as translation table, but you can 
+  use arbitrary translation tables. You can also give regular
+  expressions (Perl) for the text surrounding the IDs. Do
+  "foomatic-replaceoldprinterids -h" to know how to use it.
+
 
 Filters
 -------

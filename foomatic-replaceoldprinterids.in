@@ -1,0 +1,91 @@
+#!@PERL@
+
+# This is foomatic-nonumericalids, it renames all printer entries with a
+# numerical ID and generates a translation table.
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+
+# Read out the program name with which we were called, but discard the path
+$0 =~ m!/([^/]+)\s*$!;
+$progname = $1;
+
+use Getopt::Std;
+getopts("r:l:t:h");
+if ($opt_h) {
+    print "
+foomatic-replaceoldprinterids [ -l <leftpattern> ] [ -r <rightpattern> ] \
+                              [ -t <transltable> ] file1 [ file2 ... ]
+ -l <leftpattern>:  Regular expresasion (Perl) which has to be matched 
+                    at the left side of the old printer ID (default:
+                    \"recnum=\")
+ -r <rightpattern>: Regular expresasion (Perl) which has to be matched 
+                    at the right side of the old printer ID (default: \"\")
+ -t <transltable>:  Translation table, every line an old ID, white space,
+                    a new ID (default $libdir/db/oldprinterids)
+ file1, file2, ...  File(s) to be processed
+
+";
+    exit 0;
+}
+
+my $leftpattern = 'recnum=';
+my $rightpattern = '';
+$leftpattern = $opt_l if defined($opt_l);
+$rightpattern = $opt_r if defined($opt_r);
+my %idhash;
+my $idtable = "$libdir/db/oldprinterids";
+$idtable = $opt_t if $opt_t;
+open IDTABLE, "< $idtable" ||
+    die "File $idtable cannot be read!\n";
+while (<IDTABLE>) {
+    if (/^\s*(\S+)\s+(\S+)\s*$/) {
+	$idhash{$1} = $2;
+    }
+}
+close IDTABLE;
+
+my $changes = 0;
+my $chfiles = 0;
+my @chfilelist;
+while (my $file = shift @ARGV) {
+    print "Processing $file";
+    open FILE, "< $file" ||
+	die "File $file cannot be read!\n";
+    my @lines = <FILE>;
+    close FILE;
+    my $ch = 0;
+    for my $id (keys %idhash) {
+	foreach (@lines) {
+	    if (s!($leftpattern)$id($rightpattern)!$1$idhash{$id}$2!g) {
+		$ch = 1;
+		$changes ++;
+		print ".";
+	    }
+	}
+    }
+    print "\n";
+    next if !$ch;
+    open FILE, "> $file" ||
+	die "File $file cannot be written!\n";
+    print FILE join('', @lines);
+    close FILE;
+    print "   Wrote $file.\n";
+    $chfiles ++;
+    push(@chfilelist, "$file\n");
+}
+
+# List of files changed
+$file = "modifiedfiles";
+open FILE, "> $file" ||
+    die "File $file cannot be written!\n";
+print FILE join('', @oldidlist, @chfilelist);
+close FILE;
+print "   Wrote $file.\n";
+
+print "$changes changes on $chfiles files applied.\n";
+
+exit 0;
+
+# member( $a, @b ) returns 1 if $a is in @b, 0 otherwise.
+sub member { my $e = shift; foreach (@_) { $e eq $_ and return 1 } 0 };

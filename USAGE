@@ -1,6 +1,6 @@
 
-Foomatic 3.0.0beta2
-===================
+Foomatic 3.0.0rc1
+=================
 
 foomatic-db-engine
 ------------------
@@ -365,7 +365,7 @@ to enter:
 and find in the output:
 
   <printer>
-    <id>133664</id>
+    <id>HP-DeskJet_840C</id>
     <make>HP</make>
     <model>DeskJet 840C</model>
     <functionality>B</functionality>
@@ -389,13 +389,14 @@ and find in the output:
     </drivers>
   </printer>
 
-The printer ID is between the "<id>" tags, the model name between the
-"<model>" tags and the driver names between the "<driver>" tags. Then
-the command line to add the queue must be (with the default paper size
-set to A4):
+The printer ID is between the "<id>" tags and is derived from the
+manufacturer and modek name (so it can often be determined without
+looking it up). The model name is between the "<model>" tags and the
+driver names between the "<driver>" tags. Then the command line to add
+the queue must be (with the default paper size set to A4):
 
    foomatic-configure -s cups -n DeskJet -c usb:/dev/usb/lp0
-		      -p 133664 -d cdj880 -o PageSize=A4
+		      -p HP-DeskJet_840C -d cdj880 -o PageSize=A4
 
 Under CUPS 1.1.17 or newer the URI will be converted to an URI referring
 to manufacturer, model, and serial number of the printer. So if the printer
@@ -404,13 +405,13 @@ gets /dev/usb/lp1 after the next boot, the queue will still work.
 Exactly the same queue, but for PDQ:
 
    foomatic-configure -s pdq  -n DeskJet -c usb:/dev/usb/lp0
-		      -p 133664 -d cdj880 -o PageSize=A4
+		      -p HP-DeskJet_840C -d cdj880 -o PageSize=A4
 
 When the printer is connected to a Samba server (name: "winserver",
 queue: "dj"), the line has to be:
 
    foomatic-configure -s cups -n DeskJet -c smb://winserver/dj
-		      -p 133664 -d cdj880 -o PageSize=A4
+		      -p HP-DeskJet_840C -d cdj880 -o PageSize=A4
 
 If you have an HP LaserJet 4050, which is a PostScript printer, you
 can get its PPD file from its Windows driver CD, http://hp.sf.net/,
@@ -515,7 +516,7 @@ modify the copy. So lets make two queues for our HP DeskJet 840C with
 two different output qualities (under LPRng):
 
    foomatic-configure -s lprng -n DeskJetHi -c usb:/dev/usb/lp0
-		      -p 133664 -d hpijs -o PageSize=A4 
+		      -p HP-DeskJet_840C -d hpijs -o PageSize=A4 
 		      -o Quality=600PhotoCMYK
 
    foomatic-configure -s lprng -n DeskJetLo -C DeskJetHi 
@@ -830,7 +831,7 @@ The first example from above looks like the following now:
 
 Print a listing of valid options with
 
-   lpr -P DeskJet -odocs ~/.bashrc
+   pdq -P DeskJet -odocs ~/.bashrc
 
 
 - Direct, spooler-less printing
