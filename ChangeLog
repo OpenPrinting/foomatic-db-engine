@@ -5,6 +5,9 @@
 	  should be no further digit on the right. This is the right
 	  choice in nearly every case.
 
+	* foomatic-compiledb.in: Make "foomatic-compiledb" working with
+	  both old numerical and new clear-text printer IDs.
+
 2003-04-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Auto-abbreviation of "*ShortNickName"s in

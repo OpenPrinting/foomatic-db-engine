@@ -130,17 +130,14 @@ sub spawn_child {
 	    chomp $driver;
 
 	    # Determine file name for the output file
-	    my $printerentry = $db->get_printer($printer);
-	    my $make = $printerentry->{'make'};
-	    $make =~ s/[\s\(\)\/]/_/g;
-	    $make =~ s/\+/plus/g;
-	    $make =~ s/__/_/g;
-	    my $model = $printerentry->{'model'};
-	    $model =~ s/[\s\(\)\/]/_/g;
-	    $model =~ s/\+/plus/g;
-	    $model =~ s/__/_/g;
-	    my $filename = "$destdir/$make-$model-$driver$suffix";
-	    #my $filename = "$destdir/$printer-$driver$suffix";
+	    my $printer = Foomatic::DB::translate_printer_id($printer);
+	    my $filename = "$destdir/$printer-$driver$suffix";
+
+	    # Skip on bad file name
+	    if ($filename =~ /^\-/) {
+		print STDERR "WARNING: $printer with $driver gives a bad PPD file name: $filename\n\n";
+		next;
+	    }
 
 	    # Skip entirely if we can
 	    next if (-f $filename);
