@@ -892,7 +892,8 @@ to its components get auto-detected during the build of this package.
 Composite options are introduced in "foomatic-db" from December 17,
 2002 ("20021217") or newer, "foomatic-db-hpijs" 1.3-2 or newer, and
 GIMP-Print 4.2.5 or newer. "foomatic-filters" 2.9.1 or newer is needed
-for using them.
+for using them. Nested composite options are supported and introduced
+on August 1, 2003.
 
 "wget" (from www.gnu.org) is really a standard tool which nearly every
 distribution includes.
