@@ -6,7 +6,7 @@ use Getopt::Std;
 use Data::Dumper;
 
 help if !@ARGV ;
-getopts("AP:d:p:hw") || help();
+getopts("AP:d:p:hwt:") || help();
 help() if $opt_h;
 my $driver = $opt_d;
 my $poid   = $opt_p;

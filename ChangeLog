@@ -1,3 +1,8 @@
+2004-02-14  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-ppdfile.in: Accept "-t <type>" option and ignore it,
+	  for compatibility with the former "foomatic-datafile".
+
 2004-01-24  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.1rc2. 
