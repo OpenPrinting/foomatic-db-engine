@@ -66,6 +66,7 @@ EOH
     'cups-reject' => '$ENV{CUPS_REJECT}',
     'cups-lpmove' => '$ENV{CUPS_LPMOVE}',
     'cups-lpoptions' => '$ENV{CUPS_LPOPTIONS}',
+    'cups-lpinfo' => '$ENV{CUPS_LPINFO}',
     'pdq-conf'   => '$ENV{PDQ_CONF}',
     'pdq-printrc' => '$ENV{PDQ_PRINTRC}',
     'pdq-foomatic' => '$ENV{PDQ_FOOMATIC}',
@@ -86,6 +87,7 @@ EOH
     'nprint' => '$ENV{NPRINT}',
     'ptal-connect' => '$ENV{PTAL_CONNECT}',
     'ptal-pipes' => '$ENV{PTAL_PIPES}',
+    'mtink-pipes' => '$ENV{MTINK_PIPES}',
     'cat' => '$ENV{CAT}',
     'wget' => '$ENV{WGET}',
     'curl' => '$ENV{CURL}'
@@ -144,6 +146,7 @@ EOF
     'cups-reject' => '$ENV{CUPS_REJECT}',
     'cups-lpmove' => '$ENV{CUPS_LPMOVE}',
     'cups-lpoptions' => '$ENV{CUPS_LPOPTIONS}',
+    'cups-lpinfo' => '$ENV{CUPS_LPINFO}',
     'pdq-conf'   => '$ENV{PDQ_CONF}',
     'pdq-printrc' => '$ENV{PDQ_PRINTRC}',
     'pdq-foomatic' => '$ENV{PDQ_FOOMATIC}',
@@ -164,6 +167,7 @@ EOF
     'nprint' => '$ENV{NPRINT}',
     'ptal-connect' => '$ENV{PTAL_CONNECT}',
     'ptal-pipes' => '$ENV{PTAL_PIPES}',
+    'mtink-pipes' => '$ENV{MTINK_PIPES}',
     'cat' => '$ENV{CAT}',
     'wget' => '$ENV{WGET}',
     'curl' => '$ENV{CURL}'

@@ -187,7 +187,7 @@ access). Therefore enter (can be done as a normal user):
    make inplace
    
 and enter the commands with "./" in the beginning
-(e. g. "./foomatic-datafile ..."). This also works on a machine where
+(e. g. "./foomatic-ppdfile ..."). This also works on a machine where
 a system-wide Foomatic is already installed. This way you can develop
 XML files for the database and test them in your local database
 without messing up the system-wide one. To have the local database you
@@ -240,6 +240,13 @@ find in the beginning of the script itself. See also the end of the
 
 The "ptal" backend script is already included in HPOJ 0.9.
 
+Printing through the MTink daemon from the MTink package
+(http://xwtools.automatix.de/) is also supported. When CUPS is the
+spooler the special "mtink" backend (included in the MTink package)
+will be used. Using the MTink daemon it is possible to check the ink
+levels while printing. The MTink daemon supports only Epson inkjets
+from the Epson Stylus Color 740 on to the current models.
+
 
 Adding a queue
 --------------
@@ -262,17 +269,48 @@ Options in [...] can be left out. The options mean:
 		the auto-detection is correct (unless -q is given). Possible
 		choices are: "lpd", "lprng", "cups", "pdq", "ppr", "direct".
    -n <queue>	The queue name. This argument is required.
-   -c <connection> The way how the printer is connected (also required):
+   -c <connection> The way how the printer is connected (also required,
+		These are exactly the URIs as one uses them for CUPS):
 
-		   file:<file name> : Local printer, <file name> can also
+		   parallel:<device> : Printer connected to local parallel
+				      port, for example "parallel:/dev/lp0".
+		   usb:<device>     : Printer connected to local USB port,
+				      for example "usb:/dev/usb/lp0". With
+				      CUPS 1.1.17 or newer the URI is
+				      automatically converted to an URI
+				      referring to the printer model and
+				      serial number. So if one has plugged
+				      the printers in a different order
+				      and reboots, they are still found
+				      even if they are assigned to other
+				      /dev/usb/lp? device files.
+		   usb://<make>/<model>?serial=<ser. num.> URIs referring 
+				      to printer models/serial numbers can 
+				      also be directly given, but they must
+				      exactly match one of the URIs listed
+				      by "lpinfo -v" (only available for
+				      CUPS).
+		   serial:<device>  : Printer connected to local serial
+				      port, for example "serial:/dev/ttyS1".
+		   file:<file name> : Printing into a file, a named pipe,
+				      or similar. <file name> can also
 			              be a device special file as /dev/lp0,
-				      /dev/usb/lp1, ...
+				      /dev/usb/lp1, ..., so we are 
+				      compatible to older versions of
+				      Foomatic.
 		   ptal:/<device name> : HP multi-function device used with
 				      the low-level driver HPOJ (see
 				      http://hpoj.sourceforge.net/). The
 				      device name is name assigned to the
 				      device by the ptal-mlcd daemon, for
 				      example "mlc:usb:PSC_950".
+		   mtink:/<device name> : Epson Stylus Color, Photo, Pro,
+				      or Scan inkjet printer used through
+				      the mtink daemon. <device name>
+				      is the name of the appropriate pipe
+				      in the /var/mtink directory. Example:
+				      To print to /var/mtink/C70 the URI is
+				      mtink:/C70. 
 		   lpd://<server>/<queue> : Remote LPD printer (on server
 				      running LPD/LPRng or ethernet-
 				      connected printer)
@@ -355,12 +393,16 @@ The printer ID is between the "<id>" tags, the model name between the
 the command line to add the queue must be (with the default paper size
 set to A4):
 
-   foomatic-configure -s cups -n DeskJet -c file:/dev/usb/lp0
+   foomatic-configure -s cups -n DeskJet -c usb:/dev/usb/lp0
 		      -p 133664 -d cdj880 -o PageSize=A4
+
+Under CUPS 1.1.17 or newer the URI will be converted to an URI referring
+to manufacturer, model, and serial number of the printer. So if the printer
+gets /dev/usb/lp1 after the next boot, the queue will still work.
 
 Exactly the same queue, but for PDQ:
 
-   foomatic-configure -s pdq  -n DeskJet -c file:/dev/usb/lp0
+   foomatic-configure -s pdq  -n DeskJet -c usb:/dev/usb/lp0
 		      -p 133664 -d cdj880 -o PageSize=A4
 
 When the printer is connected to a Samba server (name: "winserver",
@@ -370,7 +412,7 @@ queue: "dj"), the line has to be:
 		      -p 133664 -d cdj880 -o PageSize=A4
 
 If you have an HP LaserJet 4050, which is a PostScript printer, you
-can get its PPD file from its Windowsd driver CD, http://hp.sf.net/,
+can get its PPD file from its Windows driver CD, http://hp.sf.net/,
 or http://www.linuxprinting.org/download/PPD/. After downloading it
 you can set up a queue as follows:
 
@@ -435,7 +477,10 @@ Both drivers have the option "PageSize", so its default value (here
 all the options again when you change something with
 foomatic-configure. Also option defaults set with external programs
 (KUPS, CUPS web interface, KDE Printing Manager, XPDQ, ...) do not
-get lost.
+get lost. Option settings are also overtaken when one switches from
+a Foomatic setup ("-p <printer> -d <driver>" to a setup with a
+manufacturer-supplied PPD ("--ppd <ppd file>") or vice-versa or
+from one to another manufacturer-supplied PPD.
 
 This command line sets an option:
 
@@ -444,7 +489,7 @@ This command line sets an option:
 and this line you need when you want to connect your printer to the
 parallel port:
 
-   foomatic-configure -s cups -n DeskJet -c file:/dev/lp0
+   foomatic-configure -s cups -n DeskJet -c parallel:/dev/lp0
 
 
 
@@ -467,7 +512,7 @@ other arguments have the same meaning as for creating a queue and they
 modify the copy. So lets make two queues for our HP DeskJet 840C with
 two different output qualities (under LPRng):
 
-   foomatic-configure -s lprng -n DeskJetHi -c file:/dev/usb/lp0
+   foomatic-configure -s lprng -n DeskJetHi -c usb:/dev/usb/lp0
 		      -p 133664 -d hpijs -o PageSize=A4 
 		      -o Quality=600PhotoCMYK
 
@@ -490,6 +535,16 @@ and our queues are transferred to CUPS. LPRng does not need to be
 installed to do that copy, but CUPS as the destination spooler must be
 running. All option settings, description, location, and so on are
 conserved.
+
+When one has set up a USB printer with CUPS, its URI is converted to
+an URI referring to manufacturer, model, and serial number (see
+above). As these URIs are not supported by other spoolers, they are
+converted back in the copied queue under the bew spooler. But note
+that for this back-conversion CUPS must still be installed and running
+(it uses the "lpinfo -v" command of CUPS). When a USB printer queue is
+copied from another spooler to CUPS, the URI is also automatically
+converted to the new URI referring to manufacturer, model, and serial
+number.
 
 
 Setting the default queue
@@ -542,19 +597,19 @@ Example: Remove the "DeskJet" queue from above:
    foomatic-configure -s cups -R -n DeskJet
 
 
-Getting data files for manual queue setup
------------------------------------------
+Getting PPD files for manual queue setup
+----------------------------------------
 
-You can get Foomatic data files for manual queue setup. Use
+You can get Foomatic PPD files for manual queue setup. Use
 
-   foomatic-datafile -h
+   foomatic-ppdfile -h
 
-to get information about how to get the data files and follow the
+to get information about how to get the PPD files and follow the
 links on
 
-   http://www.linuxprinting.org/foomatic.html
+   http://www.linuxprinting.org/foomatic2.9/foomatic.html
 
-to know how to set up a queue with these data files.
+to know how to set up a queue with these PPD files.
 
 
 Querying info

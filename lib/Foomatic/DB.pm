@@ -337,6 +337,7 @@ sub sortargs {
 	    my $secondinlist = ($secondgr =~ /^$standardgroups[$j]/);
 	    if (($firstinlist) && (!$secondinlist)) {return -1};
 	    if (($secondinlist) && (!$firstinlist)) {return 1};
+	    if (($firstinlist) && ($secondinlist)) {last};
 	}
 
 	# Compare normalized group names
@@ -360,6 +361,7 @@ sub sortargs {
 	my $secondinlist = ($second =~ /^$standardopts[$i]/);
 	if (($firstinlist) && (!$secondinlist)) {return -1};
 	if (($secondinlist) && (!$firstinlist)) {return 1};
+	if (($firstinlist) && ($secondinlist)) {last};
     }
 
     # None of the search terms in the list, compare the standard-formed
@@ -386,180 +388,9 @@ sub sortvals {
 			# Paper sizes
 			"letter\$",
 			#"legal",
-			"a000004\$",
-			# Resolutions
-			"000060x60",
-			"000060\\D",
-			"000060\$",
-			"000060x72",
-			"000060x90",
-			"000060x120",
-			"000060x144",
-			"000060x180",
-			"000060x216",
-			"000060x240",
-			"000060x360",
-			"000072x60",
-			"000072x72",
-			"000072\\D",
-			"000072\$",
-			"000072x90",
-			"000072x120",
-			"000072x144",
-			"000072x180",
-			"000072x216",
-			"000072x240",
-			"000072x360",
-			"000075x75",
-			"000075\\D",
-			"000075\$",
-			"000090x60",
-			"000090x72",
-			"000090x90",
-			"000090\\D",
-			"000090\$",
-			"000090x120",
-			"000090x144",
-			"000090x180",
-			"000090x216",
-			"000090x240",
-			"000090x360",
-			"000100x100",
-			"000100\\D",
-			"000100\$",
-			"000120x60",
-			"000120x72",
-			"000120x90",
-			"000120x120",
-			"000120\\D",
-			"000120\$",
-			"000120x144",
-			"000120x180",
-			"000120x216",
-			"000120x240",
-			"000120x360",
-			"000128x128",
-			"000128\\D",
-			"000128\$",
-			"000144x60",
-			"000144x72",
-			"000144x90",
-			"000144x120",
-			"000144x144",
-			"000144\\D",
-			"000144\$",
-			"000144x180",
-			"000144x216",
-			"000144x240",
-			"000144x360",
-			"000150x75",
-			"000150x150",
-			"000150\\D",
-			"000150\$",
-			"000150x300",
-			"000150x600",
-			"000180x60",
-			"000180x72",
-			"000180x90",
-			"000180x120",
-			"000180x144",
-			"000180x180",
-			"000180\\D",
-			"000180\$",
-			"000180x216",
-			"000180x240",
-			"000180x360",
-			"000200x200",
-			"000200\\D",
-			"000200\$",
-			"000216x60",
-			"000216x72",
-			"000216x90",
-			"000216x120",
-			"000216x144",
-			"000216x180",
-			"000216x216",
-			"000216\\D",
-			"000216\$",
-			"000216x240",
-			"000216x360",
-			"000240x60",
-			"000240x72",
-			"000240x90",
-			"000240x120",
-			"000240x144",
-			"000240x180",
-			"000240x216",
-			"000240x240",
-			"000240\\D",
-			"000240\$",
-			"000240x360",
-			"000240x480",
-			"000240x720",
-			"000300x75",
-			"000300x150",
-			"000300x300",
-			"000300\\D",
-			"000300\$",
-			"000300x600",
-			"000300x1200",
-			"000360x60",
-			"000360x72",
-			"000360x90",
-			"000360x120",
-			"000360x144",
-			"000360x180",
-			"000360x216",
-			"000360x240",
-			"000360x360",
-			"000360\\D",
-			"000360\$",
-			"000360x720",
-			"000360x1440",
-			"000400x400",
-			"000400\\D",
-			"000400\$",
-			"000600x150",
-			"000600x300",
-			"000600x600",
-			"000600\\D",
-			"000600\$",
-			"000600x1200",
-			"000600x2400",
-			"000720x360",
-			"000720x720",
-			"000720\\D",
-			"000720\$",
-			"000720x1440",
-			"000720x2880",
-			"001200x300",
-			"001200x600",
-			"001200x1200",
-			"001200\\D",
-			"001200\$",
-			"001200x2400",
-			"001200x4800",
-			"001440x360",
-			"001440x720",
-			"001440x1440",
-			"001440\\D",
-			"001440\$",
-			"001440x2880",
-			"002400x600",
-			"002400x1200",
-			"002400x2400",
-			"002400\\D",
-			"002400\$",
-			"002400x4800",
-			"002880x360",
-			"002880x720",
-			"002880x1440",
-			"002880x2880",
-			"002880\\D",
-			"002880\$",
-			"004800x4800",
-			"004800\\D",
-			"004800\$",
+			"a4\$",
+			# Paper types
+			"plain",
 			# Printout Modes
 			"draft\$",
 			"draft\.gray",
@@ -596,27 +427,36 @@ sub sortvals {
 			"highcapacity",
 			"multipurpose",
 			"tray",
-			# Paper types
-			"plain",
-			"normal",
 			);
+
+    # Do not waste time if the input strings are equal
+    if ($a eq $b) {return 0;}
+
+    # Are the two strings numbers? Compare them numerically
+    if (($a =~ /^[\d\.]+$/) && ($b =~ /^[\d\.]+$/)) {
+	my $compare = ( $a <=> $b );
+	if ($compare != 0) {return $compare};
+    }
+
     # Bring the two option names into a standard form to compare them
     # in a better way
-    my $first = normalizename(lc($a));
+    my $first = lc($a);
     $first =~ s/[\W_]//g;
-    my $second = normalizename(lc($b));
+    my $second = lc($b);
     $second =~ s/[\W_]//g;
-    # Check whether they are in the @standardopts list
-    my $i;
-    for ($i = 0; $i <= $#standardvals; $i++) {
+
+    # Check whether they are in the @standardvals list
+    for (my $i = 0; $i <= $#standardvals; $i++) {
 	my $firstinlist = ($first =~ /^$standardvals[$i]/);
 	my $secondinlist = ($second =~ /^$standardvals[$i]/);
 	if (($firstinlist) && (!$secondinlist)) {return -1};
 	if (($secondinlist) && (!$firstinlist)) {return 1};
+	if (($firstinlist) && ($secondinlist)) {last};
     }
-
-    # None of the search terms in the list, compare the standard-formed strings
-    my $compare = ( $first cmp $second );
+	
+    # None of the search terms in the list, compare the standard-formed 
+    # strings
+    my $compare = ( normalizename($first) cmp normalizename($second) );
     if ($compare != 0) {return $compare};
 
     # No other criteria fullfilled, compare the original input strings
@@ -647,6 +487,7 @@ sub getdat {
     # now, so we do it here
 
     $this->sortoptions();
+    $this->generalentries();
 
     return \%dat;
 }
@@ -664,7 +505,7 @@ sub getdatfromppd {
     $this->{'dat'} = $dat;
 
     # Some clean-up
-    $this->sortoptions();
+    $this->generalentries();
 
 }
 
@@ -1514,6 +1355,12 @@ sub sortoptions {
 	    push (@{$arg->{'vals'}}, $val);
 	}
     }
+
+}
+
+sub generalentries {
+
+    my ($this) = @_;
 
     $this->{'dat'}{'compiled-at'} = localtime(time());
     $this->{'dat'}{'timestamp'} = time();
@@ -3607,10 +3454,7 @@ sub valbyname {
 sub normalizename {
     my $n = $_[0];
 
-    if ($n =~ m!(\d+)!) {
-	my $num = sprintf("%06d", $1);
-	$n =~ s!(\d+)!$num!;
-    }
+    $n =~ s/[\d\.]+/sprintf("%013.6f", $&)/eg;
     return $n;
 }
 

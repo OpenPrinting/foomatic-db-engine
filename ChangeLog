@@ -1,3 +1,23 @@
+2003-01-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Made URIs for printer connections ("-c"
+	  option) absolutely compatible to CUPS (Now one can use
+	  "parallel:...", "usb:...", and "serial:..."). Automatic
+	  conversion of USB URIs to URIs referring to manufacturer, model,
+	  and serial number of the printer under CUPS 1.1.17 or newer.
+	  Support for the MTink daemon from http://xwtools.automatix.de/.
+	
+	* lib/Foomatic/DB.pm: Improved sorting of option choices. Made it
+	  faster and removed the long list of resolutions. Let the
+	  "normalizename()" function also support strings with more than
+	  one number and with floating point numbers.
+
+	* configure.in, Makefile.in, makeDefaults.in: Added paths for
+	  the new features of "foomatic-configure".
+
+	* README, USAGE: Documented the new features of
+	  "foomatic-configure".
+
 2003-01-20  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixes for Adobe compliance of the generated

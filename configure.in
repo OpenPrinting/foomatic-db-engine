@@ -45,6 +45,7 @@ BINSEARCHPATH=/usr/bin:/bin:/usr/local/bin
 DATASEARCHPATH=/usr/share:/usr/local/share:/usr/lib:/usr/local/lib:/opt
 LIBSEARCHPATH=/usr/lib:/lib:/usr/local/lib:/opt
 PTALPIPESSEARCHPATH=/var/run:/var:/var/ptal:/usr/var/run:/usr/var:/usr/var/ptal:/usr/local/var/run:/usr/local/var:/usr/local/var/ptal:/dev:/dev/ptal
+MTINKPIPESSEARCHPATH=/var:/var/run:/usr/var/:/usr/var/run:/usr/local/var:/usr/local/var/run:/dev
 
 dnl Check for Perl
 AC_PATH_PROGS(PERL,perl,/usr/bin/perl,$BINSEARCHPATH)
@@ -120,6 +121,7 @@ AC_PATH_PROGS(CUPS_ACCEPT,accept-cups accept,/usr/sbin/accept,$SBINSEARCHPATH:$B
 AC_PATH_PROGS(CUPS_REJECT,reject-cups reject,/usr/sbin/reject,$SBINSEARCHPATH:$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPMOVE,lpmove,/usr/sbin/lpmove,$SBINSEARCHPATH:$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPOPTIONS,lpoptions,/usr/bin/lpoptions,$BINSEARCHPATH)
+AC_PATH_PROGS(CUPS_LPINFO,lpinfo,/usr/sbin/lpinfo,$SBINSEARCHPATH)
 
 dnl Paths for PDQ
 AC_PATH_DIRS(PDQ_CONF,pdq,/usr/lib/pdq,$SYSCONFSEARCHPATH:$LIBSEARCHPATH)
@@ -148,6 +150,7 @@ AC_PATH_PROGS(SMBCLIENT,smbclient,/usr/bin/smbclient,$BINSEARCHPATH:$SBINSEARCHP
 AC_PATH_PROGS(NPRINT,nprint,/usr/bin/nprint,$BINSEARCHPATH:$SBINSEARCHPATH)
 AC_PATH_PROGS(PTAL_CONNECT,ptal-connect,/usr/bin/ptal-connect,$BINSEARCHPATH:$SBINSEARCHPATH)
 AC_PATH_DIRS(PTAL_PIPES,ptal-printd,/var/run/ptal-printd,$PTALPIPESSEARCHPATH)
+AC_PATH_DIRS(MTINK_PIPES,mtink,/var/mtink,$MTINKPIPESSEARCHPATH)
 AC_PATH_PROGS(CAT,cat,/bin/cat,$BINSEARCHPATH:$SBINSEARCHPATH)
 AC_PATH_PROGS(WGET,wget,/usr/bin/wget,$BINSEARCHPATH:$SBINSEARCHPATH)
 AC_PATH_PROGS(CURL,curl,/usr/bin/curl,$BINSEARCHPATH:$SBINSEARCHPATH)

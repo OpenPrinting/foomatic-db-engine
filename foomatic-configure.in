@@ -23,8 +23,15 @@ use Foomatic::DB;
 # which support it are listed in parantheses, "direct" means direct, 
 # spooler-less printing.
 #
+# usb:/path/device                # Local USB printer
+# usb://make/model?serial=xxx     # Printer-bound USB connection (CUPS)
+# parallel:/path/device           # Local parallel printer
+# serial:/path/device             # Local serial printer
 # file:/path/file                 # includes usb, lp, named pipes, other
 # ptal:/provider:bus:name         # HPOJ MLC protocol (hpoj.sourceforge.net)
+# mtink:/path/device              # Epson inkjet through mtink daemon
+#                                 # (for ink level monitoring when printing,
+#                                 #  http://xwtools.automatix.de/)
 # lpd://host/queue                # LPD protocol
 # socket://host:port              # TCP aka appsocket
 # ncp://user:pass@host/queue      # Netware (LPD, LPRng, direct)
@@ -516,11 +523,16 @@ sub setup_lpd {
 	delete $entry->{'str'}{'rp'};
 
 	# All URIs ("-c" option) have the same syntax as URIs in CUPS ("-v"
-	# option of "lpadmin"), except "parallel:/", "usb:/", and
-	# "serial:/", use "file:/" instead.
-	if ($config->{'connect'} =~ m!^file:(.*)!) {
+	# option of "lpadmin").
+	if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)!) {
 	    # Local printer or printing to a file
-	    my $file = $1;
+	    my $file = $2;
+	    if ($config->{'connect'} =~ m!^usb://!) {
+		# Queue with printer-bound USB URI transferred from CUPS,
+		# as LPD/LPRng does not support these URIs, translate it
+		# back to a standard USB device URI
+		$file = cups_usb_printer_uri_to_device_uri($file);
+	    }
 	    if (! -e $file) {
 		warn "The device or file $file doesn't exist? " .
 		    "Working anyway.\n";
@@ -543,6 +555,9 @@ sub setup_lpd {
 	    my $devname = $1;
 	    $postpipe = "$sysdeps->{'ptal-connect'} $devname -print";
 	    $entry->{'str'}{'lp'} = "/dev/null";
+	} elsif ($config->{'connect'} =~ m!^mtink:/(.+)$!) {
+	    # Printing through "mtinkd"
+	    $entry->{'str'}{'lp'} = "$sysdeps->{'mtink-pipes'}/$1";
 	} elsif ($config->{'connect'} =~ m!^lpd://([^/]+)/([^/]+)$!) {
 	    # Remote LPD
 	    my $remhost = $1;
@@ -1084,17 +1099,16 @@ sub setup_cups {
     }
 
     # All URIs ("-c" option) have the same syntax as URIs in CUPS
-    # ("-v" option of "lpadmin"), except "parallel:/", "usb:/", and
-    # "serial:/", use "file:/" instead. Here the "file:/" URIs are
+    # ("-v" option of "lpadmin"). Here the old "file:/" URIs are
     # translated to the form which CUPS needs. All other URIs are
     # simply passed to lpadmin.
 
     if (defined($config->{'connect'})) {
 	my $cupsuri = "";
-	if ($config->{'connect'} =~ m!^file:(.*)$!) {
+	if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)$!) {
 	    # Translate "file:/" into the prefix needed by CUPS, if
 	    # necessary
-	    $cupsuri = $1;
+	    $cupsuri = $2;
 	    if ((($cupsuri =~ m!$sysdeps->{'ptal-pipes'}/(.+)$!) ||
 		 ($cupsuri =~ m!/dev/ptal-printd/(.+)$!) ||
 		 ($cupsuri =~ m!/var/run/ptal-printd/(.+)$!)) &&
@@ -1106,7 +1120,15 @@ sub setup_cups {
 		$devname =~ s/_/:/;
 		$devname =~ s/_/:/;
 		$cupsuri = "ptal:/$devname";
+	    } elsif ((($cupsuri =~ m!^$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+		      ($cupsuri =~ m!^/var/mtink/(.+)$!)) &&
+		     (-x "$sysdeps->{'cups-backends'}/mtink")) {
+		# Translate URI for mtinkd (does not work with CUPS
+		# 1.1.12 and newer) to URI for the "mtink" CUPS backend
+		# script (if the script is there)
+		$cupsuri = "mtink:/$1";
 	    } elsif (($cupsuri =~ m!usb!) || ($cupsuri =~ m!USB!)) {
+		$cupsuri = cups_usb_device_uri_to_printer_uri($cupsuri);
 		$cupsuri = "usb:$cupsuri";
 	    } elsif (($cupsuri =~ m!lp[0-9]!) || ($cupsuri =~ m!LP[0-9]!)|| 
 		     ($cupsuri =~ m!parallel!)) {
@@ -1124,6 +1146,11 @@ sub setup_cups {
 	    my $devname = $1;
 	    $devname =~ tr/:/_/;
 	    $cupsuri = "file:$sysdeps->{'ptal-pipes'}/$devname";
+	} elsif (($config->{'connect'} =~ m!^mtink:/(.*)$!) &&
+		 (!-x "$sysdeps->{'cups-backends'}/mtink")) {
+	    # If there is no "mtink" backend script for CUPS, use an URI
+	    # pointing to the pipe set up by mtinkd.
+	    $cupsuri = "file:$sysdeps->{'mtink-pipes'}/$1";
 	} else {
 	    $cupsuri=$config->{'connect'};
 	}
@@ -1177,7 +1204,6 @@ sub default_cups {
     # (required for setting a remote queue as default)
     my $command = "$sysdeps->{'cups-lpoptions'} -d " .
 	"\"$config->{'queue'}\" > /dev/null";
-    print "##### $command\n";
  
     # Do it!
     system $command and
@@ -1372,11 +1398,16 @@ sub setup_pdq {
     # Interface fields
 
     # All URIs ("-c" option) have the same syntax as URIs in CUPS ("-v"
-    # option of "lpadmin"), except "parallel:/", "usb:/", and "serial:/",
-    # use "file:/" instead.
-    if ($config->{'connect'} =~ m!^file:(.*)!) {
+    # option of "lpadmin").
+    if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)!) {
 	# Local printer or printing to a file
-	my $file = $1;
+	my $file = $2;
+	if ($config->{'connect'} =~ m!^usb://!) {
+	    # Queue with printer-bound USB URI transferred from CUPS,
+	    # as PDQ does not support these URIs, translate it
+	    # back to a standard USB device URI
+	    $file = cups_usb_printer_uri_to_device_uri($file);
+	}
 	if (! -e $file) {
 	    warn "The device or file $file doesn't exist? " .
 		"Working anyway.\n";
@@ -1392,6 +1423,12 @@ sub setup_pdq {
 	$entry->{'interface_opts'} = "\{ \}";
 	$entry->{'interface_args'} = "\{ \"PORT\" = " .
 	    "\"$sysdeps->{'ptal-pipes'}/$devname\" \}";
+    } elsif ($config->{'connect'} =~ m!^mtink:/(.+)$!) {
+	# Printing through "mtinkd"
+	$entry->{'interface'} = "\"local-port\"";
+	$entry->{'interface_opts'} = "\{ \}";
+	$entry->{'interface_args'} = "\{ \"PORT\" = " .
+	    "\"$sysdeps->{'mtink-pipes'}/$1\" \}";
     } elsif ($config->{'connect'} =~ m!^lpd://([^/]+)/([^/]+)$!) {
 	# Remote LPD
 	my $remhost = $1;
@@ -1646,15 +1683,20 @@ sub setup_ppr {
     }
 
     # All URIs ("-c" option) have the same syntax as URIs in CUPS ("-v"
-    # option of "lpadmin"), except "parallel:/", "usb:/", and "serial:/",
-    # use "file:/" instead.
+    # option of "lpadmin").
 
     if (defined($config->{'connect'})) {
 	$interface_options =~ s/smbuser=(\S+)//;
 	$interface_options =~ s/smbpassword=(\S+)//;
-	if ($config->{'connect'} =~ m!^file:(.*)!) {
+	if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)!) {
 	    # Local printer or printing to a file
-	    $address = $1;
+	    $address = $2;
+	    if ($config->{'connect'} =~ m!^usb://!) {
+		# Queue with printer-bound USB URI transferred from CUPS,
+		# as PPR does not support these URIs, translate it
+		# back to a standard USB device URI
+		$address = cups_usb_printer_uri_to_device_uri($address);
+	    }
 	    if (! -e $address) {
 		warn "The device or file $address doesn't exist? " .
 		    "Working anyway.\n";
@@ -1662,7 +1704,9 @@ sub setup_ppr {
 	    if (($address =~ m!usb!) || ($address =~ m!USB!) ||
 		($address =~ m!$sysdeps->{'ptal-pipes'}!) || 
 		($address =~ m!/dev/ptal-printd!) ||
-		($address =~ m!/var/run/ptal-printd!)) {
+		($address =~ m!/var/run/ptal-printd!) ||
+		($address =~ m!$sysdeps->{'mtink-pipes'}!) || 
+		($address =~ m!/var/mtink!)) {
 		$interface = "simple";
 	    } elsif (($address =~ m!lp[0-9]!) || ($address =~ m!LP[0-9]!) || 
 		     ($address =~ m!parallel!)) {
@@ -1679,6 +1723,11 @@ sub setup_ppr {
 	    my $devname = $1;
 	    $devname =~ tr/:/_/;
 	    $address = "$sysdeps->{'ptal-pipes'}/$devname";
+	    $interface = "simple";
+	    $options = "";
+	} elsif ($config->{'connect'} =~ m!^mtink:/(.+)$!) {
+	    # Printing through "mtinkd"
+	    $address = "$sysdeps->{'mtink-pipes'}/$1";
 	    $interface = "simple";
 	    $options = "";
 	} elsif ($config->{'connect'} =~ m!^lpd://([^/]+)/([^/]+)$!) {
@@ -2189,11 +2238,16 @@ sub setup_direct {
 	# Set up connection type
 
 	# All URIs ("-c" option) have the same syntax as URIs in CUPS ("-v"
-	# option of "lpadmin"), except "parallel:/", "usb:/", and 
-	# "serial:/", use "file:/" instead.
-	if ($config->{'connect'} =~ m!^file:(.*)!) {
+	# option of "lpadmin").
+	if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)!) {
 	    # Local printer or printing to a file
-	    my $file = $1;
+	    my $file = $2;
+	    if ($config->{'connect'} =~ m!^usb://!) {
+		# Queue with printer-bound USB URI transferred from CUPS,
+		# as spooler-less printing does not support these URIs, 
+		# translate it back to a standard USB device URI
+		$file = cups_usb_printer_uri_to_device_uri($file);
+	    }
 	    if (! -e $file) {
 		warn "The device or file $file doesn't exist? " .
 		    "Working anyway.\n";
@@ -2214,6 +2268,9 @@ sub setup_direct {
 	    # HPOJ MLC protocol
 	    my $devname = $1;
 	    $postpipe = "$sysdeps->{'ptal-connect'} $devname -print";
+	} elsif ($config->{'connect'} =~ m!^mtink:/(.+)$!) {
+	    # Printing through "mtinkd"
+	    $postpipe = "$sysdeps->{'cat'} > $sysdeps->{'mtink-pipes'}/$1";
 	} elsif ($config->{'connect'} =~ m!^lpd://([^/]+)/([^/]+)$!) {
 	    # Remote LPD
 	    my $remhost = $1;
@@ -3053,6 +3110,68 @@ sub load_direct_config {
     return \@items;
 }
 
+sub cups_generate_usb_device_lists {
+    # Generate two lists: One of the actual USB device files in the
+    # file system, another of the USB URIs listed by CUPS' "lpinfo -v"
+
+    # Actual devices
+    my @usbdevices;
+    for my $pattern ("/dev/usb/lp*", "/dev/usb/usblp*", "/dev/usb/lp*") {
+	open F, "ls -1 $pattern |" or next;
+	@usbdevices = grep { chomp } <F>;
+	close F;
+	last if $#usbdevices >= 0;
+    }
+    return ([], []) if $#usbdevices < 0;
+
+    # USB URIs listed by "lpinfo -v"
+    open F, "$sysdeps->{'cups-lpinfo'} -v |" or return ([], []);
+    my @usburis = grep { s!^direct usb:!! and chomp } <F>;
+    close F;
+
+    return ([], []) if $#usburis < 0;
+
+    # Results
+    return (\@usbdevices, \@usburis);
+}
+
+sub cups_usb_device_uri_to_printer_uri {
+
+    # Transfer a device file name into a printer-bound CUPS URI for
+    # the printer currently connected
+    my ($device) = @_;
+    return $device if $device =~ m!^//!;
+    my @devicelists = cups_generate_usb_device_lists;
+    return $device if (($#{$devicelists[0]} < 0) ||
+		       ($#{$devicelists[1]} < 0));
+    for (my $i = 0; $i <= $#{$devicelists[0]}; $i ++) {
+	last if !$devicelists[1][$i];
+	if ($device eq $devicelists[0][$i]) {
+	    return $devicelists[1][$i];
+	}
+    }
+    return $device;
+}
+
+sub cups_usb_printer_uri_to_device_uri {
+
+    # Transfer a device file name into a printer-bound CUPS URI for
+    # the printer currently connected
+    my ($device) = @_;
+    return $device if $device =~ m!^/[^/]!;
+    $device =~ s/ /\%20/g;
+    my @devicelists = cups_generate_usb_device_lists;
+    return $device if (($#{$devicelists[0]} < 0) ||
+		       ($#{$devicelists[1]} < 0));
+    for (my $i = 0; $i <= $#{$devicelists[1]}; $i ++) {
+	last if !$devicelists[0][$i];
+	if ($device eq $devicelists[1][$i]) {
+	    return $devicelists[0][$i];
+	}
+    }
+    return $device;
+}
+
 sub load_datablob {
 
     my ($spooler, $queue) = @_;
@@ -3149,6 +3268,16 @@ sub load_lpd_datablob {
 		    $devname =~ s/_/:/;
 		    $devname =~ s/_/:/;
 		    $c->{'connect'} = "ptal:/$devname";
+		} elsif (($file =~ m!^$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+			 ($file =~ m!^/var/mtink/(.+)$!)) {
+		    # Translate device for mtinkd to mtink URI
+		    $c->{'connect'} = "mtink:/$1";
+		} elsif ($file =~ m!usb!i) {
+		    $c->{'connect'} = "usb:$file";
+		} elsif ($file =~ m!(tty|serial)!i) {
+		    $c->{'connect'} = "serial:$file";
+		} elsif ($file =~ m!(lp[0-9]|parallel)!i) {
+		    $c->{'connect'} = "parallel:$file";
 		} else {
 		    $c->{'connect'} = "file:$file";
 		}
@@ -3243,6 +3372,16 @@ sub load_lpd_datablob {
 		    $devname =~ s/_/:/;
 		    $devname =~ s/_/:/;
 		    $c->{'connect'} = "ptal:/$devname";
+		} elsif (($lp =~ m!^$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+			 ($lp =~ m!^/var/mtink/(.+)$!)) {
+		    # Translate device for mtinkd to mtink URI
+		    $c->{'connect'} = "mtink:/$1";
+		} elsif ($file =~ m!usb!i) {
+		    $c->{'connect'} = "usb:$file";
+		} elsif ($file =~ m!(tty|serial)!i) {
+		    $c->{'connect'} = "serial:$file";
+		} elsif ($file =~ m!(lp[0-9]|parallel)!i) {
+		    $c->{'connect'} = "parallel:$file";
 		} else {
 		    $c->{'connect'} = "file:$lp";
 		}
@@ -3292,9 +3431,6 @@ sub load_cups_datablob {
 	$c->{'desc'} = $p->{'Info'};
 	$c->{'loc'} = $p->{'Location'};
 	my $uri = $p->{'DeviceURI'};
-	$uri =~ s!^parallel:!file:!;
-	$uri =~ s!^serial:!file:!;
-	$uri =~ s!^usb:!file:!;
 	if (($uri =~ m!^file:$sysdeps->{'ptal-pipes'}/(.+)$!) ||
 	    ($uri =~ m!^file:/dev/ptal-printd/(.+)$!) ||
 	    ($uri =~ m!^file:/var/run/ptal-printd/(.+)$!)) {
@@ -3303,6 +3439,10 @@ sub load_cups_datablob {
 	    $devname =~ s/_/:/;
 	    $devname =~ s/_/:/;
 	    $uri = "ptal:/$devname";
+	} elsif (($uri =~ m!^file:$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+		 ($uri =~ m!^file:/var/mtink/(.+)$!)) {
+	    # Translate URI for mtinkd to mtink URI
+	    $uri = "mtink:/$1";
 	}
 	$c->{'connect'} = $uri;
 	$dat->{'queuedata'} = $c;
@@ -3393,6 +3533,16 @@ sub load_pdq_datablob {
 		$devname =~ s/_/:/;
 		$devname =~ s/_/:/;
 		$c->{'connect'} = "ptal:/$devname";
+	    } elsif (($file =~ m!^$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+		     ($file =~ m!^/var/mtink/(.+)$!)) {
+		# Translate device for mtinkd to mtink URI
+		$c->{'connect'} = "mtink:/$1";
+	    } elsif ($file =~ m!usb!i) {
+		$c->{'connect'} = "usb:$file";
+	    } elsif ($file =~ m!(tty|serial)!i) {
+		$c->{'connect'} = "serial:$file";
+	    } elsif ($file =~ m!(lp[0-9]|parallel)!i) {
+		$c->{'connect'} = "parallel:$file";
 	    } else {
 		$c->{'connect'} = "file:$file";
 	    }
@@ -3495,6 +3645,16 @@ sub load_ppr_datablob {
 		$devname =~ s/_/:/;
 		$devname =~ s/_/:/;
 		$uri = "ptal:/$devname";
+	    } elsif (($address =~ m!^$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+		     ($address =~ m!^/var/mtink/(.+)$!)) {
+		# Translate device for mtinkd to mtink URI
+		$uri = "mtink:/$1";
+	    } elsif ($file =~ m!usb!i) {
+		$c->{'connect'} = "usb:$file";
+	    } elsif ($file =~ m!(tty|serial)!i) {
+		$c->{'connect'} = "serial:$file";
+	    } elsif ($file =~ m!(lp[0-9]|parallel)!i) {
+		$c->{'connect'} = "parallel:$file";
 	    } else {
 		$uri = "file:$address";
 	    }
@@ -3596,6 +3756,16 @@ sub load_direct_datablob {
 		    $devname =~ s/_/:/;
 		    $devname =~ s/_/:/;
 		    $c->{'connect'} = "ptal:/$devname";
+		} elsif (($file =~ m!^$sysdeps->{'mtink-pipes'}/(.+)$!) ||
+		    ($file =~ m!^/var/mtink/(.+)$!)) {
+		    # Translate device for mtinkd to mtink URI
+		    $c->{'connect'} = "mtink:/$1";
+		} elsif ($file =~ m!usb!i) {
+		    $c->{'connect'} = "usb:$file";
+		} elsif ($file =~ m!(tty|serial)!i) {
+		    $c->{'connect'} = "serial:$file";
+		} elsif ($file =~ m!(lp[0-9]|parallel)!i) {
+		    $c->{'connect'} = "parallel:$file";
 		} else {
 		    $c->{'connect'} = "file:$file";
 		}

@@ -217,6 +217,28 @@ Implemented in 2.9.1:
 
 Planned/Roadmap for 2.9.x:
 
+ - URIs (Unified Resource Identifiers, the descriptions for the
+   printer connection type used with the "-c" option of
+   foomatic-configure) are exactly the same as under CUPS now. The
+   only difference was that before for local printers always URIs
+   beginning with "file:" were used, now "parallel:", "usb:", or
+   "serial:" is used. The old form with "file:" is still accepted
+   for compatibility.
+
+ - For USB printers CUPS 1.1.17 and newer supports URIs which refer to
+   manufacturer, model, and serial number and not to the device file
+   (/dev/usb/lp*) any more. This way the queues still work when the
+   printers are plugged in or turned on in another order in a later
+   session (the printers can get different device files
+   then). Foomatic now automatically converts the conventional USB
+   URIs to the new ones when an appropriate versions of CUPS is used.
+   When copying a queue to another spooler the URI is converted back
+   in the copied queue.
+
+ - Support for the MTink daemon from the MTink package
+   (http://xwtools.automatix.de/). MTink allows monitoring the ink
+   levels of Epson inkjets also while printing.
+
  - Non-printable margins: Both printer and driver XML database entries
    should get a new section for unprintable margins, so that the
    "*ImageableArea" entries in the PPD files can be correctly set.
@@ -508,7 +530,7 @@ foomatic-addpjloptions
   foomatic-configure -n LaserJet4050 -c socket://printer6:9100/ \
      -d lj5gray -p 62304
 
-  Instead of "foomatic-configure" you can also generate the PPD file: 
+  Instead of using "foomatic-configure" you can also generate the PPD file: 
 
   ./foomatic-ppdfile -d lj5gray -p 62304 > lj4050.ppd
 
