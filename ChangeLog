@@ -3,6 +3,10 @@
 	* README: Added list of implemented and planned features for
 	  Foomatic 3.0.
 
+	* lib/Foomatic/DB.pm: Fixed calls of "dossy" line ends removal
+	  ("undossify();") when reading the PPD file and quoted the
+	  asterisk in "/^\*End/".
+
 2002-11-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* Makefile.in, configure.in: Fixed connection to the other Foomatic

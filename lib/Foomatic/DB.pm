@@ -664,7 +664,7 @@ sub ppdtoperl {
     while(<PPD>) {
 	# foomatic-rip should also work with PPD file downloaded under
 	# Windows.
-	undossify;
+	undossify();
 	# Parse keywords
 	if (m!^\*ShortNickName:\s*\"(.*)$!) {
 	    # "*NickName: <code>"
@@ -1077,7 +1077,7 @@ sub ppdgetdefaults {
     while(<PPD>) {
 	# foomatic-rip should also work with PPD file downloaded under
 	# Windows.
-	undossify;
+	undossify();
 	# Parse keywords
 	if (m!^\*FoomaticRIPPostPipe:\s*\"(.*)$!) {
 	    # "*FoomaticRIPPostPipe: <code>"
@@ -1136,7 +1136,7 @@ sub ppdsetdefaults {
 	    }
 	    # We also have to remove the "*End" line
 	    $line = <PPD>;
-	    if ($line !~ /^*End/) {
+	    if ($line !~ /^\*End/) {
 		push(@ppdlines, $line);
 	    }
 	} else {
