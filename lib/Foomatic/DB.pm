@@ -3271,7 +3271,7 @@ EOFPGSZ
     $pcfilename = 'FOOMATIC' if !defined($pcfilename);
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
-    my $ieee1284;
+    my $ieee1284 = "";
     $ieee1284 = $dat->{'general_ieee'} or $ieee1284 = $dat->{'pnp_ieee'} or
 	$ieee1284 = $dat->{'par_ieee'} or $ieee1284 = $dat->{'usb_ieee'} or 
 	$ieee1284 = $dat->{'snmp_ieee'};
@@ -3428,7 +3428,7 @@ EOFPGSZ
     $tmpl =~ s!\@\@NICKNAME\@\@!$nickname!g;
     $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
     $tmpl =~ s!\@\@COLOR\@\@!$color!g;
-    $tmpl =~ s!\@\@IEEE1284\@\@!$ieee1284!g if $ieee1284;
+    $tmpl =~ s!\@\@IEEE1284\@\@!$ieee1284!g;
     $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
     $tmpl =~ s!\@\@EXTRALINES\@\@!$extralines!g;
