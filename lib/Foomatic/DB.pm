@@ -155,19 +155,21 @@ sub get_drivers_for_printer {
     return undef;
 }
 
-# This function should apply a more or less senseful order to the argument
-# names so that they appear kind of sorted in frontends
+# This function sorts the options at first by their group membership and
+# then by their names appearing in the list of functional areas. This way
+# it will be made easier to build the PPD file with option groups and in
+# user interfaces options will appear sorted by their functionality.
 sub sortargs {
 
-    # All sorting done case-insensitive and characters which are not a letter
-    # or number are taken out!!
+    # All sorting done case-insensitive and characters which are not a
+    # letter or number are taken out!!
 
     # List of typical option names to appear at first
     # The terms must fit to the beginning of the line, terms which must fit
     # exactly must have '\$' in the end.
     my @standardopts = (
-			# Options which appear in the "General" group in CUPS
-			# and similar media handling options
+			# Options which appear in the "General" group in 
+			# CUPS and similar media handling options
 			"pagesize",
 			"papersize",
 			"mediasize",
@@ -281,14 +283,75 @@ sub sortargs {
 			"yellow",
 			"stpyellow"
 			);
+
+    my @standardgroups = (
+			  "general",
+			  "media",
+			  "quality",
+			  "imag",
+			  "color",
+			  "output",
+			  "finish",
+			  "stapl",
+			  "extra",
+			  "install"
+			  );
+
+    my $compare;
+
+    # Argument records
+    my $firstarg = $a;
+    my $secondarg = $b;
+
     # Bring the two option names into a standard form to compare them
     # in a better way
-    my $first = normalizename(lc($a));
+    my $first = normalizename(lc($firstarg->{'name'}));
     $first =~ s/[\W_]//g;
-    my $second = normalizename(lc($b));
+    my $second = normalizename(lc($secondarg->{'name'}));
     $second =~ s/[\W_]//g;
-    # Check whether they are in the @standardopts list
-    my $i;
+
+    # group names
+    my $firstgr = $firstarg->{'group'};
+    my @firstgroup = split("/", $firstgr); 
+    my $secondgr = $secondarg->{'group'};
+    my @secondgroup = split("/", $secondgr);
+
+    my $i = 0;
+
+    # Compare groups
+    while ($firstgroup[$i] && $secondgroup[$i]) {
+
+	# Normalize group names
+	my $firstgr = normalizename(lc($firstgroup[$i]));
+	$firstgr =~ s/[\W_]//g;
+	my $secondgr = normalizename(lc($secondgroup[$i]));
+	$secondgr =~ s/[\W_]//g;
+	    
+	# Are the groups in the list of standard group names?
+	my $j;
+	for ($j = 0; $j <= $#standardgroups; $j++) {
+	    my $firstinlist = ($firstgr =~ /^$standardgroups[$j]/);
+	    my $secondinlist = ($secondgr =~ /^$standardgroups[$j]/);
+	    if (($firstinlist) && (!$secondinlist)) {return -1};
+	    if (($secondinlist) && (!$firstinlist)) {return 1};
+	}
+
+	# Compare normalized group names
+	$compare = $firstgr cmp $secondgr;
+	if ($compare != 0) {return $compare};
+
+	# Compare original group names
+	$compare = $firstgroup[$i] cmp $secondgroup[$i];
+	if ($compare != 0) {return $compare};
+	
+	$i++;
+    }
+
+    # The one with a deeper level in the group tree will come later
+    if ($firstgroup[$i]) {return 1};
+    if ($secondgroup[$i]) {return -1};
+
+    # Check whether they argument names are in the @standardopts list
     for ($i = 0; $i <= $#standardopts; $i++) {
 	my $firstinlist = ($first =~ /^$standardopts[$i]/);
 	my $secondinlist = ($second =~ /^$standardopts[$i]/);
@@ -296,12 +359,13 @@ sub sortargs {
 	if (($secondinlist) && (!$firstinlist)) {return 1};
     }
 
-    # None of the search terms in the list, compare the standard-formed strings
-    my $compare = ( $first cmp $second );
+    # None of the search terms in the list, compare the standard-formed
+    # strings
+    $compare = ( $first cmp $second );
     if ($compare != 0) {return $compare};
 
     # No other criteria fullfilled, compare the original input strings
-    return $a cmp $b;
+    return $firstarg->{'name'} cmp $secondarg->{'name'};
 }
 
 sub sortvals {
@@ -550,12 +614,8 @@ sub getdat {
     # it here.
 
     # Sort options with "sortargs" function
-    my @sortedarglist = sort sortargs keys(%{$dat{'args_byname'}});
-    @{$dat{'args'}} = ();
-    for my $i (@sortedarglist) {
-	my $arg = $dat{'args_byname'}{$i};
-	push (@{$dat{'args'}}, $arg);
-    }
+    my @sortedarglist = sort sortargs @{$dat{'args'}};
+    @{$dat{'args'}} = @sortedarglist;
 
     # Sort values of enumerated options with "sortvals" function
     for my $arg (@{$dat{'args'}}) {
@@ -1934,7 +1994,7 @@ sub getgenericppd {
 					  : $v->{'value'}));
 		    } else {
 			# Option setting directive for Foomatic filter
-			# 8 "%" because of several "sprintf¨ applied to it
+			# 8 "%" because of several "sprintf" applied to it
 			# In the end stay 2 "%" to have a PostScript comment
 			$psstr = sprintf("%%%%%%%% FoomaticOpt: %s=%s",
 					 $name, $v->{'value'});
@@ -2025,7 +2085,7 @@ sub getgenericppd {
 		$psstr = $arg->{'proto'};
 	    } else {
 		# Option setting directive for Foomatic filter
-		# 8 "%" because of several "sprintf¨ applied to it
+		# 8 "%" because of several "sprintf" applied to it
 		# In the end stay 2 "%" to have a PostScript comment
 		$psstr = sprintf("%%%%%%%% FoomaticOpt: %s=True", $name);
 		$psstrf = sprintf("%%%%%%%% FoomaticOpt: %s=False", $name);
@@ -2145,7 +2205,7 @@ sub getgenericppd {
 			$psstr = sprintf($arg->{'proto'}, $v);
 		    } else {
 			# Option setting directive for Foomatic filter
-			# 8 "%" because of several "sprintf¨ applied to it
+			# 8 "%" because of several "sprintf" applied to it
 			# In the end stay 2 "%" to have a PostScript comment
 			$psstr = sprintf("%%%%%%%% FoomaticOpt: %s=%s",
 					 $name, $v);
@@ -2286,7 +2346,7 @@ sub getgenericppd {
 			$psstr = sprintf($arg->{'proto'}, $v);
 		    } else {
 			# Option setting directive for Foomatic filter
-			# 8 "%" because of several "sprintf¨ applied to it
+			# 8 "%" because of several "sprintf" applied to it
 			# In the end stay 2 "%" to have a PostScript comment
 			$psstr = sprintf("%%%%%%%% FoomaticOpt: %s=%s",
 					 $name, $v);
@@ -2305,6 +2365,747 @@ sub getgenericppd {
 		     sprintf("*CloseUI: *%s\n", $name));
 	    }
         }
+    }
+
+    if (! $dat->{'args_byname'}{'PageSize'} ) {
+	
+	# This is a problem, since CUPS segfaults on PPD files without
+	# a default PageSize set.  Indeed, the PPD spec requires a
+	# PageSize clause.
+	
+	# GhostScript does not understand "/PageRegion[...]", therefore
+	# we use "/PageSize[...]" in the "*PageRegion" option here, in
+	# addition, for most modern PostScript interpreters "PageRegion"
+	# is the same as "PageSize".
+
+	push(@optionblob, <<EOFPGSZ);
+
+*% This is fake. We have no information on how to
+*% set the pagesize for this driver in the database. To
+*% prevent PPD users from blowing up, we must provide a
+*% default pagesize value.
+
+*OpenUI *PageSize/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: Letter
+*PageSize Letter/Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
+*PageSize Legal/Legal: "<</PageSize[612 1008]/ImagingBBox null>>setpagedevice"
+*PageSize A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: Letter
+*PageRegion Letter/Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
+*PageRegion Legal/Legal: "<</PageSize[612 1008]/ImagingBBox null>>setpagedevice"
+*PageRegion A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageRegion
+
+*DefaultImageableArea: Letter
+*ImageableArea Letter/Letter:	"0 0 612 792"
+*ImageableArea Legal/Legal:	"0 0 612 1008"
+*ImageableArea A4/A4:	"0 0 595 842"
+
+*DefaultPaperDimension: Letter
+*PaperDimension Letter/Letter:	"612 792"
+*PaperDimension Legal/Legal:	"612 1008"
+*PaperDimension A4/A4:	"595 842"
+
+EOFPGSZ
+    }
+
+    my @others;
+
+    my $headcomment =
+"*% For information on using this, and to obtain the required backend
+*% script, consult http://www.linuxprinting.org/ppd-doc.html
+*%
+*% PPD-O-MATIC generated this PPD file. It is for use with all programs 
+*% and environments which use PPD files for dealing with printer capabilty
+*% information. The printer must be configured with a Foomatic backend
+*% filter script. This file and the backend filter script work together to
+*% support PPD-controlled printer driver option access with arbitrary free 
+*% software printer drivers and printing spoolers.";
+
+    my $blob = join('',@datablob);
+    my $opts = join('',@optionblob);
+    my $otherstuff = join('',@others);
+    my $pcfilename;
+    if (($dat->{'pcmodel'}) && ($dat->{'pcdriver'})) {
+	$pcfilename = uc("$dat->{'pcmodel'}$dat->{'pcdriver'}");
+    } else {
+	my $driver = $dat->{'driver'};
+	$driver =~ m!(^(.{1,8}))!;
+	$pcfilename = uc($1);
+    }
+    my $model = $dat->{'model'};
+    my $make = $dat->{'make'};
+    my $pnpmodel;
+    $pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
+	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = $model;
+    my $pnpmake;
+    $pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
+	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = $make;
+    my $filename = join('-',($dat->{'make'},
+			     $dat->{'model'},
+			     $dat->{'driver'}));;
+    $filename =~ s![ /]!_!g;
+    my $longname = "$filename.ppd";
+
+    my $drivername = $dat->{'driver'};
+    
+    # evil special case.
+    $drivername = "stp-4.0" if $drivername eq 'stp';
+
+    my $nickname = "$make $model, Foomatic + $drivername";
+    my $shortnickname = "$make $model";
+
+    my $tmpl = get_tmpl();
+    $tmpl =~ s!\@\@HEADCOMMENT\@\@!$headcomment!g;
+    $tmpl =~ s!\@\@SAVETHISAS\@\@!$longname!g;
+    $tmpl =~ s!\@\@PCFILENAME\@\@!$pcfilename!g;
+    $tmpl =~ s!\@\@PNPMAKE\@\@!$pnpmake!g;
+    $tmpl =~ s!\@\@PNPMODEL\@\@!$pnpmodel!g;
+    $tmpl =~ s!\@\@MODEL\@\@!$model!g;
+    $tmpl =~ s!\@\@NICKNAME\@\@!$nickname!g;
+    $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
+    $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
+    $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
+    $tmpl =~ s!\@\@COMDATABLOB\@\@!$blob!g;
+    $tmpl =~ s!\@\@PAPERDIMENSION\@\@!!g;
+    
+    return ($tmpl);
+}
+
+
+#####################
+# New PPD stuff
+#
+
+# Return a generic Adobe-compliant PPD for the filter scripts for all
+# spoolers.  Built from the standard data; you must call getdat()
+# first.
+sub getppd {
+    my ($db) = @_;
+    die "you need to call getdat first!\n" 
+	if (!defined($db->{'dat'}));
+
+    # The Perl data structure of the current printer/driver combo.
+    my $dat = $db->{'dat'};
+
+    # Find enumerated choice option with the lowest amount of choices. This
+    # option will carry the command line prototype. There will always be an
+    # enumerated choice option since the "PageSize" option is required in
+    # PPD files.
+
+    my $minchoices = 999999;
+    my $carrycommandline; # Name of the option which should carry the
+                          # command line prototype
+    
+    for $arg (@{$dat->{'args'}}) {
+	my $name = $arg->{'name'};
+	my $type = $arg->{'type'};
+	if ($type eq 'enum') {
+	    # We are only interested in enumerated choice options here
+	    $numchoices = scalar(@{$arg->{'vals'}});
+	    if ((($numchoices > 1) || (($name eq "PageSize"))) && 
+		($numchoices < $minchoices)) { 
+		$minchoices = $numchoices;
+		$carrycommandline = $name;
+	    }
+	}
+    }
+
+    # Construct the option entries for the PPD file
+
+    my @optionblob; # Lines to put into the PPD file
+    my @groupstack; # In which group are we currently
+
+    for $arg (@{$dat->{'args'}}) {
+	my $name = $arg->{'name'};
+	my $type = $arg->{'type'};
+	my $com  = $arg->{'comment'};
+	my $default = $arg->{'default'};
+	my $order = $arg->{'order'};
+	my $spot = $arg->{'spot'};
+	my $section = $arg->{'section'};
+	my $cmd = $arg->{'proto'};
+	my @group = split("/", $arg->{'group'});
+	my $idx = $arg->{'idx'};
+
+	# Set default for missing section value
+	if (!defined($section)) {$section = "AnySetup";}
+
+	# Do we have to open or close one or more groups here?
+	# No group will be opened more than once, since the options
+	# are sorted to have the members of every group together
+
+	# Find the level on which the group path of the current option
+	# (@group) defers from the group path of the last option
+	# (@groupstack).
+        my $level = 0;
+	while (($level <= $#groupstack) and
+	       ($level <= $#group) and 
+	       ($groupstack[$level] eq $group[$level])) {
+	    $level++;
+	}
+	for (my $i = $#groupstack; $i >= $level; $i--) {
+	    # Close this group, the current option is not member
+	    # of it.
+	    push(@optionblob,
+		 sprintf("\n*Close%sGroup: %s\n",
+			 ($i > 0 ? "Sub" : ""), $groupstack[$i])
+		 );
+	    pop(@groupstack);
+	}
+	for (my $i = $level; $i <= $#group; $i++) {
+	    # Open this group, the current option is a member
+	    # of it.
+	    push(@optionblob,
+		 sprintf("\n*Open%sGroup: %s/%s\n",
+			 ($i > 0 ? "Sub" : ""), $group[$i], $group[$i])
+		 );
+	    push(@groupstack, $group[$i]);
+	}
+
+	if ($type eq 'enum') {
+	    # Skip zero or one choice arguments (except "PageSize", a PPD
+	    # file without "PageSize" will break the CUPS environment).
+	    if ((1 < scalar(@{$arg->{'vals'}})) ||
+		($name eq "PageSize")) {
+		push(@optionblob,
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("*OrderDependency: %s %s *%s\n", 
+			     $order, $section, $name),
+		     sprintf("*Default%s: %s\n", 
+			     $name,
+			     (defined($default) ? $default : 'Unknown')));
+		if (!defined($default)) {
+		    my $whr = sprintf("%s %s driver %s",
+				      $dat->{'make'},
+				      $dat->{'model'},
+				      $dat->{'driver'});
+		    warn "undefined default for $idx/$name on a $whr\n";
+		}
+	    
+		# If this is the page size argument; construct
+		# PageRegion, ImageableArea, and PaperDimension clauses 
+		# from it. Arguably this is all backwards, but what can
+		# you do! ;)
+		my @pageregion;
+		my @imageablearea;
+		my @paperdimension;
+
+		# If we have a paper size named "Custom", or one with
+		# one or both dimensions being zero, we must replace
+		# this by an Adobe-complient custom paper size
+		# definition.
+		my $hascustompagesize = 0;
+
+		# We take very big numbers now, to not impose linits.
+		# Later, when we will have physical demensions of the
+		# printers in the database.
+		my $maxpagewidth = 100000;
+		my $maxpageheight = 100000;
+
+		# Start the PageRegion, ImageableArea, and PaperDimension
+		# clauses
+		if ($name eq "PageSize") {
+		    
+		    push(@pageregion,
+			 "*OpenUI *PageRegion: PickOne
+*OrderDependency: $order $section *PageRegion
+*DefaultPageRegion: $dat->{'args_byname'}{'PageSize'}{'default'}");
+		    push(@imageablearea, 
+			 "*DefaultImageableArea: $dat->{'args_byname'}{'PageSize'}{'default'}");
+		    push(@paperdimension, 
+			 "*DefaultPaperDimension: $dat->{'args_byname'}{'PageSize'}{'default'}");
+		}
+
+		my $v;
+		for $v (@{$arg->{'vals'}}) {
+		    my $psstr = "";
+
+		    if ($name eq "PageSize") {
+		    
+			my $value = $v->{'value'}; # in a PPD, the value 
+			                           # is the PPD name...
+			my $comment = $v->{'comment'};
+
+			# Here we have to fill in the absolute sizes of the 
+			# papers. We consult a table when we could not read
+			# the sizes out of the choices of the "PageSize"
+			# option.
+			my $size = $v->{'driverval'};
+			if (($size !~ /^\s*(\d+)\s+(\d+)\s*$/) &&
+			    # 2 positive integers separated by whitespace
+			    ($size !~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
+			    # "-dDEVICEWIDTHPOINTS=..."/"-dDEVICEHEIGHTPOINTS=..."
+			    $size = getpapersize($value);
+			} else {
+			    $size = "$1 $2";
+			}
+			$size =~ /^\s*(\d+)\s+(\d+)\s*$/;
+			my $width = $1;
+			my $height = $2;
+			if ($maxpagewidth < $width) {
+			    $maxpagewidth = $width;
+			}
+			if ($maxpageheight < $height) {
+			    $maxpageheight = $height;
+			}
+			if (($value eq "Custom") ||
+			    ($width == 0) || ($height == 0)) {
+			    # This page size is either named "Custom" or
+			    # at least one of its dimensions is not fixed
+			    # (=0), so this printer/driver combo must
+			    # support custom page sizes
+			    $hascustompagesize = 1;
+			    # We do not add this size to the PPD file
+			    # because the Adobe standard foresees a
+			    # special code block in the header of the
+			    # PPD file to be inserted when a custom
+			    # page size is requested.
+			    next;
+			}
+			push(@imageablearea,
+			     "*ImageableArea $value/$comment: \"0 0 $size\"");
+			push(@paperdimension,
+			     "*PaperDimension $value/$comment: \"$size\"");
+		    }
+		    if ($arg->{'style'} eq 'G') {
+			# Ghostscript argument; offer up ps for insertion
+			$psstr = sprintf($cmd, 
+					 (defined($v->{'driverval'})
+					  ? $v->{'driverval'}
+					  : $v->{'value'}));
+		    } else {
+			# Option setting directive for Foomatic filter
+			# 4 "%" because of the "sprintf" applied to it
+			# In the end stay 2 "%" to have a PostScript comment
+			my $optstyle = ($arg->{'style'} eq 'J' ? 
+					"JCL" : "CommandLine");
+			my $cmdval =
+			    htmlify(sprintf($cmd,
+					    (defined($v->{'driverval'})
+					     ? $v->{'driverval'}
+					     : $v->{'value'})));
+			$psstr = sprintf
+			    ("%%%% RIP%sOption %s %s %s:%s",
+			     $optstyle, $name, $spot, $order, $cmdval);
+		    }
+		    if ($name eq $carrycommandline) {
+			# This option will carry the command line prototype,
+			# So insert it right before the code to be inserted
+			# into the PostScript data
+			$psstr =
+			    sprintf("%%%% RIPCammandLine:%s\n",
+				    htmlify($dat->{'cmd'})) . $psstr;
+		    }
+		    push(@optionblob,
+			 sprintf("*%s %s/%s: \"%s\"\n", 
+				 $name, $v->{'value'}, $v->{'comment'},
+				 $psstr));
+		    # PostScript code is more than one line? Let an "*End"
+		    # line follow
+		    if ($psstr =~ /\n/s) {
+			push(@optionblob, "*End\n");
+		    }
+		    # In modern PostScript interpreters "PageRegion" 
+		    # and "PageSize" are the same option, so we fill 
+		    # in the "PageRegion" the same
+		    # way as the "PageSize" choices.
+		    if ($name eq "PageSize") {
+			push(@pageregion,
+			     sprintf("*PageRegion %s/%s: \"$psstr\"", 
+				     $v->{'value'}, $v->{'comment'}));
+			if ($psstr =~ /\n/s) {
+			    push(@pageregion, "*End");
+			}
+		    }
+		}
+		
+		push(@optionblob,
+		     sprintf("*CloseUI: *%s\n", $name));
+
+		if ($name eq "PageSize") {
+		    # Close the PageRegion, ImageableArea, and 
+		    # PaperDimension clauses
+		    push(@pageregion,
+			 "*CloseUI: *PageRegion");
+
+		    my $paperdim = join("\n", 
+					("", @pageregion, "", 
+					 @imageablearea, "",
+					 @paperdimension, ""));
+		    push (@optionblob, $paperdim);
+
+		    # Make the header entries for a custom page size
+		    if ($hascustompagesize) {
+			my $maxpaperdim = 
+			    ($maxpageheight > $maxpagewidth ?
+			     $maxpageheight : $maxpagewidth);
+			# PostScript code from the example 6 in section 6.3
+			# of Adobe's PPD V4.3 specification
+			# http://partners.adobe.com/asn/developer/pdfs/tn/5003.PPD_Spec_v4.3.pdf
+			# If the page size is an option for the command line
+			# of GhostScript, let the values which where put
+			# on the stack being popped and inserta comment
+			# to advise the filter
+			
+			my $pscode;
+			if ($arg->{'style'} eq 'G') {
+			    $pscode = "pop pop
+2 mod 0 eq {exch} if
+<</PageSize [ 5 -2 roll ] /ImagingBBox null>>setpagedevice";
+			} else {
+			    my $a = $arg->{'vals_byname'}{'Custom'};
+			    my $optstyle = ($arg->{'style'} eq 'J' ? 
+					    "JCL" : "CommandLine");
+			    my $cmdval =
+				htmlify(sprintf($cmd,
+						(defined($a->{'driverval'})
+						 ? $a->{'driverval'}
+						 : $a->{'value'})));
+				$pscode = "pop pop pop pop pop
+%% RIP${optstyle}Option $name $spot $order:$cmdval";
+			}
+			my $custompagesizeheader = "*HWMargins: 0 0 0 0
+*VariablePaperSize: True
+*MaxMediaWidth: $maxpaperdim
+*MaxMediaHeight: $maxpaperdim
+*NonUIOrderDependency: $order $section *CustomPageSize
+*CustomPageSize True: \"$pscode\"
+*End
+*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
+*ParamCustomPageSize Height: 2 points 36 $maxpageheight
+*ParamCustomPageSize Orientation: 3 int 0 0
+*ParamCustomPageSize WidthOffset: 4 points 0 0
+*ParamCustomPageSize HeightOffset: 5 points 0 0
+
+";
+			
+			unshift (@optionblob, $custompagesizeheader);
+		    }
+		}
+	    }
+	} elsif ($type eq 'bool') {
+	    my $name = $arg->{'name'};
+	    my $namef = $arg->{'name_false'};
+	    my $defstr = ($default ? 'True' : 'False');
+	    my $psstr = "";
+	    my $psstrf = "";
+	    if ($arg->{'style'} eq 'G') {
+		# Ghostscript argument
+		$psstr = $cmd;
+	    } else {
+		# Option setting directive for Foomatic filter
+		# 4 "%" because of the "sprintf" applied to it
+		# In the end stay 2 "%" to have a PostScript comment
+		my $optstyle = ($arg->{'style'} eq 'J' ? 
+					"JCL" : "CommandLine");
+		my $cmdval = htmlify($cmd);
+		$psstr = sprintf
+		    ("%%%% RIP%sOption %s %s %s:%s",
+		     $optstyle, $name, $spot, $order, $cmdval);
+		$psstrf = sprintf
+		    ("%%%% RIP%sOption %s %s %s:%s",
+		     $optstyle, $name, $spot, $order, "");
+	    }
+	    if (!defined($default)) { 
+		$defstr = 'Unknown';
+	    }
+	    push(@optionblob,
+		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, $com),
+		 sprintf("*OrderDependency: %s AnySetup *%s\n", 
+			 $order, $name),
+		 sprintf("*Default%s: $defstr\n", $name),
+		 sprintf("*%s True/%s: \"%s\"\n", $name, $name, $psstr),
+		 ($psstr =~ /\n/s ? "*End\n" : ""),
+		 sprintf("*%s False/%s: \"%s\"\n", $name, $namef, $psstrf),
+		 ($psstrf =~ /\n/s ? "*End\n" : ""),
+		 sprintf("*CloseUI: *%s\n", $name));
+	    
+	} elsif ($type eq 'int') {
+
+	    # Real numerical options do not exist in the Adobe
+	    # specification for PPD files. So we map the numerical
+	    # options to enumerated options offering the minimum, the
+	    # maximum, the default, and some values inbetween to the
+	    # user.
+
+	    my $min = $arg->{'min'};
+	    my $max = $arg->{'max'};
+	    my $second = $min + 1;
+	    my $stepsize = 1;
+	    if (($max - $min > 100) && ($name ne "Copies")) {
+		# We don't want to have more than 1000 values, but when the
+		# difference between min and max is more than 1000 we should
+		# have at least 100 steps.
+		my $mindesiredvalues = 10;
+		my $maxdesiredvalues = 100;
+		# Find the order of magnitude of the value range
+		my $rangesize = $max - $min;
+		my $log10 = log(10.0);
+		my $rangeom = POSIX::floor(log($rangesize)/$log10);
+		# Now find the step size
+		my $trialstepsize = 10 ** $rangeom;
+		my $numvalues = 0;
+		while (($numvalues <= $mindesiredvalues) &&
+		       ($trialstepsize > 2)) {
+		    $trialstepsize /= 10;
+		    $numvalues = $rangesize/$trialstepsize;
+		}
+		# Try to find a finer stepping
+		$stepsize = $trialstepsize;
+		$trialstepsize = $stepsize / 2;
+		$numvalues = $rangesize/$trialstepsize;
+		if ($numvalues <= $maxdesiredvalues) {
+		    if ($stepsize > 20) { 
+			$trialstepsize = $stepsize / 4;
+			$numvalues = $rangesize/$trialstepsize;
+		    }
+		    if ($numvalues <= $maxdesiredvalues) {
+			$trialstepsize = $stepsize / 5;
+			$numvalues = $rangesize/$trialstepsize;
+		    }
+		    if ($numvalues <= $maxdesiredvalues) {
+			$stepsize = $trialstepsize;
+		    } else {
+			$stepsize /= 2;
+		    }
+		}
+		$numvalues = $rangesize/$stepsize;
+		# We have the step size. Now we must find an appropriate
+		# second value for the value list, so that it contains
+		# the integer multiples of 10, 100, 1000, ...
+		$second = $stepsize * POSIX::ceil($min / $stepsize);
+		if ($second <= $min) {$second += $stepsize};
+	    }
+	    # Generate the choice list
+	    my @choicelist;
+	    push (@choicelist, $min);
+	    if (($default < $second) && ($default > $min)) {
+		push (@choicelist, $default);
+	    }
+	    my $item = $second;
+	    while ($item < $max) {
+		push (@choicelist, $item);
+		if (($default < $item + $stepsize) && ($default > $item) &&
+		    ($default < $max)) {
+		    push (@choicelist, $default);
+		}
+		$item += $stepsize;
+	    }
+	    push (@choicelist, $max);
+
+            # Add the option
+
+	    # Skip zero or one choice arguments
+	    if (1 < scalar(@choicelist)) {
+		push(@optionblob,
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
+			     $order, $name),
+		     sprintf("*Default%s: %s\n", 
+			     $name,
+			     (defined($default) ? $default : 'Unknown')));
+		if (!defined($default)) {
+		    my $whr = sprintf("%s %s driver %s",
+				      $dat->{'make'},
+				      $dat->{'model'},
+				      $dat->{'driver'});
+		    warn "undefined default for $idx/$name on a $whr\n";
+		}
+	    
+		my $v;
+		for $v (@choicelist) {
+		    my $psstr = "";
+		    
+		    if ($arg->{'style'} eq 'G') {
+			# Ghostscript argument; offer up ps for insertion
+			$psstr = sprintf($cmd, $v);
+		    } else {
+			# Option setting directive for Foomatic filter
+			# 4 "%" because of the "sprintf" applied to it
+			# In the end stay 2 "%" to have a PostScript comment
+			my $optstyle = ($arg->{'style'} eq 'J' ? 
+					"JCL" : "CommandLine");
+			my $cmdval =
+			    htmlify(sprintf($cmd,$v));
+			$psstr = sprintf
+			    ("%%%% RIP%sOption %s %s %s:%s",
+			     $optstyle, $name, $spot, $order, $cmdval);
+		    }
+		    push(@optionblob,
+			 sprintf("*%s %s/%s: \"%s\"\n", 
+				 $name, $v, $v, $psstr));
+		    # PostScript code is more than one line? Let an "*End"
+		    # line follow
+		    if ($psstr =~ /\n/s) {
+			push(@optionblob, "*End\n");
+		    }
+		}
+		
+		push(@optionblob,
+		     sprintf("*CloseUI: *%s\n", $name));
+	    }
+	    
+	} elsif ($type eq 'float') {
+	    
+	    my $min = $arg->{'min'};
+	    my $max = $arg->{'max'};
+	    # We don't want to have more than 500 values or less than 50
+	    # values.
+	    my $mindesiredvalues = 10;
+	    my $maxdesiredvalues = 100;
+	    # Find the order of magnitude of the value range
+	    my $rangesize = $max - $min;
+	    my $log10 = log(10.0);
+	    my $rangeom = POSIX::floor(log($rangesize)/$log10);
+	    # Now find the step size
+	    my $trialstepsize = 10 ** $rangeom;
+	    my $stepom = $rangeom; # Order of magnitude of stepsize,
+	                           # needed for determining necessary number
+	                           # of digits
+	    my $numvalues = 0;
+	    while ($numvalues <= $mindesiredvalues) {
+		$trialstepsize /= 10;
+		$stepom -= 1;
+		$numvalues = $rangesize/$trialstepsize;
+	    }
+	    # Try to find a finer stepping
+	    $stepsize = $trialstepsize;
+	    my $stepsizeorig = $stepsize;
+	    $trialstepsize = $stepsizeorig / 2;
+	    $numvalues = $rangesize/$trialstepsize;
+	    if ($numvalues <= $maxdesiredvalues) {
+		$stepsize = $trialstepsize;
+		$trialstepsize = $stepsizeorig / 4;
+		$numvalues = $rangesize/$trialstepsize;
+		if ($numvalues <= $maxdesiredvalues) {
+		    $stepsize = $trialstepsize;
+		    $trialstepsize = $stepsizeorig / 5;
+		    $numvalues = $rangesize/$trialstepsize;
+		    if ($numvalues <= $maxdesiredvalues) {
+			$stepsize = $trialstepsize;
+		    }
+		}
+	    }
+	    $numvalues = $rangesize/$stepsize;
+	    if ($stepsize < $stepsizeorig * 0.9) {$stepom -= 1;}
+	    # Determine number of digits after the decimal point for
+	    # formatting the output values.
+	    my $digits = 0;
+	    if ($stepom < 0) {
+		$digits = - $stepom;
+	    }
+	    # We have the step size. Now we must find an appropriate
+	    # second value for the value list, so that it contains
+	    # the integer multiples of 10, 100, 1000, ...
+	    $second = $stepsize * POSIX::ceil($min / $stepsize);
+	    if ($second <= $min) {$second += $stepsize};
+	    # Generate the choice list
+	    my @choicelist;
+	    my $choicestr =  sprintf("%.${digits}f", $min);
+	    push (@choicelist, $choicestr);
+	    if (($default < $second) && ($default > $min)) {
+		$choicestr =  sprintf("%.${digits}f", $default);
+		# Prevent values from entering twice because of rounding
+		# inacuracy
+		if ($choicestr ne $choicelist[$#choicelist]) {
+		    push (@choicelist, $choicestr);
+		}
+	    }
+	    my $item = $second;
+	    my $i = 0;
+	    while ($item < $max) {
+		$choicestr =  sprintf("%.${digits}f", $item);
+		# Prevent values from entering twice because of rounding
+		# inacuracy
+		if ($choicestr ne $choicelist[$#choicelist]) {
+		    push (@choicelist, $choicestr);
+		}
+		if (($default < $item + $stepsize) && ($default > $item) &&
+		    ($default < $max)) {
+		    $choicestr =  sprintf("%.${digits}f", $default);
+		    # Prevent values from entering twice because of rounding
+		    # inacuracy
+		    if ($choicestr ne $choicelist[$#choicelist]) {
+			push (@choicelist, $choicestr);
+		    }
+		}
+		$i += 1;
+		$item = $second + $i * $stepsize;
+	    }
+	    $choicestr =  sprintf("%.${digits}f", $max);
+	    # Prevent values from entering twice because of rounding
+	    # inacuracy
+	    if ($choicestr ne $choicelist[$#choicelist]) {
+		push (@choicelist, $choicestr);
+	    }
+
+            # Add the option
+
+	    # Skip zero or one choice arguments
+	    if (1 < scalar(@choicelist)) {
+		push(@optionblob,
+		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, $com),
+		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
+			     $order, $name),
+		     sprintf("*Default%s: %s\n", 
+			     $name,
+			     (defined($default) ? 
+			      sprintf("%.${digits}f", $default) : 'Unknown')));
+		if (!defined($default)) {
+		    my $whr = sprintf("%s %s driver %s",
+				      $dat->{'make'},
+				      $dat->{'model'},
+				      $dat->{'driver'});
+		    warn "undefined default for $idx/$name on a $whr\n";
+		}
+	    
+		my $v;
+		for $v (@choicelist) {
+		    my $psstr = "";
+		    if ($arg->{'style'} eq 'G') {
+			# Ghostscript argument; offer up ps for insertion
+			$psstr = sprintf($cmd, $v);
+		    } else {
+			# Option setting directive for Foomatic filter
+			# 4 "%" because of the "sprintf" applied to it
+			# In the end stay 2 "%" to have a PostScript comment
+			my $optstyle = ($arg->{'style'} eq 'J' ? 
+					"JCL" : "CommandLine");
+			my $cmdval =
+			    htmlify(sprintf($cmd,$v));
+			$psstr = sprintf
+			    ("%%%% RIP%sOption %s %s %s:%s",
+			     $optstyle, $name, $spot, $order, $cmdval);
+		    }
+		    push(@optionblob,
+			 sprintf("*%s %s/%s: \"%s\"\n", 
+				 $name, $v, $v, $psstr));
+		    # PostScript code is more than one line? Let an "*End"
+		    # line follow
+		    if ($psstr =~ /\n/s) {
+			push(@optionblob, "*End\n");
+		    }
+		}
+		
+		push(@optionblob,
+		     sprintf("*CloseUI: *%s\n", $name));
+	    }
+        }
+    }
+
+    # Close the option groups which are still open
+    for (my $i = $#groupstack; $i >= 0; $i--) {
+	push(@optionblob,
+	     sprintf("\n*Close%sGroup: %s\n",
+		     ($level > 0 ? "Sub" : ""), $groupstack[$i])
+	     );
+	pop(@groupstack);
     }
 
     if (! $dat->{'args_byname'}{'PageSize'} ) {
@@ -2456,12 +3257,15 @@ sub getpage {
 }
 
 # Prepare strings for being part of an HTML document by, converting
-# "<" to "&lt;", ">" to "&gt;", and "&" to "&amp;"
+# "<" to "&lt;", ">" to "&gt;", "&" to "&amp;", "\"" to "&quot;",
+# and "'" to  "&apos;"
 sub htmlify {
     my $str = $_[0];
     $str =~ s!&!&amp;!g;
     $str =~ s/\</\&lt;/g;
     $str =~ s/\>/\&gt;/g;
+    $str =~ s/\"/\&quot;/g;
+    $str =~ s/\'/\&apos;/g;
     return $str;
 }
 

@@ -1,5 +1,16 @@
 2002-10-20  Till Kamppeter <till.kamppeter@gmx.net>
 
+	* lib/Foomatic/DB.pm: Introduced new function "getppd()" which
+	  generates the new PPDs which do not need the Perl data eny more
+	  (see discussion with Johannes Meixner on the foomatic-devel list
+	  on linuxprinting.org), started option group support (use
+	  "<arg_group>group/subgroup</arg_group>" tag in "<arg_execution>"
+	  section of option XML files), option groups work, but there are
+	  no "longnames"/translations yet. Fixed some typos.
+
+	* foomatic-datafile.in: When one uses "foomatic-datafile -t ppd
+	  ...", the new Perl-less PPD files are generated.
+	
 	* lib/Foomatic/DB.pm: Fixed "*ImageableArea" and "*PaperDimension"
 	  in the PPD-O-Matic PPD files. It got broken when introducing the
 	  code for variable paper size support.

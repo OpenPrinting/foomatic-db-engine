@@ -33,7 +33,7 @@ if (defined($driver) and defined($poid)) {
     } elsif ($type eq 'mf') {
 	@data = $db->getmfdata();
     } elsif ($type eq 'ppd') {
-	@data = $db->getgenericppd();
+	@data = $db->getppd();
     } elsif ($type eq 'ppr') {
 	@data = $db->getgenericppd();
     } elsif ($type eq 'direct') {
