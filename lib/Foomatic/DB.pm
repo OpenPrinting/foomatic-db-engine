@@ -1328,6 +1328,41 @@ sub removearg {
     }
 }
 
+sub booltoenum {
+    # Turn the boolean argument $argname from $dat to an enumerated choice
+    # equivalent to the original argument
+    my ($dat, $argname) = @_;
+    return if !defined($dat->{'args_byname'}{$argname});
+    # Argument record
+    my $arg = $dat->{'args_byname'}{$argname};
+    # General settings
+    $arg->{'type'} = 'enum';
+    my $proto = $arg->{'proto'};
+    $arg->{'proto'} = '%s';
+    # Choice for 'true'
+    if (!defined($arg->{'name_true'})) {
+	$arg->{'name_true'} = $arg->{'name'};
+    }
+    checksetting($dat, $argname, 'true');
+    my $truechoice = $arg->{'vals_byname'}{'true'};
+    $truechoice->{'comment'} = longname($arg->{'name_true'});
+    $truechoice->{'driverval'} = $proto;
+    # Choice for 'false'
+    if (!defined($arg->{'name_false'})) {
+	$arg->{'name_false'} = "no$arg->{'name'}";
+    }
+    checksetting($dat, $argname, 'false');
+    my $truechoice = $arg->{'vals_byname'}{'false'};
+    $truechoice->{'comment'} = longname($arg->{'name_false'});
+    $truechoice->{'driverval'} = '';
+    # Default value
+    if ($arg->{'default'} eq '0') {
+	$arg->{'default'} = 'false';
+    } else {
+	$arg->{'default'} = 'true';
+    }
+}
+
 sub checkoptionvalue {
 
     ## This function checks whether a given value is valid for a given
@@ -1529,7 +1564,7 @@ sub getppd {
 	push(@optionblob, "*End\n");
     }
 
-    # Search for composite options and mark prepare the member options
+    # Search for composite options and prepare the member options
     # of the found composite options
     for $arg (@{$dat->{'args'}}) {
 	# Here we are only interested in composite options, skip the others
@@ -1554,7 +1589,7 @@ sub getppd {
 	    my @settings = split(/\s+/s, $v->{'driverval'});
 	    for my $s (@settings) {
 		if (($s =~ /^([^=]+)=/) ||
-		    ($s =~ /^no([^=]+)$/) ||
+		    ($s =~ /^[Nn][Oo]([^=]+)$/) ||
 		    ($s =~ /^([^=]+)$/)) {
 		    my $m = $1;
 		    # Does the found member exist for this printer/driver
@@ -1563,6 +1598,16 @@ sub getppd {
 			# Add it to the list of found member options
 			if (!member($m, @members)) {
 			    push(@members, $1);
+			}
+			# Clean up entries for boolean options
+			if ($s !~ /=/) {
+			    if ($s =~ /^[Nn][Oo]$m$/) {
+				$v->{'driverval'} =~
+				    s/(^|\s)$s(\s|$)/$1$m=false$2/;
+			    } else {
+				$v->{'driverval'} =~ 
+				    s/(^|\s)$s(\s|$)/$1$m=true$2/;
+			    }
 			}
 		    } else {
 			# Remove it from the choice of the composite
@@ -1580,6 +1625,12 @@ sub getppd {
 	# number).
 	for my $m (@members) {
 	    my $a = $dat->{'args_byname'}{$m};
+
+	    # Convert boolean options to enumerated choice options, so
+	    # that we can add the "From<Composite>" choice.
+	    if ($a->{'type'} eq 'bool') {
+		booltoenum($dat, $a->{'name'});
+	    }
 
 	    # If $members_in_subgroup is set, the group should be a
 	    # subgroup of the group where the composite option is
@@ -2669,6 +2720,7 @@ sub ripdirective {
     $out = substr($out, 0, -1);
     return $out;
 }
+
 
 # PPD boilerplate template
 
