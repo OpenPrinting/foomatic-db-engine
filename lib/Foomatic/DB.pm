@@ -695,7 +695,7 @@ sub ppdtoperl {
 	undossify();
 	# Parse keywords
 	if (m!^\*ShortNickName:\s*\"(.*)$!) {
-	    # "*NickName: <code>"
+	    # "*ShortNickName: <code>"
 	    my $line = $1;
 	    # Store the value
 	    # Code string can have multiple lines, read all of them
@@ -2566,6 +2566,7 @@ EOFPGSZ
     my $pnpmodel;
     $pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
 	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = $model;
+    $pnpmodel = "($pnpmodel)" if $pnpmodel;
     my $pnpmake;
     $pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
 	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = $make;
@@ -2586,7 +2587,7 @@ EOFPGSZ
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
     my $nickname = "$make $model, Foomatic + $drivername";
-    my $shortnickname = "$make $model";
+    my $shortnickname = "$make $model, $drivername";
 
     my $tmpl = get_tmpl();
     $tmpl =~ s!\@\@POSTPIPE\@\@!$postpipe!g;
@@ -2868,14 +2869,15 @@ sub get_tmpl {
 *cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
 *%pprRIP:        foomatic-rip other
 *ModelName:     "\@\@NICKNAME\@\@"
-*NickName:      "\@\@NICKNAME\@\@"
 *ShortNickName: "\@\@SHORTNICKNAME\@\@"
+*NickName:      "\@\@NICKNAME\@\@"
 *PSVersion:	"(3010.000) 550"
 *PSVersion:	"(3010.000) 651"
 *PSVersion:	"(3010.000) 652"
 *PSVersion:	"(3010.000) 653"
 *PSVersion:	"(3010.000) 704"
 *PSVersion:	"(3010.000) 705"
+*PSVersion:	"(3010.000) 800"
 *LanguageLevel:	"3"
 *ColorDevice:	True
 *DefaultColorSpace: RGB

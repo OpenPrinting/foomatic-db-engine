@@ -1,3 +1,11 @@
+2003-01-20  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixes for Adobe compliance of the generated
+	  PPD files: In "*Product: ..." IEEE model name has to be in
+	  parantheses, "*ShortNickName: ..." must be different for all PPD
+	  files, driver name added to achieve this, "*ShortNickName: ..."
+	  entry has to come before "*NickName: ...".
+	
 2003-01-07  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed a typo in the calculation of the
