@@ -1,3 +1,16 @@
+2002-12-17  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Allow settings for options which do not
+	  exist for the current printer/driver combo in the choices of
+	  composite options. These will be deleted from the composite
+	  option in the final PPD file. With this it gets much easier
+	  to set up the composite option, for example the one for the
+	  "pxlmono" driver where some printers have the PJL option
+	  "Economode" and some not. So one simply puts in settings for
+	  "Economode" and these are only used for the appropriate
+	  printers. So much less constraints are needed in the XML
+	  file for the composite option.
+	
 2002-12-15  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Let "getppd()" put the member options of a

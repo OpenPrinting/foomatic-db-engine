@@ -1557,8 +1557,18 @@ sub getppd {
 		    ($s =~ /^no([^=]+)$/) ||
 		    ($s =~ /^([^=]+)$/)) {
 		    my $m = $1;
-		    if (!member($m, @members)) {
-			push(@members, $1);
+		    # Does the found member exist for this printer/driver
+		    # combo?
+		    if (defined($dat->{'args_byname'}{$m})) {
+			# Add it to the list of found member options
+			if (!member($m, @members)) {
+			    push(@members, $1);
+			}
+		    } else {
+			# Remove it from the choice of the composite
+			# option
+			$v->{'driverval'} =~ s/$s\s*//;
+			$v->{'driverval'} =~ s/\s*$//;
 		    }
 		}
 	    }
