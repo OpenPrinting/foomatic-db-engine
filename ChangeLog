@@ -1,3 +1,12 @@
+2003-04-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* *: Tagged CVS for the release of foomatic-db-engine 3.0.0rc2. 
+	  Tag name: "foomatic-db-engine-3_0_0rc2".
+
+	* README, USAGE, Foomatic-Devel-Ideas.txt: Added missing
+	  substitution for ampersand in XML files, updated for version
+	  3.0.0rc2.
+	
 2003-04-21  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c, lib/Foomatic/DB.pm, foomatic-configure.in:
