@@ -5,6 +5,10 @@
 	  parantheses, "*ShortNickName: ..." must be different for all PPD
 	  files, driver name added to achieve this, "*ShortNickName: ..."
 	  entry has to come before "*NickName: ...".
+
+	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Now the "*Nickname"
+	  and "*ModelName" entries of the PPD file get marked when the
+	  recommended driver is used.
 	
 2003-01-07  Till Kamppeter <till.kamppeter@gmx.net>
 

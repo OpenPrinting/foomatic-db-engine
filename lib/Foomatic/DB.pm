@@ -2582,11 +2582,17 @@ EOFPGSZ
     my $longname = "$filename.ppd";
 
     my $drivername = $dat->{'driver'};
+
+    # Do we use the recommended driver?
+    my $driverrecommended = "";
+    if ($dat->{'driver'} eq $dat->{'recdriver'}) {
+	$driverrecommended = " (recommended)";
+    }
     
     # evil special case.
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
-    my $nickname = "$make $model, Foomatic + $drivername";
+    my $nickname = "$make $model, Foomatic + $drivername$driverrecommended";
     my $shortnickname = "$make $model, $drivername";
 
     my $tmpl = get_tmpl();

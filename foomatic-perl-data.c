@@ -184,6 +184,7 @@ typedef struct comboData {
   xmlChar *snmp_mdl;
   xmlChar *snmp_des;
   xmlChar *snmp_cmd;
+  xmlChar *recdriver;
   /* Driver */
   xmlChar *driver;
   xmlChar *pcdriver;
@@ -653,6 +654,7 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->snmp_mdl = NULL;
   ret->snmp_des = NULL;
   ret->snmp_cmd = NULL;
+  ret->recdriver = NULL;
 
   /* Get printer ID */
   id = xmlGetProp(node, (const xmlChar *) "id");
@@ -674,10 +676,17 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->model = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Printer Model: %s\n", ret->model);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "driver"))) {
+      ret->recdriver = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Recommended driver: %s\n", 
+			 ret->recdriver);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "pcmodel"))) {
       ret->pcmodel = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
-      if (debug) fprintf(stderr, "  Model part for PC filename in PPD: %s\n", ret->pcmodel);
+      if (debug) fprintf(stderr,
+			 "  Model part for PC filename in PPD: %s\n",
+			 ret->pcmodel);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "mechanism"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -2199,6 +2208,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   printf("  'id' => '%s',\n", combo->id);
   printf("  'make' => '%s',\n", combo->make);
   printf("  'model' => '%s',\n", combo->model);
+  if (combo->recdriver) {
+    printf("  'recdriver' => '%s',\n", combo->recdriver);
+  } else {
+    printf("  'recdriver' => undef,\n");
+  }
   if (combo->pcmodel) {
     printf("  'pcmodel' => '%s',\n", combo->pcmodel);
   } else {
