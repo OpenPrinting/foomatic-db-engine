@@ -3145,7 +3145,7 @@ EOFPGSZ
 		    $parts{$part} = join('', @words);
 		    # ... and the ShortNickName
 		    $shortnickname =
-			"$parts{'make'} $parts{'model'}, $parts{'driver'}";
+			"$parts{'make'} $parts{'model'} ($parts{'driver'})";
 		    # Stop if the ShostNickName has 30 characters or less
 		    # (we have still to add the abbreviation point), if there
 		    # is only one letter left, or if the manufacturer name
@@ -3156,7 +3156,8 @@ EOFPGSZ
 		    last if (((length($shortnickname) <= 30) &&
 			      ($abbreviated != 1)) ||
 			     ($_ !~ /[a-zA-Z]{2,}$/) ||
-			     (length($parts{'make'}) <= 4));
+			     ((length($parts{'make'}) <= 4) &&
+			      ($abbreviated != 1)));
 		}
 		#Abbreviation point
 		if ($abbreviated) {
@@ -3164,7 +3165,7 @@ EOFPGSZ
 		}
 		$parts{$part} = join('', @words);
 		$shortnickname =
-		    "$parts{'make'} $parts{'model'}, $parts{'driver'}";
+		    "$parts{'make'} $parts{'model'} ($parts{'driver'})";
 		last if (length($shortnickname) <= 31);
 	    }
 	    last if (length($shortnickname) <= 31);
