@@ -1,3 +1,7 @@
+2004-01-24  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* README, USAGE: Updated for version 3.0.1rc2.
+
 2004-01-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Eliminated warnings which appeared since
@@ -41,7 +45,7 @@
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.1rc1. 
 	  Tag name: "foomatic-db-engine-3_0_1rc1".
 
-	* README, USAGE: Updated for version 3.0.0rc1.
+	* README, USAGE: Updated for version 3.0.1rc1.
 	
 2003-11-19  Till Kamppeter <till.kamppeter@gmx.net>
 

@@ -1,5 +1,5 @@
 
-Foomatic 3.0.1rc1
+Foomatic 3.0.1rc2
 =================
 
 foomatic-db-engine
@@ -358,7 +358,16 @@ Implemented in 3.0.1rc1:
 
  - Compatibility fixes for IRIX and the *BSD operating systems.
 
-Planned/Roadmap for future releases in the 3.0.x line:
+Implemented in 3.0.1rc2:
+
+ - Script to update the "gimp-print" driver entry in the database
+   using the src/foomatic/foomatic-printermap file of the source
+   tarball of GIMP-Print 4.2.x.
+
+ - perltoxml() Perl function in DB.pm to generate XML database entries
+   from PPD files (thanks to Tim Waugh from Red Hat).
+
+Planned/Roadmap for future releases:
 
  - Option conflicts: PPDs allow to define conflicts between option settings,
    so that one cannot set up things which the printer cannot do or

@@ -1,5 +1,5 @@
 
-Foomatic 3.0.1rc1
+Foomatic 3.0.1rc2
 =================
 
 foomatic-db-engine
@@ -360,8 +360,12 @@ Options in [...] can be left out. The options mean:
    --ppd <ppdfile> : If you have a PostScript printer which is shipped
 		with a PPD file (or a PPD file from the internet, a CD,
 		or so), you can set up your print queue with this PPD
-		file using this option. Compressed PPD files 
-		("file.ppd.gz") are allowed. Do not use "-p" and "-d" then.
+		file using this option. Works also with the PPD files
+		of CUPS raster drivers, even if another spooler than
+		CUPS is used. The driver itself and a GhostScript version
+		with the "cups" device (check with "gs -h") must be
+		installed. Compressed PPD files ("file.ppd.gz") are 
+		allowed. Do not use "-p" and "-d" then.
    -o <option>=<value> : Set the default value for an option.
 
 Example: We have the HP DeskJet 840C on the USB and want to use it
@@ -432,6 +436,21 @@ you can set up a queue as follows:
 and you get full access to all features of the printer, even with
 non-PPD-aware spoolers (as PDQ in this example). Compressed PPD files
 ("file.ppd.gz") are also allowed here.
+
+In this example we set up an Epson Stylus Photo 1290 with the CUPS
+driver of GIMP-Print, but with PDQ as the spooler:
+
+   foomatic-configure -s pdq  -n Eps1290 -c usb:/dev/usb/lp0
+		      --ppd escp2-1290.ppd -o PageSize=A4
+
+One simply takes the PPD file which comes with the CUPS
+driver. Naturally the CUPS driver itself and a GhostScript with the
+"cups" output device (Check with "gs -h", ESP GhostScript
+recommended). In most cases you will need also the CUPS libraries to
+run a CUPS driver or to compile GhostScript/the driver with CUPS
+support. The liberaries (and its "-devel" or "-dev" for compiling
+drivers/GhostScript) are only a small part of CUPS and in most distros
+you can install the separately.
 
 A raw LPD queue pointing to an HP JetDirect box (IP: 192.168.1.234,
 port: 9100) is made this way:
