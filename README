@@ -1,6 +1,6 @@
 
-Foomatic 2.9.1
-==============
+Foomatic 3.0.0beta1
+===================
 
 foomatic-db-engine
 ------------------
@@ -63,7 +63,7 @@ the upcoming Foomatic 3.0.
 New features for Foomatic 3.0
 -----------------------------
 
-Implemented in 2.9.1:
+Implemented in 3.0.0beta1:
 
  - For all supported spoolers (CUPS, LPRng, LPD, GNUlpr, PPR, PDQ, CPS,
    no spooler) the same PostScript-to-printer's-native-language filter
@@ -215,8 +215,6 @@ Implemented in 2.9.1:
    demands goes to the tab with the member options and makes detailed
    choices.
 
-Planned/Roadmap for 2.9.x:
-
  - URIs (Unified Resource Identifiers, the descriptions for the
    printer connection type used with the "-c" option of
    foomatic-configure) are exactly the same as under CUPS now. The
@@ -251,6 +249,8 @@ Planned/Roadmap for 2.9.x:
    (individually determined for each page border) is inserted. If the
    unprintable margins of a printer depend on options settings, the
    "worst case" is chosen, too.
+
+Planned/Roadmap for 3.0.x:
 
  - Option conflicts: PPDs allow to define conflicts between option settings,
    so that one cannot set up things which the printer cannot do or
