@@ -1,3 +1,9 @@
+2002-12-14  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: use longname of composite option in the
+	  longnames of the "From<composite>" choices in the member options
+	  (ex: "FromPrintoutMode" -> "Controlled by 'Printout Mode'").
+
 2002-12-11  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Modified keyword lists for sorting options

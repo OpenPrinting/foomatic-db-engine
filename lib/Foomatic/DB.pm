@@ -1530,12 +1530,19 @@ sub getppd {
 	# Here we are only interested in composite options, skip the others
 	next if $arg->{'style'} ne 'X';
 	my $name = $arg->{'name'};
+	my $com  = $arg->{'comment'};
 	my $group = $arg->{'group'};
 	my $order = $arg->{'order'};
 	my $section = $arg->{'section'};
+
 	# Set default for missing section value
 	if (!defined($section)) {$arg->{'section'} = "AnySetup";}
+
+	# Set default for missing tranaslation/longname
+	if (!$com) {$com = longname($name);}
+
 	my @members;
+
 	# Go through all choices of the composite option to find its
 	# member options
 	for my $v (@{$arg->{'vals'}}) {
@@ -1603,7 +1610,7 @@ sub getppd {
 	    # setting record
 	    my $rec;
 	    $rec->{'value'} = "From$name";
-	    $rec->{'comment'} = "Controlled by '$name'";
+	    $rec->{'comment'} = "Controlled by '$com'";
 	    # We mark the driverval as invalid with a non-printable
 	    # character, this means that the code to insert will be an
 	    # empty string in the PPD.
