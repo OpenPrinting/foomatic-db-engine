@@ -1892,8 +1892,14 @@ sub getppd {
 			    # page size is requested.
 			    next;
 			}
+			# Determine the unprintable margins
+			# Zero margins when no margin info exists
+			my ($left, $right, $top, $bottom) =
+			    getmargins($dat, $width, $height, $value);
+			# Insert margins in "*ImageableArea" line
 			push(@imageablearea,
-			     "*ImageableArea $value/$comment: \"0 0 $size\"");
+			     "*ImageableArea $value/$comment: " . 
+			     "\"$left $bottom $right $top\"");
 			push(@paperdimension,
 			     "*PaperDimension $value/$comment: \"$size\"");
 		    }
@@ -2035,7 +2041,10 @@ sub getppd {
 			    $pscode = "pop pop pop pop pop
 %% FoomaticRIPOptionSetting: $name=Custom";
 			}
-			my $custompagesizeheader = "*HWMargins: 0 0 0 0
+			my ($left, $right, $top, $bottom) =
+			    getmargins($dat, 0, 0, 'Custom');
+			my $custompagesizeheader = 
+"*HWMargins: $left $bottom $right $top
 *VariablePaperSize: True
 *MaxMediaWidth: $maxpaperdim
 *MaxMediaHeight: $maxpaperdim
@@ -2633,6 +2642,103 @@ sub getpage {
     }
 
     return $page;
+}
+
+# Determine the margins as needed by "*ImageableArea"
+sub getmarginsformarginrecord {
+    my ($margins, $width, $height, $pagesize) = @_;
+    if (!defined($margins)) {
+	# No margins defined? Return zero margins
+	return (0, $width, $height, 0);
+    }
+    # Defaults
+    my $unit = 'pt';
+    my $absolute = 0;
+    my ($left, $right, $top, $bottom) = (0, $width, $height, 0);
+    # Check the general margins and then the particular paper size
+    for $i ('_general', $pagesize) {
+	# Skip a section if it is not defined
+	next if (!defined($margins->{$i}));
+	# Determine the factor to calculate the margin in points (pt)
+	$unit = (defined($margins->{$i}{'unit'}) ?
+		 $margins->{$i}{'unit'} : $unit);
+	my $unitfactor = 1.0; # Default unit is points
+	if ($unit =~ /^p/i) {
+	    $unitfactor = 1.0;
+	} elsif ($unit =~ /^in/i) {
+	    $unitfactor = 72.0;
+	} elsif ($unit =~ /^cm$/i) {
+	    $unitfactor = 72.0/2.54;
+	} elsif ($unit =~ /^mm$/i) {
+	    $unitfactor = 72.0/25.4;
+	} elsif ($unit =~ /^dots(\d+)dpi$/i) {
+	    $unitfactor = 72.0/$1;
+	}
+	# Convert the values to points
+	($left, $right, $top, $bottom) =
+	    ((defined($margins->{$i}{'left'}) ?
+	      $margins->{$i}{'left'} * $unitfactor : $left),
+	     (defined($margins->{$i}{'right'}) ?
+	      $margins->{$i}{'right'} * $unitfactor : $rigth),
+	     (defined($margins->{$i}{'top'}) ?
+	      $margins->{$i}{'top'} * $unitfactor : $top),
+	     (defined($margins->{$i}{'bottom'}) ?
+	      $margins->{$i}{'bottom'} * $unitfactor : $bottom));
+	# Determine the absolute values
+	$absolute = (defined($margins->{$i}{'absolute'}) ?
+		     $margins->{$i}{'absolute'} : $absolute);
+	if (!$absolute){
+	    if (defined($margins->{$i}{'right'})) {
+		$right = $width - $right;
+	    }
+	    if (defined($margins->{$i}{'top'})) {
+		$top = $height - $top;
+	    }
+	}
+    }
+    return ($left, $right, $top, $bottom);
+}
+
+sub getmargins {
+    my ($dat, $width, $height, $pagesize) = @_;
+    # Determine the unprintable margins
+    # Zero margins when no margin info exists
+    my ($left, $right, $top, $bottom) =
+	(0, $width, $height, 0);
+    # Margins from printer database entry
+    my ($pleft, $pright, $ptop, $pbottom) =
+	getmarginsformarginrecord($dat->{'printermargins'}, 
+				  $width, $height, $pagesize);
+    # Margins from driver database entry
+    my ($dleft, $dright, $dtop, $dbottom) =
+	getmarginsformarginrecord($dat->{'drivermargins'}, 
+				  $width, $height, $pagesize);
+    # Margins from printer/driver combo
+    my ($cleft, $cright, $ctop, $cbottom) =
+	getmarginsformarginrecord($dat->{'combomargins'}, 
+				  $width, $height, $pagesize);
+    # Left margin
+    if ($pleft > $left) {$left = $pleft};
+    if ($dleft > $left) {$left = $dleft};
+    if ($cleft > $left) {$left = $cleft};
+    # Right margin
+    if ($pright < $right) {$right = $pright};
+    if ($dright < $right) {$right = $dright};
+    if ($cright < $right) {$right = $cright};
+    # Top margin
+    if ($ptop < $top) {$top = $ptop};
+    if ($dtop < $top) {$top = $dtop};
+    if ($ctop < $top) {$top = $ctop};
+    # Bottom margin
+    if ($pbottom > $bottom) {$bottom = $pbottom};
+    if ($dbottom > $bottom) {$bottom = $dbottom};
+    if ($cbottom > $bottom) {$bottom = $cbottom};
+    # If we entered with $width == 0 and $height == 0, we mean
+    # relative margins, so correct the signs
+    if ($width == 0) {$right = -$right};
+    if ($height == 0) {$top = -$top};
+    # Return the results
+    return ($left, $right, $top, $bottom);
 }
 
 # Generate a translation/longname from a shortname

@@ -193,6 +193,7 @@ typedef struct comboData {
   xmlChar *cmd;
   xmlChar *nopjl;
   marginsPtr drivermargins;
+  marginsPtr combomargins;
   /* Driver options */
   int     num_args;
   argPtr  *args;
@@ -816,6 +817,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 		 int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
+  xmlNodePtr     cur3;  /* Another XML node pointer */
   xmlChar        *id;  /* Full driver ID, with "driver/" */
 
   /* Initialization of entries */
@@ -826,6 +828,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->cmd = NULL;
   ret->nopjl = (xmlChar *)"0";
   ret->drivermargins = NULL;
+  ret->combomargins = NULL;
 
   /* Get driver ID */
   id = xmlGetProp(node, (const xmlChar *) "id");
@@ -897,6 +900,21 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
 	  parseMargins(doc, cur2, &(ret->drivermargins), language, debug);
      	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "printers"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "printer"))) {
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "margins"))) {
+	      parseMargins(doc, cur3, &(ret->combomargins), 
+			   language, debug);
+	    }
+	    cur3 = cur3->next;
+	  }
+	}
 	cur2 = cur2->next;
       }
     }
@@ -2292,6 +2310,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   if (combo->drivermargins) {
     printf("  'drivermargins' => {\n");
     generateMarginsPerlData(combo->drivermargins, debug);
+    printf("  },\n");
+  }
+  if (combo->combomargins) {
+    printf("  'combomargins' => {\n");
+    generateMarginsPerlData(combo->combomargins, debug);
     printf("  },\n");
   }
   if (combo->maxspot > 0) {

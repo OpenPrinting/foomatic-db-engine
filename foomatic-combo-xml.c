@@ -193,7 +193,7 @@ parse(const char **data, /* I/O - Data to process */
   char          cargdefault[256];
   char          argdefault[256];
   char          defaultline[256];
-  char          printerentry[1024];
+  char          printerentry[1024*1024];
   const char    *scan;               /* pointer for scanning through the file*/
   const char    *lasttag = NULL;     /* Start of last XML tag */
   const char    *lasttagend = NULL;  /* End of last XML tag */

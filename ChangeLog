@@ -1,3 +1,16 @@
+2003-01-05  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c: Support for margin settings in a printer
+	  entry of a driver XML file (combo-specific margins).
+
+	* foomatic-combo-xml.c: Bigger buffer for printer entry of
+	  driver XML files (needed for margin info, especially of
+	  GIMP-Print driver).
+
+	* lib/Foomatic/DB.pm: Unprintable margins as defined in the XML
+	  files are used for the "*ImageableArea" and "*HWMargins" lines in 
+	  the PPD files now.
+	
 2003-01-04  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c: Parse data about unprintable margins in
