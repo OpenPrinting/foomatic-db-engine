@@ -1,3 +1,17 @@
+2003-12-19  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* configure.in, Makefile.in, 
+	  foomatic-printermap-to-gimp-print-xml.in: Added script to
+	  update the driver entry of GIMP-Print with the printer list
+	  of the src/foomatic/foomatic-printermap file of the
+	  GIMP-Print source tarball (GIMP-Print 4.2.x or later).
+
+	* Makefile.in: Make mkinstalldirs executable (Thanks to Florian
+	  Diesch <diesch@spamfence.net>).
+
+	* Makefile.in: Removed $(DESTDIR) from "make" calls for the Perl
+	  libraries (Thanks to Florian Diesch <diesch@spamfence.net>).
+
 2003-12-17  Tim Waugh <twaugh@redhat.com>
  
 	* Makefile.in: Use relative symlink, not absolute.

@@ -146,7 +146,7 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-cleanupdrivers foomatic-getpjloptions \
 	foomatic-addpjloptions foomatic-compiledb foomatic-fix-xml \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
-	foomatic-ppd-options
+	foomatic-ppd-options foomatic-printermap-to-gimp-print-xml
 
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
@@ -158,7 +158,8 @@ BINFILES:=foomatic-printjob foomatic-configure \
 SBINFILES:=foomatic-kitload \
 	foomatic-getpjloptions foomatic-addpjloptions \
 	foomatic-preferred-driver foomatic-fix-xml \
-	foomatic-nonumericalids foomatic-replaceoldprinterids
+	foomatic-nonumericalids foomatic-replaceoldprinterids \
+	foomatic-printermap-to-gimp-print-xml
 
 # Foomatic XML templates
 TEMPLATES:=pjl_enum_choice.xml pjl_enum_option.xml pjl_num_option.xml
@@ -182,8 +183,8 @@ install-bin: check-config lib/Makefile
 #	This is the only way to get the Perl-generated Makefile using
 #	$(DESTDIR) properly
 	( cd lib && \
-	  $(MAKE) PREFIX=$(DESTDIR)$(PERLPREFIX) && \
-	  $(MAKE) PREFIX=$(DESTDIR)$(PERLPREFIX) pure_install \
+	  $(MAKE) PREFIX=$(PERLPREFIX) && \
+	  $(MAKE) PREFIX=$(PERLPREFIX) pure_install \
 	)
 	${SRC}/mkinstalldirs $(DESTDIR)$(BINDIR)
 	${SRC}/mkinstalldirs $(DESTDIR)$(SBINDIR)
@@ -212,7 +213,7 @@ build: defaults lib/Makefile foomatic-combo-xml foomatic-perl-data man
 	for m in $(BINFILES) $(SBINFILES); do \
 	  $(PERL) -p -i -e "s=use lib '.*lib/';\n==s" $$m; \
 	done
-	chmod a+rx $(AC_OUTPUT_FILES)
+	chmod a+rx $(AC_OUTPUT_FILES) mkinstalldirs
 
 lib/Makefile: lib/Makefile.PL
 	( cd lib && $(PERL) Makefile.PL verbose INSTALLDIRS=$(PERL_INSTALLDIRS) )
