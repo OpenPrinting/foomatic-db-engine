@@ -1,3 +1,8 @@
+2002-10-23  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-preferred-driver.in: Added new drivers: "hpijs-rss",
+	  "lxm3200-tweaked", "lz11".
+
 2002-10-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: After Grant Taylor discovered a huge

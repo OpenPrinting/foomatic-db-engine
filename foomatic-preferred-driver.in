@@ -120,6 +120,7 @@ sub sortdrivers ($$) {
 			"pbm2ppa", # bw
 			# Lexmark 3200, the GIMP-Print support for this
 			# printer is broken
+			"lxm3200-tweaked",
 			"lxm3200\$",
 			"lxm3200c",
 			"lxm3200m",
@@ -133,6 +134,7 @@ sub sortdrivers ($$) {
 			"bj8hg12f.upp",
 			"bj8pp12f.upp",
 			# HP and compatible inkjets
+			"hpijs-rss", # HP drivers, patched
 			"hpijs", # HP drivers, with Duplex and 1200 dpi
 			"cdj970", # Duplex support
 			"DJ", # HP drivers, but no duplex
@@ -230,6 +232,7 @@ sub sortdrivers ($$) {
 			"stc_l.upp",
 			"stcany.upp",
 			# Lexmark inkjets
+			"lz11",
 			"cZ11somsom",
 			"cZ11",
 			"lx5000",
