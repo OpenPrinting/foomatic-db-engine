@@ -89,6 +89,7 @@ EOH
     'ptal-pipes' => '$ENV{PTAL_PIPES}',
     'mtink-pipes' => '$ENV{MTINK_PIPES}',
     'cat' => '$ENV{CAT}',
+    'gzip' => '$ENV{GZIP}',
     'wget' => '$ENV{WGET}',
     'curl' => '$ENV{CURL}'
 };
@@ -169,6 +170,7 @@ EOF
     'ptal-pipes' => '$ENV{PTAL_PIPES}',
     'mtink-pipes' => '$ENV{MTINK_PIPES}',
     'cat' => '$ENV{CAT}',
+    'gzip' => '$ENV{GZIP}',
     'wget' => '$ENV{WGET}',
     'curl' => '$ENV{CURL}'
 };

@@ -346,7 +346,7 @@ sub getoldqueuedata {
 	set_default_options($config, $db->{'dat'});
     }
 
-    # Printer model name (for comment field of the queue configuration
+    # Printer model name (for comment field of the queue configuration)
     my ($make, $model, $makemodel);
     if (defined($db->{'dat'})) {
 	$make = $db->{'dat'}{'make'};
@@ -390,8 +390,16 @@ sub writeppdfile {
     } else {
 	if ($config->{'ppdfile'}) {
 	    # Copy in the PPD file specified on the command line
-	    system("cp -f $config->{'ppdfile'} $ppdfile") and
-		die "Cannot copy $config->{'ppdfile'} to $ppdfile!\n";
+	    if ($config->{'ppdfile'} !~ /\.gz$/i) {
+		# Uncompressed PPD file
+		system("cp -f $config->{'ppdfile'} $ppdfile") and
+		    die "Cannot copy $config->{'ppdfile'} to $ppdfile!\n";
+	    } else {
+		# Compressed PPD file
+		system("$sysdeps->{'gzip'} -dc $config->{'ppdfile'} > " .
+		       "$ppdfile") and
+		    die "Cannot copy $config->{'ppdfile'} to $ppdfile!\n";
+	    }
 	    # Set default option settings and $postpipe
 	    $db->ppdsetdefaults($ppdfile);
 	} elsif ($newfoomaticdata) {
@@ -4073,19 +4081,22 @@ Usage: $progname [ -s spooler ] -n queuename \
  -c connection   Printer is connected thusly (ex file:/dev/lp0), must
                  be given when a new queue is created
  --ppd ppdfile   Set up the queue using the PPD file ppdfile (can be a
-                 manufacturer-supplied PPD file for a PostScript printer)
+                 manufacturer-supplied PPD file for a PostScript printer).
+                 gzip-compressed PPD files are allowed, they must have the
+                 extension ".gz".
  -d driver       Foomatic database name for desired printer driver or "raw"
                  for a raw queue. When a non-raw queue is created, the
                  printer must be specified in addition ("-p" option)
- -p printer      Foomatic id for printer. When a non-raw queue is created, the
-                 driver must be specified in addition ("-d" option)
+ -p printer      Foomatic id for printer. When a non-raw queue is created,
+                 the driver must be specified in addition ("-d" option)
  -s spooler      Explicit spooler type (cups, lpd, lprng, pdq, ppr, direct)
  -o option=value Use value as the default for option in this queue
  -o option       Set the switch option by default in this queue
- -C [sourcespooler] sourcequeue  Create a copy of a queue. All characteristics
-                 including default option settings are overtaken. Additional
-                 arguments modify the copy. This facility allows to overtake
-                 one's configured queues when one changes the spooler.
+ -C [sourcespooler] sourcequeue  Create a copy of a queue. All 
+                 characteristics including default option settings are 
+                 overtaken. Additional arguments modify the copy. This
+                 facility allows to overtake one's configured queues when
+                 one changes the spooler.
  -D              Set this queue as the queue used by default.
  -R              Remove this whole queue entirely (just give -n queuename)
  -Q              Query existing configuration (gives XML summary). Supplying
@@ -4093,16 +4104,16 @@ Usage: $progname [ -s spooler ] -n queuename \
                  current/selected spooler, including the default queue.
  -r              list also remote queues (CUPS only).
  -P              Query existing configuration (gives Perl data structure of
-                 the complete information about the queue, including options,
-                 possible choices, default settings, ..., for use by frontends,
-                 the output is done as a Perl array, one element per queue),
-                 With printer ID and driver name instead of queue name supplied
-                 the Perl data structure of the appropriate printer/driver
-                 combo is generated, supplied options are entered as default
-                 settings then, from a supplied queue the option default
-		 settings are used. Supplying no queue, printer, and driver
-		 gives info about all installed queues for the current/selected
-                 spooler.
+                 the complete information about the queue, including
+                 options, possible choices, default settings, ..., for use 
+                 by frontends, the output is done as a Perl array, one
+                 element per queue), With printer ID and driver name instead
+                 of queue name supplied the Perl data structure of the 
+                 appropriate printer/driver combo is generated, supplied
+                 options are entered as default settings then, from a
+                 supplied queue the option default settings are used.
+                 Supplying no queue, printer, and driver gives info about
+                 all installed queues for the current/selected spooler.
  N               The first index of the Perl array, default: 0
  -O              Print XML Overview of all known printer/drivers
  -X              Print XML data for -p printer and/or -d driver object

@@ -517,7 +517,8 @@ sub ppdtoperl {
 
     # Load the PPD file and build a data structure for the renderer's
     # command line and the options
-    open PPD, "$ppdfile" || return undef;
+    open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
+	       "$sysdeps->{'gzip'} -cd $ppdfile |") or return undef;
 
     my $dat = {};              # data structure for the options
     my $currentargument = "";  # We are currently reading this argument
@@ -937,7 +938,8 @@ sub ppdgetdefaults {
     my ($this, $ppdfile) = @_;
     
     # Open the PPD file
-    open PPD, "$ppdfile" || do {
+    open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
+	       "$sysdeps->{'gzip'} -cd $ppdfile |") or do {
 	die ("Unable to open PPD file $ppdfile\n");
     };
 
@@ -992,8 +994,9 @@ sub ppdsetdefaults {
 
     # Load the complete PPD file into memory but remove the postpipe
     #system "cat $ppdfile";
-    open PPD, "< $ppdfile" or
-	die ("Unable to open PPD file $ppdfile\n");
+    open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
+	       "$sysdeps->{'gzip'} -cd $ppdfile |") or
+	       die ("Unable to open PPD file $ppdfile\n");
     while (my $line = <PPD>) {
 	if ($line =~ m!^\*FoomaticRIPPostPipe:\s*\"(.*)$!) {
 	    # "*FoomaticRIPPostPipe: <code>"
@@ -1055,7 +1058,8 @@ sub ppdsetdefaults {
     }
     
     # Write back the modified PPD file
-    open PPD, "> $ppdfile" or
+    open PPD, ($ppdfile !~ /\.gz$/i ? "> $ppdfile" : 
+	       "| $sysdeps->{'gzip'} > $ppdfile") or
 	die ("Unable to open PPD file $ppdfile for writing\n");
     print PPD $ppd;
     close PPD;

@@ -352,7 +352,8 @@ Options in [...] can be left out. The options mean:
    --ppd <ppdfile> : If you have a PostScript printer which is shipped
 		with a PPD file (or a PPD file from the internet, a CD,
 		or so), you can set up your print queue with this PPD
-		file using this option. Do not use "-p" and "-d" then.
+		file using this option. Compressed PPD files 
+		("file.ppd.gz") are allowed. Do not use "-p" and "-d" then.
    -o <option>=<value> : Set the default value for an option.
 
 Example: We have the HP DeskJet 840C on the USB and want to use it
@@ -420,7 +421,8 @@ you can set up a queue as follows:
 		      --ppd HP_LaserJet_4050_Series.ppd -o PageSize=A4
    
 and you get full access to all features of the printer, even with
-non-PPD-aware spoolers (as PDQ in this example).
+non-PPD-aware spoolers (as PDQ in this example). Compressed PPD files
+("file.ppd.gz") are also allowed here.
 
 A raw LPD queue pointing to an HP JetDirect box (IP: 192.168.1.234,
 port: 9100) is made this way:

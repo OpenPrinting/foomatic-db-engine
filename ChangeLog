@@ -1,3 +1,10 @@
+2003-01-26  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in, lib/Foomatic/DB.pm, configure.in,
+	  Makefile.in, makeDefaults.in, USAGE: Added support for
+	  compressed PPD files ("file.ppd.gz") supplied with the "--ppd"
+	  option of foomatic-configure.
+	
 2003-01-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Made URIs for printer connections ("-c"
