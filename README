@@ -1,6 +1,6 @@
 
-Foomatic 3.0.0
-==============
+Foomatic 3.0.1rc1
+=================
 
 foomatic-db-engine
 ------------------
@@ -304,6 +304,45 @@ Implemented in 3.0.0:
 
  - The Foomatic database uses clear-text printer IDs for all printers
    now.
+
+Implemented in 3.0.1rc1:
+
+ - If a printer/driver combo has Foomatic-defined JCL options and the
+   driver already generates a JCL header, the JCL options are merged
+   into the header produced by the driver.
+
+ - Workaround for newly introduced PostScript generation bug of
+   OpenOffice.org 1.1.0 (OOo puts settings for whole document into
+   "%%PageSetup" section of first page).
+
+ - Added "use strict;" to the most important Perl scripts, clean-up of
+   the scripts (Thanks to Patrick Powell from LPRng)
+
+ - Improved LPRng support (Thanks to Patrick Powell from LPRng)
+
+ - Printer listing options and auto-selection of recommended driver
+   for the PPD generator foomatic-ppdfile (Thanks to Patrick Powell
+   from LPRng).
+
+ - Support for string options and additional operation modes for
+   foomatic-addpjloptions (Thanks to Patrick Powell from LPRng).
+
+ - Additional checks in the configure scripts (Thanks to Patrick
+   Powell from LPRng).
+
+ - Composite options can be nested now (normal and forced composite
+   options can be mixed).
+
+ - Several modifications to make the PPD files compatible with the
+   PostScript drivers for Windows: 100 instead of 999 choices for the
+   "Copies" options, no "," and "+" in the "*NickName" and
+   "*ShortNickName" entries, optional cutting of the long names of the
+   options and choices (translation strings in the PPDs) to 39
+   characters for compatibility with the Microsoft PostScript driver
+   and the original PostScript driver for Windows of CUPS. All this is
+   not required by the Adobe specification for PPD files.
+
+ - Compatibility fixes for IRIX and the *BSD operating systems.
 
 Planned/Roadmap for future releases in the 3.0.x line:
 
