@@ -993,40 +993,47 @@ sub query_lpd {
     my $p;
 
     if (!$opt_P) {
-
 	print "<queues>\n";
-	# Query the default printer
-	if (!defined($config->{'queue'})) {
-	    if ($config->{'spooler'} eq "lpd") {
-		# Under LPD the default printer is the printer which has
-		# "lp" as its name or as an alias name
-		my $def_firstname = undef;
-		for $p (@{$pcap}) {
-		    if (defined($p->{'names'})) {
-			my $n;
-			for $n (@{$p->{'names'}}) {
-			    if ($n eq 'lp') {
-				$def_firstname = $p->{'names'}[0];
-				last;
-			    }
-			}
-			if (defined($def_firstname)) {
+    }
+
+    # Query the default printer
+    my $default;
+    if (!defined($config->{'queue'})) {
+	if ($config->{'spooler'} eq "lpd") {
+	    # Under LPD the default printer is the printer which has
+	    # "lp" as its name or as an alias name
+	    my $def_firstname = undef;
+	    for $p (@{$pcap}) {
+		if (defined($p->{'names'})) {
+		    my $n;
+		    for $n (@{$p->{'names'}}) {
+			if ($n eq 'lp') {
+			    $def_firstname = $p->{'names'}[0];
 			    last;
 			}
 		    }
-		}
-		if (defined($def_firstname)) {
-		    print "<defaultqueue>$def_firstname</defaultqueue>\n";
-		}
-	    } else {
-		# Under LPRng the default printer is the first entry in
-		# /etc/printcap
-		for $p (@{$pcap}) {
-		    if (defined($p->{'names'})) {
-			print "<defaultqueue>$p->{'names'}[0]" .
-			    "</defaultqueue>\n";
+		    if (defined($def_firstname)) {
 			last;
 		    }
+		}
+	    }
+	    if (defined($def_firstname)) {
+		$default = $def_firstname;
+		if (!$opt_P) {
+		    print "<defaultqueue>$def_firstname</defaultqueue>\n";
+		}
+	    }
+	} else {
+	    # Under LPRng the default printer is the first entry in
+	    # /etc/printcap
+	    for $p (@{$pcap}) {
+		if (defined($p->{'names'})) {
+		    $default = $p->{'names'}[0];
+		    if (!$opt_P) {
+			print "<defaultqueue>$p->{'names'}[0]" .
+			    "</defaultqueue>\n";
+		    }
+		    last;
 		}
 	    }
 	}
@@ -1047,6 +1054,11 @@ sub query_lpd {
         my $c = $db->{'dat'}{'queuedata'};
 
 	if ($opt_P) {
+	    if ($p->{'names'}[0] eq $default) {
+		$db->{'dat'}{'queuedata'}{'default'} = 1;
+	    } else {
+		$db->{'dat'}{'queuedata'}{'default'} = 0;
+	    }
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -1275,14 +1287,19 @@ sub query_cups {
 
     if (!$opt_P) {
 	print "<queues>\n";
-	# Query the default printer
-	if (!defined($config->{'queue'})) {
-	    open DEFAULT, "$sysdeps->{'cups-lpstat'} -d |" or
-		die "Could not run $sysdeps->{'cups-lpstat'}!\n";
-	    my $defaultstr = <DEFAULT>;
-	    close DEFAULT;
-	    if ($defaultstr =~ m!\S+:\s+(\S+)$!) {
-		print "<defaultqueue>$1</defaultqueue>\n";
+    }
+
+    # Query the default printer
+    my $default;
+    if (!defined($config->{'queue'})) {
+	open DEFAULT, "$sysdeps->{'cups-lpstat'} -d |" or
+	    die "Could not run $sysdeps->{'cups-lpstat'}!\n";
+	my $defaultstr = <DEFAULT>;
+	close DEFAULT;
+	if ($defaultstr =~ m!\S+:\s+(\S+)$!) {
+	    $default = $1;
+	    if (!$opt_P) {
+		print "<defaultqueue>$default</defaultqueue>\n";
 	    }
 	}
     }
@@ -1301,6 +1318,11 @@ sub query_cups {
 	    my $c = $db->{'dat'}{'queuedata'};
 	    
 	    if ($opt_P) {
+		if ($p->{'name'} eq $default) {
+		    $db->{'dat'}{'queuedata'}{'default'} = 1;
+		} else {
+		    $db->{'dat'}{'queuedata'}{'default'} = 0;
+		}
 		my $asciidata = $db->getascii();
 		$asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 		print $asciidata;
@@ -1594,14 +1616,19 @@ sub query_pdq {
 
     if (!$opt_P) {
 	print "<queues>\n";
-	# Query the default printer
-	if (!defined($config->{'queue'})) {
-	    open DEFAULT, "$sysdeps->{'pdq-print'} -h 2>&1 |" or
-		die "Could not run $sysdeps->{'pdq-print'}!\n";
-	    my $defaultstr = join('', <DEFAULT>);
-	    close DEFAULT;
-	    if ($defaultstr =~ m!The\s+default\s+printer\s+is\s+(\S+)$!m) {
-		print "<defaultqueue>$1</defaultqueue>\n";
+    }
+
+    # Query the default printer
+    my $default;
+    if (!defined($config->{'queue'})) {
+	open DEFAULT, "$sysdeps->{'pdq-print'} -h 2>&1 |" or
+	    die "Could not run $sysdeps->{'pdq-print'}!\n";
+	my $defaultstr = join('', <DEFAULT>);
+	close DEFAULT;
+	if ($defaultstr =~ m!The\s+default\s+printer\s+is\s+(\S+)$!m) {
+	    $default = $1;
+	    if (!$opt_P) {
+		print "<defaultqueue>$default</defaultqueue>\n";
 	    }
 	}
     }
@@ -1622,6 +1649,11 @@ sub query_pdq {
         my $c = $db->{'dat'}{'queuedata'};
 
 	if ($opt_P) {
+	    if ($p->{'name'} eq $default) {
+		$db->{'dat'}{'queuedata'}{'default'} = 1;
+	    } else {
+		$db->{'dat'}{'queuedata'}{'default'} = 0;
+	    }
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -2160,13 +2192,18 @@ sub query_ppr {
 
     if (!$opt_P) {
 	print "<queues>\n";
-	# Query the default printer
-	if (!defined($config->{'queue'})) {
-	    for $p (@{$pconf}) {
-		if ($p->{'default'}) {
+    }
+
+    # Query the default printer
+    my $default;
+    if (!defined($config->{'queue'})) {
+	for $p (@{$pconf}) {
+	    if ($p->{'default'}) {
+		$default = $p->{'name'};
+		if (!$opt_P) {
 		    print "<defaultqueue>$p->{'name'}</defaultqueue>\n";
-		    last;
 		}
+		last;
 	    }
 	}
     }
@@ -2184,6 +2221,11 @@ sub query_ppr {
 	my $c = $db->{'dat'}{'queuedata'};
 	    
 	if ($opt_P) {
+	    if ($p->{'name'} eq $default) {
+		$db->{'dat'}{'queuedata'}{'default'} = 1;
+	    } else {
+		$db->{'dat'}{'queuedata'}{'default'} = 0;
+	    }
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;
@@ -2527,13 +2569,18 @@ sub query_direct {
 
     if (!$opt_P) {
 	print "<queues>\n";
-	# Query the default printer
-	if (!defined($config->{'queue'})) {
-	    for $p (@{$pconf}) {
-		if ($p->{'default'}) {
+    }
+
+    # Query the default printer
+    my $default;
+    if (!defined($config->{'queue'})) {
+	for $p (@{$pconf}) {
+	    if ($p->{'default'}) {
+		$default = $p->{'name'};
+		if (!$opt_P) {
 		    print "<defaultqueue>$p->{'name'}</defaultqueue>\n";
-		    last;
 		}
+		last;
 	    }
 	}
     }
@@ -2551,6 +2598,11 @@ sub query_direct {
 	my $c = $db->{'dat'}{'queuedata'};
 	    
 	if ($opt_P) {
+	    if ($p->{'name'} eq $default) {
+		$db->{'dat'}{'queuedata'}{'default'} = 1;
+	    } else {
+		$db->{'dat'}{'queuedata'}{'default'} = 0;
+	    }
 	    my $asciidata = $db->getascii();
 	    $asciidata =~ s/\$VAR1/\$QUEUES[$i]/g;
 	    print $asciidata;

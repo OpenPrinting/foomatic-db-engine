@@ -1,3 +1,12 @@
+2003-08-26  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Let the information about the default
+	  printer be included in the output of "foomatic-configure -P".
+	  This makes the initial reading of configuration information by a
+	  frontend much faster. The information will by in
+	  $QUEUES[x]->{'queuedata'}{'default'}, which is 1 for the default
+	  queue and 0 for the other queues.
+
 2003-08-24  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed reading make and model name of the
