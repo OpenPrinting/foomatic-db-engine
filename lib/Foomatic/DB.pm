@@ -3642,6 +3642,7 @@ sub getpapersize {
 
     my $sizetable = {
 	'germanlegalfanfold' => '612 936',
+	'halfletter'       => '396 612',
 	'letterwide'       => '647 957',
 	'lettersmall'      => '612 792',
 	'letter'           => '612 792',
@@ -3652,7 +3653,6 @@ sub getpapersize {
 	'tabloidextra'     => '864 1296',
 	'statement'        => '396 612',
 	'manual'           => '396 612',
-	'halfletter'       => '396 612',
 	'executive'        => '522 756',
 	'folio'            => '612 936',
 	'archa'            => '648 864',

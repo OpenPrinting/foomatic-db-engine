@@ -1,3 +1,9 @@
+2003-09-07  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixed bug of the getpapersize() function
+	  returning the size of "Letter" when requesting the sixe of
+	  "Half Letter".
+
 2003-08-27  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: When using "foomatic-configure -P -r"
