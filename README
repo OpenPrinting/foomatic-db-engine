@@ -1,5 +1,5 @@
 
-Foomatic 3.0.0beta1
+Foomatic 3.0.0beta2
 ===================
 
 foomatic-db-engine
@@ -63,7 +63,7 @@ the upcoming Foomatic 3.0.
 New features for Foomatic 3.0
 -----------------------------
 
-Implemented in 3.0.0beta1:
+Implemented in 3.0.0beta2:
 
  - For all supported spoolers (CUPS, LPRng, LPD, GNUlpr, PPR, PDQ, CPS,
    no spooler) the same PostScript-to-printer's-native-language filter
@@ -81,7 +81,7 @@ Implemented in 3.0.0beta1:
       available. So PostScript printers work always "Perfectly".
 
     o With the PPD file one has one configuration file for every place
-      where information abot the printer and its options is needed:
+      where information about the printer and its options is needed:
       The print queue itself, PPD-aware applications (as Star Office,
       OpenOffice.org, GIMP, ...), and clients (Windows, Mac, Unix with
       arbitrary spooler). The PPD format is a standard format used by
@@ -110,7 +110,9 @@ Implemented in 3.0.0beta1:
    comments) of the appropriate pages in the PostScript input file. If
    necessary, the renderer (usually GhostScript) is stopped and restarted
    in the middle of the job, when certain pages need a different command
-   line for the renderer.
+   line for the renderer. The bug of Star Office/OpenOffice.org
+   inserting the "%%BeginSetup...%%EndSetup" section after the first
+   "%%Page:" comment is taken care of.
 
  - foomatic-rip does neither use temporary files on the disk, nor does it
    need to load huge documents completely into memory. All is done in data
@@ -249,6 +251,27 @@ Implemented in 3.0.0beta1:
    (individually determined for each page border) is inserted. If the
    unprintable margins of a printer depend on options settings, the
    "worst case" is chosen, too.
+
+ - Facility to make a package consisting of all possible Foomatic PPD
+   files, foomatic-rip, and foomatic-configure, see
+   README.build-foomatic-filters-ppds for how to proceed.
+
+ - Support for inserting arbitrary constant entries (as a default
+   resolution if there is no "Resolution" option) into the PPD
+   file. The entries can be printer-specific, driver-specific, or
+   printer/driver-combo-specific.
+
+ - Extended structure for auto-detection info in printer XML files:
+   General section for entries valid for both USB and parallel port
+   connection, possibility to insert the constant part of the original
+   IEEE-1284 ID string. The ID string will also be inserted into the
+   PPD file.
+
+ - New handling of numerical options in the PPD files:
+   "*Default<option>: ..." now always contains one of the enumerated
+   choices to be Adobe-compliant, the exact default value for
+   Foomatic-aware applications is stored with the new
+   "*FoomaticRIPDefault<option>: ..." keywords now.
 
 Planned/Roadmap for 3.0.x:
 
@@ -1257,16 +1280,25 @@ printer/100576
 # interfaces the printers report back an IEEE-1284-complient ID string
 # from which the fields "MFG" (<manufacturer>...</manufacturer>),
 # "MDL" (<model>...</model>), "DES" (<description>...</description>),
-# and "CMD" (<commandset>...</commandset>) are used. A complete entry
-# could look like:
+# and "CMD" (<commandset>...</commandset>) are used. The string itself
+# can be put between <ieee1284>...</ieee1284> tags, but all items
+# which are not constant for all printers of this model, as the serial
+# number ("SERN:...;") and the device status ("VSTATUS:...;") have to
+# be removed here. As the ID string is usually the same for all
+# detection methods, on can put the entries between
+# <general>...</general> tags, then the <parallel>...</parallel>,
+# <usb>...</usb>, and <snmp>...</snmp> are only used only for
+# differences to the data between the <general>...</general> tags. A
+# complete entry could look like:
 #
 #  <autodetect>
-#    <parallel>
+#    <general>
+#      <ieee1284>MFG:HEWLETT-PACKARD;MDL:DESKJET 600;CMD:MLC,PCL,PML;CLASS:PRINTER;DESCRIPTION:Hewlett-Packard DeskJet 600;</ieee1284>
 #      <commandset>MLC,PCL,PML</commandset>
-#      <description>Hewlett-Packard DeskJet 660C</description>
+#      <description>Hewlett-Packard DeskJet 600</description>
 #      <manufacturer>HEWLETT-PACKARD</manufacturer>
-#      <model>DESKJET 660C</model>
-#    </parallel>
+#      <model>DESKJET 600</model>
+#    </general>
 #  </autodetect>
 #
 
@@ -1635,8 +1667,8 @@ leave out one of them. These individual options are the member options
 of the composite option. Not all options of a driver/printer combo
 need to be member options of the composite option. It is not allowed
 to have one option being member of more than one composite option. The
-composite option and all member options must be enumerated choice
-options.
+composite option must be an enumerated choice options, the member
+options must be enumerated choice or boolean.
 
 It is enough to add a composite option as shown. The PPD generator
 (getppd() in lib/Foomatic/DB.pm, package "foomatic-db-engine") will
@@ -1779,6 +1811,186 @@ Miscellaneous
   is not worth to make a special group.
 
 
+Unprintable margins
+-------------------
+
+On most printers you cannot print arbitrarily close to the borders of
+the paper. You usually will have margins of certain width on which you
+cannot print. For filters and applkication programs to know about
+these margins PPD file have "*ImageableArea" lines which define the
+positions of the lower, the upper, the left, and the right borders of
+the area on which the printer can print. There is one line for each
+paper size listed in the "*PageSize" option.
+
+To conveniently generating these lines one can use the following XML
+structure in the Foomatic database entries:
+
+--------------------------------------------------------------------------
+<margins>
+     <general>
+       <!-- The margins here are valid for every paper size for -->
+       <!-- which there is no "exception" section -->
+       <!-- ---------- -->
+       <!-- possible units: -->
+       <!-- pt, inches, mm, cm,
+       <!-- dotsNNNdpi (NNN: resolution in which dots are counted) -->
+       <!-- if "unit" not present, default unit is pt -->
+       <!-- ---------- -->
+       <!-- if a margin is not present, default width is 0 -->
+       <!-- ---------- -->
+       <!-- a missing "general" section assumes zero borders as the -->
+       <!-- general borders and "pt" as the default unit for -->
+       <!-- "exceptions". -->
+       <unit>pt</unit>
+       <top>9</top>
+       <bottom>36</bottom>
+       <left>18</left>
+       <right>18</right>
+     </general>
+     <exception PageSize="Photo4x6TearoffTab">
+       <!-- if one or more of "unit", "top", "bottom", "left", -->
+       <!-- "right" is missing, the appropriate item of the "general" -->
+       <!-- section is used -->
+       <top>0</top>
+       <left>0</left>
+       <right>0</right>
+     </exception>
+     <exception PageSize="A4">
+       <!-- It is also possible to give absolute values in PostScript -->
+       <!-- coordinates where the origin is the lower left corner. To -->
+       <!-- do so, the <absolute /> tag has to be added, otherwise -->
+       <!-- the values are the widths of the unprintable margins -->
+       <absolute />
+       <left>10</left>
+       <right>585</right>
+     </exception>
+     <exception PageSize="...">
+       ...
+     </exception>
+     ...
+<margins>
+--------------------------------------------------------------------------
+
+This structure is allowed in printer entries in the "<mechanism>" 
+section and in driver entries in the "<execution>" section or inside a 
+"<printer>" entry of the driver's printer list. In the "<execution>" 
+section of a driver entry the margins are valid for all printers used 
+with this driver, in a "<printer>" entry they apply only to the given 
+printer/driver combo.
+
+The shown example could be for the HP PhotoSmart 7150/7350, which does 
+full-bleed only on HP's special photo paper with an 0.5 inch wide 
+tear-off tab on the lower border (and some other paper sizes used in the 
+photo tray). On all other paper sizes the printer leaves white borders 
+of half an inch at the top and at the bottom and a quarter of an inch on 
+the left and right hand side (1 inch are 72 pt). In addition, the page 
+size "A4" allows to print up to 10 points to the left and the right borders.
+
+At first we give the general borders ("<general>" section) where we 
+choose the unit "pt" (PostScript points) for the numbers. These borders 
+are valid for all paper sizes which are not explicitly mentioned with an 
+"<exception ...>" section. For our printers one of the exceptions is the 
+4x6 photo paper with the tear-off tab (including the tab the paper is 
+4x6.5 inches large). here the printer prints up to the left, right, and 
+top borders. Therefore we have margins of zero here. At the lower border 
+the printer still leaves half an inch white (therefore probably HP 
+introduced the tear-off tab), so we keep the 36 pt of the "<general>" 
+section by not mentioning a new lower border. For A4 we redefine the 
+left and the right border. This is also possible in absolute PostScript 
+coordinates measured from the lower left corner, as we do here. We 
+indicate this with the "<absolute />" tag. The left border is at 10 pt 
+from the left, and as A4 paper is 595 pt wide, the right border is at 
+585 points from the left.
+
+One hint for the choice of the units: Float numbers as border widths are 
+allowed, but it is recommended for having exact info to choose a unit 
+which gives integer numbers for the widths (which is always possible 
+with the "dotsNNNdpi" unit with NNN being the maximum resolution of the 
+printer).
+
+A "<margins>" section in a printer entry should represent the printer's 
+hardware capabilities. Such a section in a driver entry should represent 
+how the driver's limitations are. If there are margins defined in both 
+the printer and the driver entry of the desired printer/driver combo, 
+the more restrictive (wider) borders count. If there are no border 
+definitions in both the printer and the driver entry, the borders are 
+assumed to be of zero width (full-bleed).
+
+
+Adding arbitrary extra entries to the PPD file
+----------------------------------------------
+
+The "<ppdentry>" tags allow to add extra lines to the PPD file. The 
+tags can be put into the top level ("<printer>") of a printer XML entry, 
+into the "<execution>" section of a driver XML entry, or into the 
+"<printer>" entries of the printer list in a driver XML file. They serve 
+mainly to put a default resolution into PPD files for drivers without 
+"Resolution" option. Examples:
+
+"hpijs"  driver, default resolution for HP DeskJet 350. For this driver 
+the default resolution depends on the printer class. Therefore the 
+appropriate "<ppdentry>"s have to be in the printer entries of the 
+printer list:
+
+--------------------------------------------------------------------------
+<driver id="driver/hpijs">
+  <name>hpijs</name>
+  ...
+  <printers>
+   <printer>
+    <id>printer/620306</id><!-- HP DeskJet 350C -->
+    <ppdentry>
+      *DefaultResolution: 600dpi
+      *Resolution 600dpi/600 dpi: &quot;&quot;
+    </ppdentry>
+    <margins>
+     <general>
+      <unit>in</unit>
+      <relative />
+      <left>0.25</left>
+      <right>0.25</right>
+      <top>0.125</top>
+      <bottom>0.67</bottom>
+     </general>
+     <exception PageSize="A4">
+      <left>0.135</left>
+      <right>0.135</right>
+     </exception>
+    </margins>
+   </printer>
+   ...
+  </printers>
+</driver>
+--------------------------------------------------------------------------
+
+"pnm2ppa" driver: This driver has no "Resolution" option, and all 
+printers print in 600 dpi with it. So we put the "<ppdentry>" into the 
+"<execution>" section:
+
+--------------------------------------------------------------------------
+<driver id="driver/pnm2ppa">
+  <name>pnm2ppa</name>
+  <url>http://sourceforge.net/projects/pnm2ppa/</url>
+  <execution>
+   <filter />
+   <prototype>gs -q -dNOPAUSE -dPARANOIDSAFER -dBATCH -r600%A%Z 
+-sOutputFile=- - | pnm2ppa%C%B -i - -o -</prototype>
+   <ppdentry>
+    *DefaultResolution: 600dpi
+    *Resolution 600dpi/600 dpi: &quot;&quot;
+   </ppdentry>
+  </execution>
+  ...
+</driver>
+--------------------------------------------------------------------------
+
+Note that leading spaces are removed from the lines between the
+"<ppdentry>" tags before they get inserted into the PPD file.
+
+The lines are added at the end of the PPD file header, right after the
+lines for the basic hardware capabilities of the printer.
+
+
 Example for a Foomatic-generated PPD file
 -----------------------------------------
 
@@ -1789,7 +2001,8 @@ used with the "ppmtomd" driver. It was generated with the command line
 
 (Note that the group tags in this example are added manually, they are
  only an example to show how the option grouping for this combo could
- look like. It can be different when it is finally implemented).
+ look like. It can be different to the actual implementation in the
+ foomatic-db package).
 
 The structure is completely Adobe-compliant and no information is in
 comments. Besides the usual keywords which one finds in PPDs there are some
@@ -1799,7 +2012,8 @@ line. See explanations for these keywords below the example file.
 
 If a printer has auto-detection information in the Foomatic database,
 the manufacturer and model names from there are inserted in the
-"*Manufacturer:" and "*Product:" fields.
+"*Manufacturer:" and "*Product:" fields and the IEEE-1284 ID string is
+put into the "*1284DeviceID:" field.
 
 ----------------------------------------------------------------------------
 *PPD-Adobe: "4.3"
@@ -2852,14 +3066,14 @@ numerical options:
 Adobe's PPD specs do not support numerical options. Therefore the
 numerical options are mapped to enumerated options in the PPD file and
 their characteristics as a numerical option are stored in
-"*Foomatic..."  keywords. Especially a default value between the
-enumerated fixed values can be used as the default value. Then this
-value must be given by a "*FoomaticRIPDefault<option>: <value>" line
-in the PPD file. But this value is only valid, if the "official"
-default given by a "*Default<option>: <value>" line (it must be one of
-the enumerated values) points to the enumerated value which is closest
-to this value. This way a user can select a default value with a tool
-only supporting PPD files but not Foomatic extensions.  This tool only
+"*Foomatic..."  keywords. Especially a value between the enumerated
+fixed values can be used as the default value. Then this value must be
+given by a "*FoomaticRIPDefault<option>: <value>" line in the PPD
+file. But this value is only valid, if the "official" default given by
+a "*Default<option>: <value>" line (it must be one of the enumerated
+values) points to the enumerated value which is closest to this
+value. This way a user can select a default value with a tool only
+supporting PPD files but not Foomatic extensions.  This tool only
 modifies the "*Default<option>: <value>" line and if the
 "*FoomaticRIPDefault<option>: <value>" had always priority, the user's
 change in "*Default<option>: <value>" had no effect.

@@ -1,3 +1,10 @@
+2003-03-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* *: Tagged CVS for the release of foomatic-db-engine 3.0.0beta2. 
+	  Tag name: "foomatic-db-engine-3_0_0beta2".
+
+	* README, USAGE: Updated for version 3.0.0beta2.
+	
 2003-03-10  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Fixed bug of USB device files names not
