@@ -2412,14 +2412,14 @@ put into the "*1284DeviceID:" field.
 *PPD-Adobe: "4.3"
 *%
 *% For information on using this, and to obtain the required backend
-*% script, consult http://www.linuxprinting.org/foomatic2.9/
+*% script, consult http://www.linuxprinting.org/
 *%
 *% This file is published under the GNU General Public License
 *%
-*% PPD-O-MATIC (2.9.x or newer) generated this PPD file. It is for use with
+*% PPD-O-MATIC (3.0.0 or newer) generated this PPD file. It is for use with
 *% all programs and environments which use PPD files for dealing with
 *% printer capability information. The printer must be configured with the
-*% "foomatic-rip" backend filter script of Foomatic 2.9.x or newer. This
+*% "foomatic-rip" backend filter script of Foomatic 3.0.0 or newer. This
 *% file and "foomatic-rip" work together to support PPD-controlled printer
 *% driver option access with arbitrary free software printer drivers and
 *% printing spoolers.
