@@ -1,3 +1,9 @@
+2003-08-14  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-compiledb.in: Let PPD pre-compilation process not choke
+	  one a driver entry with a non-existing printer (for example
+	  mistyped) in its list.
+
 2003-08-12  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-combo-xml.c: Pre-initialized pointers in the loadidlist()
@@ -14,7 +20,7 @@
 
 	* lib/Foomatic/DB.pm, foomatic-ppdfile.in, foomatic-configure.in,
 	  USAGE: Added possibility to limit the length of GUI strings
-	  ("translations") in the generated PPD files ton 39 characters,
+	  ("translations") in the generated PPD files to 39 characters,
 	  so that the CUPS PostScript driver for Windows does not choke on
 	  them.
 	
