@@ -7,6 +7,9 @@
 	
 	* README: Documentation for string and password options.
 
+	* USAGE: Documentation for applying option settings only to
+	  selected pages.
+
 2003-04-12  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c, lib/Foomatic/DB.pm, foomatic-configure.in:

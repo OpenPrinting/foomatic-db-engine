@@ -659,7 +659,7 @@ Example: "file.ps" should be printed on the "DeskJet" in presentation
 quality on A4 paper:
 
    foomatic-printjob -s cups -P DeskJet -o PageSize=A4 
-		     -oQuality=presentation file.ps
+		     -o Quality=presentation file.ps
 
 The current directory should be printed on the default printer:
 
@@ -894,6 +894,51 @@ Note that "foomatic-rip" only exits when the whole data is passed
 through the printer driver and sent to the printer, because we have no
 spooler which stores the data on the hard disk to print out of the
 background.
+
+
+Applying options only to selected pages
+---------------------------------------
+
+With most spoolers options can be supplied only to selected pages when
+Foomatic is used. The queues can be either Foomatic queues or they can
+use a manufacturer-supplied PPD file with "foomatic-rip". To make CUPS
+using "foomatic-rip" with manufacturer-supplied PPD files, add the
+line
+
+*cupsFilter:    "application/vnd.cups-postscript 0 foomatic-rip"
+
+to the PPD file. To make an option setting acting only on certain
+pages one only needs to preceed the option by a page specification:
+
+CUPS, GNUlpr, CPS, no spooler:
+  lpr -o 1:InputSlot=Letterhead
+  lpr -o even:Watermark=on
+  lpr -o 1,6-10,15,20-:MediaType=YellowPaper
+
+LPRng:
+  lpr -Z 1-2:MediaType=Cardboard
+
+LPD:
+  lpr -J "1,6-10,15,20-:MediaType=YellowPaper"
+
+PPR (RIP):
+  ppr --ripopts "1:InputSlot=Letterhead"
+
+PPR (Interface)
+  ppr -i "1:InputSlot=Letterhead"
+
+The syntax is "even", "odd", or giving comma-separated page numbers or
+page ranges. Applying options to selected pages with PDQ is not
+supported. Note that specifying a page selection with the "-F" option
+of "ppr" does not work.
+
+Option settings with page selection override option settings for the
+whole document on the appropriate pages. More specific (less pages
+selected) settings override less specific settings on the appropriate
+pages.
+
+Page-specific option settings cannot be set as default in the PPD
+files, but they can be set by editing the ~/.lpoptions file of CUPS.
 
 
 Printing from the command line with libppd/ppdfilt
