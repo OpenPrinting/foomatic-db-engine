@@ -2157,7 +2157,8 @@ sub getppd (  $ $ $ ) {
 
 	    # In case of a forced composite option mark the member option
 	    # as hidden.
-	    if ($arg->{'substyle'} eq 'F') {
+	    if (defined($arg->{'substyle'}) &&
+		($arg->{'substyle'} eq 'F')) {
 		$a->{'hidden'} = 1;
 	    }
 

@@ -1,3 +1,7 @@
+2004-02-27  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Eliminated another Perl warning.
+
 2004-02-18  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 3.0.1. 
