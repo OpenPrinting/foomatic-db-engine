@@ -345,9 +345,11 @@ sub sortargs {
 
     # group names
     my $firstgr = $firstarg->{'group'};
-    my @firstgroup = split("/", $firstgr); 
+    my @firstgroup;
+    @firstgroup = split("/", $firstgr) if defined($firstgr); 
     my $secondgr = $secondarg->{'group'};
-    my @secondgroup = split("/", $secondgr);
+    my @secondgroup;
+    @secondgroup = split("/", $secondgr) if defined($secondgr);
 
     my $i = 0;
 
@@ -2227,7 +2229,8 @@ sub getppd (  $ $ $ ) {
 	my $spot = $arg->{'spot'};
 	my $section = $arg->{'section'};
 	my $cmd = $arg->{'proto'};
-	my @group = split("/", $arg->{'group'});
+	my @group;
+	@group = split("/", $arg->{'group'}) if defined($arg->{'group'});
 	my $idx = $arg->{'idx'};
 
 	# What is the execution style of the current option? Skip options
@@ -3224,6 +3227,7 @@ EOFPGSZ
 	$driver =~ m!(^(.{1,8}))!;
 	$pcfilename = uc($1);
     }
+    $pcfilename = 'FOOMATIC' if !defined($pcfilename);
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
     my $ieee1284;
@@ -3358,14 +3362,18 @@ EOFPGSZ
 
     # Clean up "<ppdentry>"s
     foreach my $type ('printerppdentry', 'driverppdentry', 'comboppdentry'){
-	$dat->{$type} =~ s/^\s+//gm;
-	$dat->{$type} =~ s/\s+$//gm;
-	$dat->{$type} =~ s/^\n+//gs;
-	$dat->{$type} =~ s/\n+$/\n/gs;
+	if (defined($dat->{$type})) {
+	    $dat->{$type} =~ s/^\s+//gm;
+	    $dat->{$type} =~ s/\s+$//gm;
+	    $dat->{$type} =~ s/^\n+//gs;
+	    $dat->{$type} =~ s/\n*$/\n/gs;
+	} else {
+	    $dat->{$type} = '';
+	}
     }
-    my $extralines = join("\n", ($dat->{'printerppdentry'} .
-				 $dat->{'driverppdentry'} .
-				 $dat->{'comboppdentry'}));
+    my $extralines = $dat->{'printerppdentry'} .
+	             $dat->{'driverppdentry'} .
+		     $dat->{'comboppdentry'};
 
     my $tmpl = get_tmpl();
     $tmpl =~ s!\@\@POSTPIPE\@\@!$postpipe!g;

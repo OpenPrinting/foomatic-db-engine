@@ -1,3 +1,7 @@
+2004-02-17  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Eliminated some Perl warnings.
+
 2004-02-14  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-ppdfile.in: Accept "-t <type>" option and ignore it,
