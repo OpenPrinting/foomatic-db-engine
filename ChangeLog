@@ -1,6 +1,11 @@
+2003-01-30  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Fixed bug of "foomatic" flag in the Perl
+	  data structure being set when the PPD is non-Foomatic.
+	
 2003-01-29  Till Kamppeter <till.kamppeter@gmx.net>
 
-	* lib/Foomatic/DB.pm, oomatic-configure.in: Improved sorting of
+	* lib/Foomatic/DB.pm, foomatic-configure.in: Improved sorting of
 	  options, make PPD parser sort the options when the PPD file is
 	  non-Foomatic, Automatically fill in longnames/translations which
 	  are missing in the PPD file, fixed stripping of "dossy" line

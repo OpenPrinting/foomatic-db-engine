@@ -3431,7 +3431,7 @@ sub load_cups_datablob {
 	$c->{'spooler'} = 'cups';
 	$c->{'queue'} = $p->{'name'};
 	$c->{'foomatic'} = 0;
-	if (defined($dat)) {
+	if (defined($dat->{'id'}) and defined($dat->{'driver'})) {
 	    $c->{'foomatic'} = 1;
 	    $c->{'printer'} = $dat->{'id'};
 	    $c->{'driver'} = $dat->{'driver'};
@@ -3512,7 +3512,7 @@ sub load_pdq_datablob {
 	$c->{'spooler'} = 'pdq';
 	$c->{'queue'} = $p->{'name'};
 	$c->{'foomatic'} = 0;
-	if (defined($dat)) {
+	if (defined($dat->{'id'}) and defined($dat->{'driver'})) {
 	    $c->{'foomatic'} = 1;
 	    $c->{'printer'} = $dat->{'id'};
 	    $c->{'driver'} = $dat->{'driver'};
@@ -3602,7 +3602,7 @@ sub load_ppr_datablob {
 	$c->{'spooler'} = 'ppr';
 	$c->{'queue'} = $p->{'name'};
 	$c->{'foomatic'} = 0;
-	if (defined($dat)) {
+	if (defined($dat->{'id'}) and defined($dat->{'driver'})) {
 	    $c->{'foomatic'} = 1;
 	    $c->{'printer'} = $dat->{'id'};
 	    $c->{'driver'} = $dat->{'driver'};
@@ -3746,7 +3746,7 @@ sub load_direct_datablob {
 	$c->{'desc'} = $p->{'desc'};
 	$c->{'loc'} = $p->{'loc'};
 	$c->{'foomatic'} = 0;
-	if (defined($dat)) {
+	if (defined($dat->{'id'}) and defined($dat->{'driver'})) {
 	    $c->{'foomatic'} = 1;
 	    $c->{'printer'} = $dat->{'id'};
 	    $c->{'driver'} = $dat->{'driver'};
