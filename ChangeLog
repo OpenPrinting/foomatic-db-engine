@@ -1,3 +1,7 @@
+2004-07-20  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* configure.in: Replaced mechanism for auto-detecting libxml(2).
+
 2004-07-13  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* README: Updated link to Adobe's PostScript specifications.

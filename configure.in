@@ -17,13 +17,26 @@ dnl Checks for libraries.
 dnl AC_PATH_XTRA
 dnl LIBS="$LIBS"
 
-AM_PATH_XML2(2.0.0)
-if test ! -n "$XML_LIBS" ; then
-  AM_PATH_XML(1.8.17)
+dnl
+dnl Test for libxml
+dnl
+xml_version=
+AC_PATH_PROG(XML2_CONFIG, xml2-config)
+if test ! -z "$XML2_CONFIG"; then
+        xml_version=libxml2
+        XML_CFLAGS=`$XML2_CONFIG --cflags`
+        XML_LIBS=`$XML2_CONFIG --libs`
 fi
-dnl CFLAGS="$CFLAGS $XML_CFLAGS"
-dnl LIBS="$LIBS $XML_LIBS"
-
+if test -z "$xml_version"; then
+        AC_PATH_PROG(XML_CONFIG, xml-config)
+        if test ! -z "$XML_CONFIG"; then
+                xml_version=libxml
+                XML_CFLAGS=`$XML_CONFIG --cflags`
+                XML_LIBS=`$XML_CONFIG --libs`
+        fi
+fi
+AC_SUBST(XML_CFLAGS)
+AC_SUBST(XML_LIBS)
 
 dnl Checks for header files.
 AC_HEADER_DIRENT
