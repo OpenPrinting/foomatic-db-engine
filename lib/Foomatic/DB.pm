@@ -542,6 +542,7 @@ sub getdatfromppd ($ $) {
 
 sub ppdfromvartoperl ($);
 sub ppdtoperl($);
+sub perltoxml($);
 
 sub ppdtoperl($) {
 
@@ -1132,6 +1133,83 @@ sub ppdfromvartoperl ($) {
     }
 
     return $dat;
+}
+
+sub perltoxml ($) {
+    my ($this, $dat) = @_;
+
+    my $xml =
+	"<foomatic><printer id=\"printer/" . $dat->{'id'} . "\">\n" .
+	" <make>" . $dat->{'make'} . "</make>\n" .
+	" <model>" . $dat->{'model'} . "</model>\n" .
+	" <comments><en /></comments>\n" .
+	"</printer>\n\n\n";
+
+    $xml .=
+	"<driver id=\"driver/" . $dat->{'driver'} . "\">\n" .
+	" <name>" . $dat->{'driver'} . "</name>\n" .
+	" <execution>\n" .
+	"  <filter />\n" .
+	"  <prototype>" . $dat->{'cmd'} . "</prototype>\n" .
+	" </execution>\n" .
+	"</driver>\n\n";
+
+    $xml .= "<options>\n";
+
+    foreach (@{$dat->{'args'}}) {
+	my $type = $_->{'type'};
+	my $optname = $_->{'name'};
+	$xml .= " <option type=\"$type\" " .
+	    "id=\"opt/" . $dat->{'driver'} . "-" . $optname . "\">\n";
+	$xml .=
+	    "  <arg_longname>\n" .
+	    "   <en>" . $_->{'comment'} . "</en>\n" .
+	    "  </arg_longname>\n" .
+	    "  <arg_shortname>\n" .
+	    "   <en>" . $_->{'name'} . "</en>\n" .
+	    "  </arg_shortname>\n" .
+	    "  <arg_execution>\n";
+	$xml .= "   <arg_group>" . $_->{'group'} . "</arg_group>\n"
+	    if $_->{'group'};
+	$xml .= "   <arg_order>" . $_->{'order'} . "</arg_order>\n"
+	    if $_->{'order'};
+	$xml .= "   <arg_spot>" . $_->{'spot'} . "</arg_spot>\n"
+	    if $_->{'spot'};
+	$xml .= "   <arg_proto>" . $_->{'proto'} . "</arg_proto>\n"
+	    if $_->{'proto'};
+	$xml .= "  </arg_execution>\n";
+
+	if ($type eq 'enum') {
+	    $xml .= "  <enum_vals>\n";
+	    my $vals_byname = $_->{'vals_byname'};
+	    foreach (keys(%{$vals_byname})) {
+		my $val = $vals_byname->{$_};
+		$xml .=
+		    "   <enum_val id=\"ev/" . $dat->{'driver'} . "-" .
+		    $optname . "-" . $_ . "\">\n";
+		$xml .=
+		    "    <ev_longname>\n" .
+		    "     <en>" . $val->{'comment'} . "</en>\n" .
+		    "    </ev_longname>\n" .
+		    "    <ev_shortname>\n" .
+		    "     <en>$_</en>\n" .
+		    "    </ev_shortname>\n";
+
+		$xml .=
+		    "    <ev_driverval>" .
+		    $val->{'driverval'} .
+		    "</ev_driverval>\n" if $val->{'driverval'};
+
+		$xml .= "   </enum_val>\n";
+	    }
+	}
+
+	$xml .= " </option>\n";
+    }
+
+    $xml .= "</options>\n";
+
+    return $xml;
 }
 
 sub ppdgetdefaults {
