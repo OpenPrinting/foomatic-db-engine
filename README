@@ -162,7 +162,7 @@ Implemented in 2.9.0:
 
 Planned/Roadmap for 2.9.x:
 
- - Collective options: This is a new option type to make it easier for 
+ - Composite options: This is a new option type to make it easier for 
    users to choose the best settings for a certain printing task, even
    if the driver has very many options. The idea is to have an enumerated
    choice option which does not directly modify something in the driver's
@@ -186,15 +186,15 @@ Planned/Roadmap for 2.9.x:
       High quality doc Plain Paper     1200x1200 dpi     Floyd-Steinberg
       Photo            Photo Paper     1200x1200 dpi     Even Tone
 
-   The member options of the collective option will all get one choice
+   The member options of the composite option will all get one choice
    called "Default"/"Controlled by 'Document Type'" added, which will
    get their default setting. If this choice is selected, the option
-   is set by the collective option according to the table. If the user
+   is set by the composite option according to the table. If the user
    wants to modify one of the individual member options, he simply 
    chooses a value other than "Default". In addition the member options
    will be put into a group (names "Custom Document Type"). and the
-   collective option goes into the same group as "PageSize", "InputSlot",
-   ... So the user sees the collective option on the "Front page" of the
+   composite option goes into the same group as "PageSize", "InputSlot",
+   ... So the user sees the composite option on the "Front page" of the
    GUI and can quickly set up print jobs without getting confused. The
    user with more special demands goes to the tab with the member options
    and makes detailed choices.
@@ -2360,14 +2360,14 @@ Foomatic keywords
 
 *FoomaticRIPOption <name>: <type> <style> <spot> [<order>]
     <name>: Option name; <type>: enum, bool, int, float;
-    <style>: CmdLine, JCL, PS, Collective;
+    <style>: CmdLine, JCL, PS, Composite;
     <spot>: Insert this at "%<spot>" in the "*FoomaticRIPCammandLine";
     <order>: order number (1-choice options only)
 
 *FoomaticRIPOptionSetting <name>=<choice>: "<code>"
     <name>: Option name; <choice>: choice name;
     <code>: Code to insert for Cmdline and JCL options,
-            Settings of member options for Collective
+            Settings of member options for Composite
             options (see below)
 
 *FoomaticRIPOptionPrototype <name>: "<code>"
@@ -2424,13 +2424,13 @@ the Foomatic-specific stuff is stored is much simpler. So one can easier
 read and edit it and one can more easily parse it, especially with 
 non-Perl programs. In addition, the PPD file is shorter.
 
-Also collective options (planned for a later release of Foomatic
+Also composite options (planned for a later release of Foomatic
 2.9.x) can be described more easily:
 
 ----------------------------------------------------------------------------
 
 *OpenUI *DocumentType/Document Type: PickOne
-*FoomaticRIPOption DocumentType: enum Collective C
+*FoomaticRIPOption DocumentType: enum Composite C
 *OrderDependency: 20 AnySetup *DocumentType
 *DefaultDocumentType: Office
 *DocumentType Draft/Draft Printout: "%% FoomaticRIPOptionSetting: 

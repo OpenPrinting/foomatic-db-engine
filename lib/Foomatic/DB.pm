@@ -827,7 +827,7 @@ sub ppdtoperl {
 		$dat->{'args_byname'}{$argname}{'style'} = 'J';
 		$dat->{'jcl'} = 1;
 		$dat->{'pjl'} = 1;
-	    } elsif ($argstyle eq "Collective") {
+	    } elsif ($argstyle eq "Composite") {
 		$dat->{'args_byname'}{$argname}{'style'} = 'X';
 	    }
 	    $dat->{'args_byname'}{$argname}{'spot'} = $spot;
@@ -1431,8 +1431,6 @@ sub syncpagesize {
     }
 }
 
-
-
 sub sortoptions {
 
     my ($this) = @_;
@@ -1470,6 +1468,9 @@ sub sortoptions {
 # PPD stuff
 #
 
+# member( $a, @b ) returns 1 if $a is in @b, 0 otherwise.
+sub member { my $e = shift; foreach (@_) { $e eq $_ and return 1 } 0 };
+
 # Return a generic Adobe-compliant PPD for the "foomatic-rip" filter script
 # for all spoolers.  Built from the standard data; you must call getdat()
 # first.
@@ -1495,6 +1496,109 @@ sub getppd {
 	push(@optionblob, "*End\n");
     }
 
+    # Search for composite options and mark prepare the member options
+    # of the found composite options
+    for $arg (@{$dat->{'args'}}) {
+	# Here we are only interested in composite options, skip the others
+	next if $arg->{'style'} ne 'X';
+	my $name = $arg->{'name'};
+	my $group = $arg->{'group'};
+	my $order = $arg->{'order'};
+	my $section = $arg->{'section'};
+	# Set default for missing section value
+	if (!defined($section)) {$arg->{'section'} = "AnySetup";}
+	my @members;
+	# Go through all choices of the composite option to find its
+	# member options
+	for my $v (@{$arg->{'vals'}}) {
+	    my @settings = split(/\s+/s, $v->{'driverval'});
+	    for my $s (@settings) {
+		if (($s =~ /^([^=]+)=/) ||
+		    ($s =~ /^no([^=]+)$/) ||
+		    ($s =~ /^([^=]+)$/)) {
+		    my $m = $1;
+		    if (!member($m, @members)) {
+			push(@members, $1);
+		    }
+		}
+	    }
+	}
+	# Set group of member options and add a "From<Composite>" choice
+	# which will be the default. Make also sure that the composite
+	# option will be inserted into the PostScript code before all its
+	# members are inserted (by means of the section and the order
+	# number).
+	for my $m (@members) {
+	    my $a = $dat->{'args_byname'}{$m};
+
+	    # The group should be a subgroup of the group where the
+	    # composite option is located, named as the composite option
+	    if ($group) {
+		$a->{'group'} = "$group/$name";
+	    } else {
+		$a->{'group'} = "$name";
+	    }
+
+	    # Determine section and order number for the composite option
+	    # Order of the DSC sections of a PostScript file
+	    my @sectionorder = ("JCLSetup", "Prolog", "DocumentSetup", 
+				"AnySetup", "PageSetup");
+	    # Set default for missing section value in member
+	    if (!defined($a->{'section'})) {$a->{'section'} = "AnySetup";}
+	    my $minsection;
+	    for my $s (@sectionorder) {
+		if (($s eq $arg->{'section'}) || ($s eq $a->{'section'})) {
+		    $minsection = $s;
+		    last;
+		}
+	    }
+	    # If the current member option is in an earlier section,
+	    # put also the composite option into it. Do never put the
+	    # composite option into the JCL setup because in the JCL
+	    # header PostScript comments are not allowed.
+	    $arg->{'section'} = ($minsection ne "JCLSetup" ?
+				 $minsection : "Prolog");
+	    # Let the order number of the composite option be less
+	    # than the order number of the current member
+	    if ($arg->{'order'} >= $a->{'order'}) {
+		$arg->{'order'} = $a->{'order'} - 1;
+		if ($arg->{'order'} < 0) {
+		    $arg->{'order'} = 0;
+		}
+	    }
+
+	    # Do not add a "From<Composite>" choice to an option with only
+	    # one choice
+	    next if $#{$a->{'vals'}} < 1;
+
+	    # Add "From<Composite>" choice
+	    # setting record
+	    my $rec;
+	    $rec->{'value'} = "From$name";
+	    $rec->{'comment'} = "Controlled by '$name'";
+	    # We mark the driverval as invalid with a non-printable
+	    # character, this means that the code to insert will be an
+	    # empty string in the PPD.
+	    $rec->{'driverval'} = "\x01";
+	    # Insert record as the first item in the 'vals' array
+	    unshift(@{$a->{'vals'}}, $rec);
+	    # Update 'vals_byname' hash
+	    $a->{'vals_byname'}{$rec->{'value'}} = $a->{'vals'}[0];
+	    for (my $i = 1; $i <= $#{$a->{'vals'}}; $i ++) {
+		$a->{'vals_byname'}{$a->{'vals'}[$i]{'value'}} =
+		    $a->{'vals'}[$i];
+	    }
+
+	    # Set default to the new "From<Composite>" choice
+	    $a->{'default'} = $rec->{'value'};
+	}
+    }
+ 
+    # Sort options with "sortargs" function after they were re-grouped
+    # due to the composite options
+    my @sortedarglist = sort sortargs @{$dat->{'args'}};
+    @{$dat->{'args'}} = @sortedarglist;
+
     # Construct the option entries for the PPD file
 
     my @groupstack; # In which group are we currently
@@ -1516,10 +1620,8 @@ sub getppd {
 	my $optstyle = ($arg->{'style'} eq 'G' ? "PS" :
 			($arg->{'style'} eq 'J' ? "JCL" :
 			 ($arg->{'style'} eq 'C' ? "CmdLine" :
-	# Collective options not implemented in 2.9.0 release skip
-	# them.
-	#		  ($arg->{'style'} eq 'X' ? "Collective" :
-			  "Unknown")));
+			  ($arg->{'style'} eq 'X' ? "Composite" :
+			   "Unknown"))));
 	next if $optstyle eq "Unknown";
 
 	# The command prototype should not be empty, set default
@@ -1535,7 +1637,7 @@ sub getppd {
 	# are sorted to have the members of every group together
 
 	# Find the level on which the group path of the current option
-	# (@group) defers from the group path of the last option
+	# (@group) differs from the group path of the last option
 	# (@groupstack).
         my $level = 0;
 	while (($level <= $#groupstack) and
@@ -1684,8 +1786,14 @@ sub getppd {
 			     "*PaperDimension $value/$comment: \"$size\"");
 		    }
 		    my $foomaticstr = "";
-		    if ($arg->{'style'} eq 'G') {
-			# Ghostscript argument; offer up ps for insertion
+		    # For PostScript options PostScript code must be 
+		    # inserted, unless they are member of a composite
+		    # option AND they are set to the "Controlled by
+		    # '<Composite>'" choice (driverval is "\x01")
+		    if (($arg->{'style'} eq 'G') &&
+			($v->{'driverval'} ne "\x01")) {
+			# Ghostscript argument; offer up ps for
+			# insertion
 			$psstr = sprintf($cmd, 
 					 (defined($v->{'driverval'})
 					  ? $v->{'driverval'}
@@ -1693,20 +1801,33 @@ sub getppd {
 		    } else {
 			# Option setting directive for Foomatic filter
 			# 4 "%" because of the "sprintf" applied to it
-			# In the end stay 2 "%" to have a PostScript comment
+			# In the end stay 2 "%" to have a PostScript 
+			# comment
 			$psstr = sprintf
-			     ("%%%% FoomaticRIPOptionSetting: %s=%s",
-			      $name, $v->{'value'});
-			my $header = sprintf
-			    ("*FoomaticRIPOptionSetting %s=%s",
+			    ("%%%% FoomaticRIPOptionSetting: %s=%s",
 			     $name, $v->{'value'});
-			my $cmdval =
-			    sprintf($cmd,
-				    (defined($v->{'driverval'})
-				     ? $v->{'driverval'}
-				     : $v->{'value'}));
-			$foomaticstr = ripdirective($header, $cmdval) . 
-			    "\n";
+			if ($v->{'driverval'} eq "\x01") {
+			    # Only set the $foomaticstr when the selected
+			    # choice is not the "Controlled by
+			    # '<Composite>'" of a member of a collective
+			    # option. Otherwise leave it out and let
+			    # the value in the "FoomaticRIPOptionSetting"
+			    # comment be "@<Composite>".
+			    $psstr =~ s/=From/=\@/;
+			    $foomaticstr = "";
+			} else {
+			    my $header = sprintf
+				("*FoomaticRIPOptionSetting %s=%s",
+				 $name, $v->{'value'});
+			    my $cmdval = "";
+			    $cmdval =
+				sprintf($cmd,
+					(defined($v->{'driverval'})
+					 ? $v->{'driverval'}
+					 : $v->{'value'}));
+			    $foomaticstr = ripdirective($header, $cmdval) . 
+				"\n";
+			}
 		    }
 		    # Code supposed to be inserted into the PostScript
 		    # data when this choice is selected.

@@ -1,3 +1,29 @@
+2002-12-09  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Introduced support for
+	  composite options.  The "genppd()" now does all steps to
+	  correctly set up a composite option in the PPD file (Marking
+	  composite option appropriately, letting its "code" be put into
+	  the PostScript stream before the code of all members, putting
+	  members in a group named after the composite option, add
+	  "Controlled by '<Composite>'" setting to the
+	  members). Limitations for now are:
+
+	   - Composite options must be enumerated choice (will most
+	     probably always be the case).
+
+	   - Members must be enumerated choice (one could later add
+	     boolean, then "genppd()" would need to convert that
+	     boolean options into enumerated choice, that they can
+	     have the additional choice).
+
+	   - Members can be every execution style except composite
+	     (otherwise the option groups would get messy).
+
+	  The second and the third limitation only concern the PPD file
+	  generation with the "genppd()" function, not the job processing
+	  with "foomatic-rip".
+	
 2002-12-06  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Let parantheses being removed in the

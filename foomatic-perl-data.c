@@ -983,11 +983,11 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	      if (debug)
 		fprintf(stderr,
 			"    Option style: PJL command\n");
-	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_collective"))) {
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_composite"))) {
 	      option->style = (xmlChar *)"X";
 	      if (debug)
 		fprintf(stderr,
-			"    Option style: Collective option\n");
+			"    Option style: Composite option\n");
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_spot"))) {
 	      option->spot =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
