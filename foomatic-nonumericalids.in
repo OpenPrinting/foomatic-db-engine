@@ -1,0 +1,153 @@
+#!@PERL@
+
+# This is foomatic-nonumericalids, it renames all printer entries with a
+# numerical ID and generates a translation table.
+
+use Foomatic::Defaults;
+use Foomatic::DB qw/get_overview/;
+# Needs "get_overview" to be added to the "@EXPORT_OK" list of DB.pm!
+
+# Read out the program name with which we were called, but discard the path
+$0 =~ m!/([^/]+)\s*$!;
+$progname = $1;
+
+my $db = new Foomatic::DB;
+
+# Get the printer overview list as a Perl data structure
+$db->get_overview();
+
+# Find all numerical IDs, determine new clear-text IDs, and rename the
+# printer entry files.
+my @oldidlist;
+my @newidlist;
+my @translationtable;
+my %idhash;
+
+my $printer;
+for $printer (@{$db->{'overview'}}) {
+    # Nothing to do if ID is not numerical
+    next if $printer->{'id'} !~ /^\d/;
+    # Generate new ID from make and model name
+    $newid = join('-',($printer->{'make'},
+		       $printer->{'model'}));
+    $newid =~ s![ /,\(\)\?]!_!g;
+    $newid =~ s![\+]!plus!g;
+    $newid =~ s![\&]!_and_!g;
+    $newid =~ s!__+!_!g;
+    $newid =~ s!_$!!;
+    $newid =~ s!_-!-!;
+    $newid =~ s!^_!!;
+    # Append a number in case of duplicate IDs
+    if (member($newid, @newidlist)) {
+	print "WARNING: ID \"$newid\" already exists, ";
+	$newid .= '_';
+	my $i = 1;
+	while (member("$newid$i", @newidlist)) {
+	    $i ++;
+	}
+	$newid .= $i;
+	print "using \"$newid\",\n";
+    }
+    print "$printer->{'make'} $printer->{'model'}: $printer->{'id'} -> $newid\n";
+    # Add change to lists
+    push (@oldidlist, "db/source/printer/$printer->{'id'}.xml\n");
+    push (@newidlist, "db/source/printer/$newid.xml\n");
+    push (@translationtable, "$printer->{'id'} $newid\n");
+    $idhash{$printer->{'id'}} = $newid;
+    # Rename the printer entry file
+    system("mv $libdir/db/source/printer/$printer->{'id'}.xml $libdir/db/source/printer/$newid.xml") and
+	die "Could not rename $printer->{'id'}.xml to $newid.xml.\n";
+    print "   Renamed $printer->{'id'}.xml to $newid.xml.\n";
+}
+
+# Translation table to convert old numerical printer IDs to new
+# clear-text ones
+my $file = "$libdir/db/oldprinterids";
+open FILE, "> $file" ||
+    die "File $file cannot be written!\n";
+print FILE join('', @translationtable);
+close FILE;
+print "   Wrote $file.\n";
+
+# List of old printer files to be removed from CVS
+$file = "oldprinterfiles";
+open FILE, "> $file" ||
+    die "File $file cannot be written!\n";
+print FILE join('', @oldidlist);
+close FILE;
+print "   Wrote $file.\n";
+
+# List of files to be added to the CVS
+$file = "newprinterfiles";
+open FILE, "> $file" ||
+    die "File $file cannot be written!\n";
+print FILE join('', @newidlist);
+close FILE;
+print "   Wrote $file.\n";
+
+# Scan through all files of the database and replace all references to
+# numerical printer IDs to the appriopriate new IDs
+my @xmlfiles;
+opendir DIR, "$libdir/db/source/printer" ||
+    die "Cannot open printer XML directory!\n";
+while ($file = readdir(DIR)) {
+    push(@xmlfiles, "printer/$file") if $file =~ /^[^\.].*\.xml$/;
+}
+closedir DIR;
+opendir DIR, "$libdir/db/source/driver" ||
+    die "Cannot open driver XML directory!\n";
+while ($file = readdir(DIR)) {
+    push(@xmlfiles, "driver/$file") if $file =~ /^[^\.].*\.xml$/;
+}
+closedir DIR;
+opendir DIR, "$libdir/db/source/opt" ||
+    die "Cannot open option XML directory!\n";
+while ($file = readdir(DIR)) {
+    push(@xmlfiles, "opt/$file") if $file =~ /^[^\.].*\.xml$/;
+}
+closedir DIR;
+
+my $changes = 0;
+my $chfiles = 0;
+my @chfilelist;
+for $file (@xmlfiles) {
+    print "Processing $file";
+    open FILE, "< $libdir/db/source/$file" ||
+	die "Database entry $file cannot be read!\n";
+    my @lines = <FILE>;
+    close FILE;
+    my $ch = 0;
+    for my $id (keys %idhash) {
+	foreach (@lines) {
+	    if (s!(printer/|recnum=)$id($|\D)!$1$idhash{$id}$2!g) {
+		$ch = 1;
+		$changes ++;
+		print ".";
+	    }
+	}
+    }
+    print "\n";
+    next if !$ch;
+    open FILE, "> $libdir/db/source/$file" ||
+	die "Database entry $file cannot be written!\n";
+    print FILE join('', @lines);
+    close FILE;
+    print "   Wrote $file.\n";
+    $chfiles ++;
+    push(@chfilelist, "db/source/$file\n");
+}
+
+# List of files changed in CVS
+$file = "changedfiles";
+open FILE, "> $file" ||
+    die "File $file cannot be written!\n";
+print FILE join('', @oldidlist, @chfilelist);
+close FILE;
+print "   Wrote $file.\n";
+
+print "$changes changes on $chfiles files applied.\n";
+
+exit 0;
+
+# member( $a, @b ) returns 1 if $a is in @b, 0 otherwise.
+sub member { my $e = shift; foreach (@_) { $e eq $_ and return 1 } 0 };

@@ -171,7 +171,8 @@ AC_OUTPUT(Makefile makeDefaults makeMan
 foomatic-configure foomatic-printjob foomatic-kitload
 foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
 foomatic-getpjloptions foomatic-addpjloptions
-foomatic-compiledb foomatic-fix-xml foomatic-ppdload)
+foomatic-compiledb foomatic-fix-xml foomatic-ppdload
+foomatic-nonumericalids)
 
 dnl Finished
 echo "Finished configuring."

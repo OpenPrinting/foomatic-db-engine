@@ -1,6 +1,6 @@
 
-Foomatic 3.0.0beta2
-===================
+Foomatic 3.0.0rc1
+=================
 
 foomatic-db-engine
 ------------------
@@ -63,7 +63,7 @@ the upcoming Foomatic 3.0.
 New features for Foomatic 3.0
 -----------------------------
 
-Implemented in 3.0.0beta2:
+Implemented in 3.0.0rc1:
 
  - For all supported spoolers (CUPS, LPRng, LPD, GNUlpr, PPR, PDQ, CPS,
    no spooler) the same PostScript-to-printer's-native-language filter
@@ -272,6 +272,12 @@ Implemented in 3.0.0beta2:
    choices to be Adobe-compliant, the exact default value for
    Foomatic-aware applications is stored with the new
    "*FoomaticRIPDefault<option>: ..." keywords now.
+
+ - Added a facility to chnage all the cryptic numerical printer IDs
+   from the old PostGreSQL time to clear-text printer IDs. With a
+   translation function it is assured that one can still use the old
+   IDs, for example to not break links to the linuxprinting.org web
+   site.
 
 Planned/Roadmap for 3.0.x:
 
@@ -682,6 +688,16 @@ foomatic-preferred-driver
   the local Foomatic database (for example when you have removed a driver
   entry from the database which belongs to a driver which is not built
   into your GhostScript).
+
+foomatic-nonumericalids
+
+  This script changes all old cryptic numerical printer IDs from the
+  old PostGreSQL time to clear-text printer IDs in the installed
+  Foomatic database. The current "foomatic-db" has no numerical IDs
+  any more (this script has been applied to it), but if you use and
+  older Foomatic database (for example to match the of your distro)
+  you can change the IDs with this script. With a translation table it
+  is assured that one can still use the old IDs.
 
 
 Filters

@@ -6,6 +6,7 @@ use Exporter;
 @EXPORT_OK = qw(normalizename comment_filter
 		get_overview
 		getexecdocs
+		translate_printer_id
 		);
 @EXPORT = qw(ppdtoperl ppdfromvartoperl);
 
@@ -22,11 +23,31 @@ sub new {
     return $this;
 }
 
-# A map from the database's internal one-letter types to English
+# A map from the database's internal one-letter driver types to English
 my %driver_types = ('F' => 'Filter',
 		    'P' => 'Postscript',
 		    'U' => 'Ghostscript Uniprint',
 		    'G' => 'Ghostscript');
+
+# Translate old numerical PostGreSQL printer IDs to the new clear text ones.
+sub translate_printer_id {
+    my ($oldid) = @_;
+    # Read translation table for the printer IDs
+    my $translation_table = "$libdir/db/oldprinterids";
+    open TRTAB, "< $translation_table" or return $oldid;
+    while (<TRTAB>) {
+	chomp;
+	if (/^\s*$oldid\s+(\S+)\s*$/) {
+	    # ID found, return new ID
+	    my $newid = $1;
+	    close TRTAB;
+	    return $newid;
+	}
+    }
+    # ID not found, return original one
+    close TRTAB;
+    return $oldid;
+}
 
 # List of driver names
 sub get_driverlist {

@@ -175,6 +175,13 @@ if (!defined($in_config->{'spooler'})) {
     $in_config->{'spooler'} = $s;
 }
 
+if ($in_config->{'printer'}) {
+    # If the user supplies an old numerical printer ID, translate it to
+    # a new clear-text ID
+    $in_config->{'printer'} =
+	Foomatic::DB::translate_printer_id($in_config->{'printer'});
+}
+
 # Call proper proc
 &{$procs->{$in_config->{'spooler'}}{$action}}($in_config);
 exit(0);

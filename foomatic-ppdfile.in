@@ -11,6 +11,10 @@ my $poid   = $opt_p;
 
 if (defined($driver) and defined($poid)) {
 
+    # If the user supplies an old numerical printer ID, translate it to
+    # a new clear-text ID
+    $poid = Foomatic::DB::translate_printer_id($poid);
+
     my $db = Foomatic::DB->new();
     # Get all the data about this driver/printer pair
     $db->getdat($driver, $poid);
