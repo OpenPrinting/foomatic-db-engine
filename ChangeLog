@@ -1,3 +1,8 @@
+2003-10-20  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* configure.in, Makefile.in, README.build-foomatic-filters-ppds:
+	  Fixes from Patrick Powell.
+
 2003-09-07  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed bug of the getpapersize() function

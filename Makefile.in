@@ -185,10 +185,10 @@ install-bin: check-config lib/Makefile
 	install -d $(DESTDIR)$(SBINDIR)
 	install -d $(DESTDIR)$(ETCDIR)
 	install -d $(DESTDIR)$(LIBDIR)/templates
-	cp -f $(BINFILES) $(DESTDIR)$(BINDIR)
-	cp -f $(SBINFILES) $(DESTDIR)$(SBINDIR)
+	install -m 755 $(BINFILES) $(DESTDIR)$(BINDIR)
+	install -m 755 $(SBINFILES) $(DESTDIR)$(SBINDIR)
 	( cd foomatic-templates && \
-	  cp -f $(TEMPLATES) $(DESTDIR)$(LIBDIR)/templates \
+	  install -m 644 $(TEMPLATES) $(DESTDIR)$(LIBDIR)/templates \
 	)
 	$(PERL) -p -i -e "s:foomatic-templates:$(LIBDIR)/templates:g" $(DESTDIR)$(SBINDIR)/foomatic-addpjloptions
 #	Link to allow foomatic-ppdfile be called under the old name
@@ -199,8 +199,8 @@ install-man: check-config
 	install -d $(DESTDIR)$(MANDIR)
 	install -d $(DESTDIR)$(MANDIR)/man1
 	install -d $(DESTDIR)$(MANDIR)/man8
-	cp -f *.1 $(DESTDIR)$(MANDIR)/man1
-	cp -f *.8 $(DESTDIR)$(MANDIR)/man8
+	install -m 644 *.1 $(DESTDIR)$(MANDIR)/man1
+	install -m 644 *.8 $(DESTDIR)$(MANDIR)/man8
 
 # If the Perl scripts have "use lib 'lib/';" lines from a former
 # "make testing", we remove them.
@@ -228,7 +228,7 @@ clean: lib/Makefile remove-trash
 	rm -f lib/Makefile.old
 	rm -f lib/Foomatic/Defaults.pm
 	rm -f *~ .testing-stamp
-	rm -f *.o
+	rm -f *.o gs_out
 	rm -f foomatic-combo-xml
 	rm -f foomatic-perl-data
 	rm -f Foomatic
