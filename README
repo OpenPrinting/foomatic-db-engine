@@ -1,5 +1,5 @@
 
-Foomatic 2.9.0
+Foomatic 2.9.1
 ==============
 
 foomatic-db-engine
@@ -63,7 +63,7 @@ the upcoming Foomatic 3.0.
 New features for Foomatic 3.0
 -----------------------------
 
-Implemented in 2.9.0:
+Implemented in 2.9.1:
 
  - For all supported spoolers (CUPS, LPRng, LPD, GNUlpr, PPR, PDQ, CPS,
    no spooler) the same PostScript-to-printer's-native-language filter
@@ -122,7 +122,7 @@ Implemented in 2.9.0:
    optionally foomatic-gswrapper. No different files for different
    spoolers.
 
- - Custom page size support with all spoolers, when the PPD file has
+ - Custom page size support with all spoolers when the PPD file has
    Adobe-compliant definitions for usage of custom page sizes.
 
  - The spooler-less printing mode of foomatic-rip can be used for testing 
@@ -160,44 +160,62 @@ Implemented in 2.9.0:
    queue with a third-party PPD file) added, and the meaning of "-f"
    (force rebuild of PPD) changed.
 
-Planned/Roadmap for 2.9.x:
+ - Option groups: Options can be put into groups and subgroups in the
+   PPD files, so that GUIs can present them in a structured way (in
+   tabs or in a tree structure). It is nearly completely functional,
+   the only thing missing is translation support ("long names" for the
+   groups, as "Adjustments and Corrections" for "Adjustment", or
+   translations to other languages). Now the PPD generator makes
+   trivial translations ("ThisIsAGroup" -> "This Is A Group")
+   automatically.
 
- - Composite options: This is a new option type to make it easier for 
-   users to choose the best settings for a certain printing task, even
-   if the driver has very many options. The idea is to have an enumerated
-   choice option which does not directly modify something in the driver's
-   command line but sets several of the other options.
+ - Composite options: This is a new option type to make it easier for
+   users to choose the best settings for a certain printing task,
+   especially if the driver has very many options. The idea is to have
+   an enumerated choice option which does not directly modify
+   something in the driver's command line but sets several of the
+   other options.
 
-   For example we could have a "Document Type" option with the following
-   choices:
+   We will have a "Printout Mode" option for all printers with the 
+   following choices:
 
       Draft
-      Office document
-      High quality document
+      Normal
+      High Quality
+      Very High Quality
       Photo
 
-   It would set the options "Media Type", "Resolution", and "Dither" as
-   follows:
+   For an Epson Stylus Color 680 with GIMP-Print it sets the options
+   resolution, ditherering, and image type as follows:
 
-      Choice           Media Type      Resolution        Dither
+      Choice           Resolution     Dither            ImageType
       ------------------------------------------------------------------
-      Draft            Plain Paper     300x300 dpi       Fast
-      Office document  Plain Paper     600x600 dpi       Floyd-Steinberg
-      High quality doc Plain Paper     1200x1200 dpi     Floyd-Steinberg
-      Photo            Photo Paper     1200x1200 dpi     Even Tone
+      Draft            180x180 dpi    Very Fast         LineArt
+      Normal           360x360 dpi    Adaptive Hybrid   Photographs
+      High Quality     720x720 dpi    Adaptive Hybrid   Photographs
+      Very High Qual.  1440x720 dpi   Adaptive Hybrid   Photographs
+      Photo            2880x720 dpi   Even Tone         Photographs
 
-   The member options of the composite option will all get one choice
-   called "Default"/"Controlled by 'Document Type'" added, which will
-   get their default setting. If this choice is selected, the option
-   is set by the composite option according to the table. If the user
-   wants to modify one of the individual member options, he simply 
-   chooses a value other than "Default". In addition the member options
-   will be put into a group (names "Custom Document Type"). and the
-   composite option goes into the same group as "PageSize", "InputSlot",
-   ... So the user sees the composite option on the "Front page" of the
-   GUI and can quickly set up print jobs without getting confused. The
-   user with more special demands goes to the tab with the member options
-   and makes detailed choices.
+   The mentioned settings set all the color mode to "Color", there
+   are also choices with a ".Gray" modifier (ex: "Normal.Gray" which
+   set the color mode to "Grayscale", but the other mentioned options
+   as the standard variants ("Normal").
+
+   The member options of the composite option all get one choice
+   called "FromPrintoutMode"/"Controlled by 'Printout Mode'" added,
+   which gets their default setting. If this choice is selected, the
+   option is set by the composite option according to the table. If
+   the user wants to modify one of the individual member options, he
+   simply chooses a value other than "FromPrintoutMode" for this
+   particular option. In addition the member options will be put into
+   a group (named "Printout Mode"). and the composite option goes into
+   the same group as "PageSize", "InputSlot", ... So the user sees the
+   composite option on the "Front page" of the GUI and can quickly set
+   up print jobs without getting confused. The user with more special
+   demands goes to the tab with the member options and makes detailed
+   choices.
+
+Planned/Roadmap for 2.9.x:
 
  - Non-printable margins: Both printer and driver XML database entries
    should get a new section for unprintable margins, so that the
@@ -211,10 +229,6 @@ Planned/Roadmap for 2.9.x:
    (individually determined for each page border) is inserted. If the
    unprintable margins of a printer depend on options settings, the
    "worst case" is chosen, too.
-
- - Option groups: Options can be put into groups and subgroups in the
-   PPD files, so that GUIs can present them in a structured way (in
-   tabs or in a tree structure). This is already partially implemented.
 
  - Option conflicts: PPDs allow to define conflicts between option settings,
    so that one cannot set up things which the printer cannot do or
@@ -801,6 +815,11 @@ Foomatic filters ("foomatic-filters") packages. It is recommended to
 install these packages before you install this package. Then the paths
 to its components get auto-detected during the build of this package.
 
+Composite options are introduced in "foomatic-db" from December 17,
+2002 ("20021217") or newer, "foomatic-db-hpijs" 1.3-2 or newer, and
+GIMP-Print 4.2.5 or newer. "foomatic-filters" 2.9.1 or newer is needed
+for using them.
+
 "wget" (from www.gnu.org) is really a standard tool which nearly every
 distribution includes.
 
@@ -898,19 +917,34 @@ source/opt/2.xml
 # the driver's command line, at the spot (e. g. "%A") whose letter is
 # given between the <arg_spot>...</arg_spot> tags, the <arg_proto> of
 # an <arg_postscript /> option is a snippet of PostScript code which
-# is inserted in the beginning of the PostScript data stream of the
-# job, not after the code for the first page begins. The <arg_proto>
-# lines of <arg_pjl> are PJL commands which are sent to the printer
-# before the output of the drivers command line is sent. Because this
+# is inserted into the PostScript data stream of the job, for
+# DSC-conforming PostScript into the section specified with
+# <arg_section>, otherwise in the beginning. The <arg_proto> lines of
+# <arg_pjl /> options are PJL commands which are sent to the printer
+# before the output of the driver's command line is sent. Because this
 # only works reliably when the driver output does not have its own PJL
 # command header, these options are ignored when the driver's XML file
 # is marked with a <nopjl /> tag in its <execution> section. Drivers
-# which produce their own PJL and therefore marked with <nopjl /> are
-# for example "hpijs" and "hl1250". The user's value gets put into the
-# <arg_proto>'s %s location.
+# which produce their own PJL and therefore are marked with <nopjl />
+# are for example "hpijs" and "hl1250". There is also the
+# <arg_composite /> execution style for composite options, see the
+# "Composite Options" section below. The user's value gets put into
+# the <arg_proto>'s %s location. 
 
+# The <arg_group>...</arg_group> tags put the option into the PPD
+# option group named here. In many PPD-based GUIs ("kprinter", "xpp",
+# OpenOffice.org, ...) every group is shown as a tab or a tree branch
+# containing the member options of this group. You can also specify
+# subgroups. Then you have to use a "group path" similar to directory
+# paths, with the group and subgroup names separated by slashes
+# (<arg_group>General/Paper</arg_group> is the "Paper" subgroup in the
+# "General" group). Subgroups are not recommended as there is no GUI
+# supporting them. If an option is member of a composite option (See
+# "Composite Options" section below), the <arg_group>...</arg_group>
+# tags will be ignored.
 
   <arg_execution>
+   <arg_group>General</arg_group>
    <arg_order>100</arg_order>
    <arg_section>DocumentSetup</arg_section>
    <arg_spot>Z</arg_spot>
@@ -1421,6 +1455,308 @@ things, but the two biggies are the prototype and the printers list
 #  </printer>
 
 
+Composite Options
+-----------------
+
+This is a new option type to make it easier for users to choose the
+best settings for a certain printing task, even if the driver has very
+many options. The idea is to have an enumerated choice option which
+does not directly modify something in the driver's command line but
+sets several of the other options.
+
+One example is the "PrintoutMode" option which will be made available
+for all printer/driver combos which have at least one option regarding
+the printout quality or document type. 
+
+The possible choices should be the same for every printer and driver,
+so that users (especially newbies) can bring their printers in the
+right mode by choosing one easy to understand item from a menu instead
+of having to switch several cryptic driver options. For now the
+choices are the following:
+
+   Command line  GUI                Intention
+   -----------------------------------------------------------------------
+   Draft         Draft              Very fast, ink/toner-saving printout
+   Normal        Normal             Quick standard quality printout
+   High          High Quality       High quality for plain paper
+   VeryHigh      Very High Quality  Highest quality for plain/inkjet paper
+   Photo         Photo              Highest quality for photo paper
+
+These choices can also have one of the following modifiers:
+
+   Modifyier     Intention
+   -----------------------------------------------------------------------
+   .Gray         Grayscale printing on a color printer
+   .Mono         Monochrome printing (no grayscales, black or white)
+
+Examples:
+
+   Command line   GUI                      Comment
+   ---------------------------------------------------------------------
+   High.Gray      High Quality Grayscale
+   Photo          Photo                    Color photos on color printer
+   VeryHigh.Mono  Very High Quality Monochrome  Really black text in
+                                           highest quality on inkjet
+                                           printer, not suitable for
+                                           halftone images.
+   Normal         Normal                   Standard color in 300/360 dpi
+                                           on normal paper, grayscale
+                                           on black-and-white printers
+
+Not all choices/combinations of basic choices and modifiers must be
+present. Often modes are simply not available on certain
+printer/driver combos, as "Photo" on most lasers. It is highly
+recommended to have "Normal" available, though (and having this the
+default).
+
+The GUI names can have additional remarks in parantheses, for example
+when manual intervention (other cartridge, photo paper) is needed.
+
+To add such an option to the database, one only needs to add an option
+XML file like the one below into the db/source/opt directory of the
+database. The file "db/source/opt/pcl3-PrintoutMode.xml could look
+like this:
+
+--------------------------------------------------------------------------
+<option type="enum" id="opt/pcl3-PrintoutMode">
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+  <arg_longname>
+   <en>Printout Mode</en>
+  </arg_longname>
+  <arg_shortname>
+   <en>PrintoutMode</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+  <arg_execution>
+   <arg_order>10</arg_order>
+   <arg_section>AnySetup</arg_section>
+   <arg_spot>A</arg_spot>
+   <arg_composite />
+   <!-- <arg_proto></arg_proto> -->
+  </arg_execution>
+  <constraints>
+     <constraint sense="true">
+      <driver>pcl3</driver>
+      <arg_defval>ev/pcl3-PrintoutMode-Normal</arg_defval>
+     </constraint>
+  </constraints>
+  <enum_vals>
+   <enum_val id="ev/pcl3-PrintoutMode-Draft">
+    <ev_longname>
+     <en>Draft</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Draft</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>MediaType=Plain Resolution=150 Quality=Draft IntensityRendering=Halftones Passes=1</ev_driverval>
+   </enum_val>
+   <enum_val id="ev/pcl3-PrintoutMode-Normal">
+    <ev_longname>
+     <en>Normal</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Normal</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>MediaType=Plain Resolution=300 Quality=Normal IntensityRendering=Halftones Passes=1</ev_driverval>
+   </enum_val>
+   <enum_val id="ev/pcl3-PrintoutMode-High">
+    <ev_longname>
+     <en>High</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>High</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>MediaType=Plain Resolution=600 Quality=Presentation IntensityRendering=FloydSteinberg Passes=4</ev_driverval>
+   </enum_val>
+   <enum_val id="ev/pcl3-PrintoutMode-Photo">
+    <ev_longname>
+     <en>Photo (on photo paper)</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Photo</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>MediaType=Premium Resolution=600 Quality=Presentation IntensityRendering=FloydSteinberg Passes=4</ev_driverval>
+   </enum_val>
+  </enum_vals>
+</option>
+--------------------------------------------------------------------------
+
+The shown option is only an example, it is neither in the CVS nore
+will it work with all printers which use the "pcl3" driver. You can
+paste it into a file (make the <ev_driverval>"s being one line, the
+items separated by spaces) and copy it to db/source/opt/ to try it
+out.
+
+The "<arg_composite />" tag for the execution style specifies it as a
+composite option. The <arg_spot> and <arg_proto> are meaningless in a
+composite option and the "<ev_driverval>"s contain a space-separated
+list of all settings of which the pre-made configuration represented
+by this choice consists. Every choice of the composite option must set
+EXACTLY THE SAME individual options. In no choice it is allowed to
+leave out one of them. These individual options are the member options
+of the composite option. Not all options of a driver/printer combo
+need to be member options of the composite option. It is not allowed
+to have one option being member of more than one composite option. The
+composite option and all member options must be enumerated choice
+options.
+
+It is enough to add a composite option as shown. The PPD generator
+(getppd() in lib/Foomatic/DB.pm, package "foomatic-db-engine") will
+take care of the rest. It will
+
+   - Order all member options into a group (PPD group, see "Option
+     Grouping" below) named after the composite option.
+
+   - Add to every member option the choice "Controlled by '<name of
+     the composite option>'" and make this choice the default. If this
+     is chosen, the composite option will set the value for this
+     member, depending on what value is chosen for the composite
+     option. If the user chooses something else than "Controlled by
+     '<name of the composite option>'" the member option does not obey
+     the setting given by the composite option. So the advanced user
+     can also set the member options individually.
+
+   - If necessary the <arg_order> and <arg_section> of the composite
+     option is replaced by other values in the PPD file, so that the
+     composite option will be stuffed into the PostScript data stream
+     always before all its member options. Do not give "0" as the
+     order number to any of the member options.
+
+A composite option can also span only one (but not zero) member
+option. This is for example done with the "PrintoutMode" option of the
+HPIJS driver ("foomatic-db-hpijs" package). This driver has only one
+option for setting resolution and quality, but this options has
+sometimes many choices with rather cryptic names. The "PrintoutMode"
+maps to the most important choices with the above-mentioned names, and
+in addition, these names are the same as of the "PrintoutMode" options
+of other drivers, so the user finds the important printing modes more
+easily.
+
+The facility of composite options can also be used for other things
+than for a "PrintoutMode" option, for example a finisher could be
+controlled by a composite option (to have the most common finishing
+tasks as "Bound booklet", "Stapled booklet", "Letter in envelope",
+...).
+
+
+Option Grouping
+---------------
+
+All options should be put in groups (with the tags
+"<arg_group>...</arg_group>" in the "<arg_execution>" section of the
+option XML files, see above). This way many GUIs sort the options into
+tabs or tree branches according to the groups. This way one gets only
+the most important options on the first tab and not so often needed
+ones on additional tabs. This also overrides the automatic option
+grouping of CUPS (Groups "General" and "Extra").
+
+It is recommended to have the options in groups as follows (plus
+perhaps special groups, but not one group for every option):
+
+General
+
+  Here go options which are most used on a job-by-job basis, as the
+  options for paper type, size, and tray, ink type, duplex, ... and
+  all options affecting the printout quality, as resolution,
+  dithering, ... and especially "PrintoutMode". If a "PrintoutMode"
+  option is present, all quality-related options covered by the
+  "PrintoutMode" option go into the automatically created
+  "PrintoutMode" group (see above). And this is intended, these
+  options are now usually controlled by "PrintoutMode" and so they are
+  not the most important options for the first tab any more.
+
+  Do not put color/brightness/gamma, ... options here, they go to
+  "Adjustment".
+
+  Options typically to go here are:
+
+    o PageSize
+    o InputSlot
+    o MediaType
+    o InkType
+    o Duplex
+    o PrintoutMode
+    o Resolution
+    o REt
+    o Dither
+    o FastRes
+    o Economode
+    o ...
+
+  All options mentioned after "PrintoutMode" will usually be used as
+  member options for "PrintoutMode", they are only in this group when
+  there is no "PrintoutMode" option.
+
+PrintoutMode
+
+  This group only exists if there is a "PrintoutMode" option, because
+  it is generated by this option. It contains the member options of
+  "PrintoutMode". Typical candidates are
+
+    o Resolution
+    o REt
+    o Dither
+    o FastRes
+    o Economode
+    o ...
+
+  They do not need an "<arg_group>PrintoutMode</arg_group>" line, they
+  are put into this group automatically. You should better put an
+  "<arg_group>General</arg_group>" line into these options, so that
+  they go into the "General" group when there is a printer/driver
+  combo for which no "PrintoutMode" option applies.
+
+Adjustment
+
+  Options for correcting the appearance of colors, contrast, ..., for
+  head alignment, ... etc. Here most numerical options will go, but
+  also things like "Density", also if it is an enumerated choice
+  option. Typical candidates are:
+
+    o Gamma
+    o Brightness
+    o Contrast
+    o Density
+    o Saturation
+    o Cyan
+    o Magenta
+    o Yellow
+    o ...
+
+Finishing
+
+  If a printer has a stapler, folder, cutter, envelope packer, or
+  similar devices to do additional processing on the ready printout,
+  the options to control this stuff go into this group. Examples:
+
+    o Stapling
+    o Binding
+    o Cutting
+    o Booklet
+    o ...
+
+Miscellaneous
+
+  Options which do not fit into the mentioned groups and for which it
+  is not worth to make a special group.
+
+
 Example for a Foomatic-generated PPD file
 -----------------------------------------
 
@@ -1428,6 +1764,10 @@ This is an example PPD file, the PPD file for the Citizen printiva600U
 used with the "ppmtomd" driver. It was generated with the command line
 
    ./foomatic-ppdfile -p Citizen-printiva600U -d ppmtomd
+
+(Note that the group tags in this example are added manually, they are
+ only an example to show how the option grouping for this combo could
+ look like. It can be different when it is finally implemented).
 
 The structure is completely Adobe-compliant and no information is in
 comments. Besides the usual keywords which one finds in PPDs there are some
@@ -1501,6 +1841,11 @@ the manufacturer and model names from there are inserted in the
 *FoomaticRIPCommandLine: "gs -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -sDE&&
 VICE=ppmraw -sOutputFile=-%A%B -informat Colour%C"
 *End
+
+*FoomaticRIPOption Model: enum CmdLine C 210
+*FoomaticRIPOptionSetting Model=Printiva-600U: " -model Printiva-600U"
+
+*OpenGroup: General/General
 
 *OpenUI *PageSize/Page Size and Printing Quality: PickOne
 *FoomaticRIPOption PageSize: enum CmdLine B
@@ -1592,6 +1937,56 @@ ersize Letter"
 *PaperDimension LegalHR/Legal, 1200x600 DPI: "612 1008"
 *PaperDimension LetterHR/Letter, 1200x600 DPI: "612 792"
 
+*OpenUI *PrintingMode/Printing Mode: PickOne
+*FoomaticRIPOption PrintingMode: enum CmdLine C
+*OrderDependency: 130 AnySetup *PrintingMode
+*DefaultPrintingMode: Colour
+*PrintingMode Black/Monochrome printing, standard black cartridge: "%% FoomaticRIPOptionSetting: PrintingMode=Black"
+*FoomaticRIPOptionSetting PrintingMode=Black: " -datamode Black"
+*PrintingMode Cassette/Do not care about cartridges, colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=Cassette"
+*FoomaticRIPOptionSetting PrintingMode=Cassette: " -datamode Cassette"
+*PrintingMode Colour/Colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=Colour"
+*FoomaticRIPOptionSetting PrintingMode=Colour: " -datamode Colour"
+*PrintingMode EconoBlack/Monochrome printing, re-usable economy black cartridge: "%% FoomaticRIPOptionSetting: PrintingMode=EconoBlack"
+*FoomaticRIPOptionSetting PrintingMode=EconoBlack: " -datamode EconoBl&&
+ack"
+*End
+*PrintingMode MultiColour/More than 4 colours, colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=MultiColour"
+*FoomaticRIPOptionSetting PrintingMode=MultiColour: " -datamode MultiC&&
+olour"
+*End
+*PrintingMode RasterCassette/Do not care about cartridges, each line in all colours: "%% FoomaticRIPOptionSetting: PrintingMode=RasterCassette"
+*FoomaticRIPOptionSetting PrintingMode=RasterCassette: " -datamode Ras&&
+terCassette"
+*End
+*PrintingMode RasterColour/Each line in all colours: "%% FoomaticRIPOptionSetting: PrintingMode=RasterColour"
+*FoomaticRIPOptionSetting PrintingMode=RasterColour: " -datamode Raste&&
+rColour"
+*End
+*CloseUI: *PrintingMode
+
+*OpenUI *Dither/Dithering: PickOne
+*FoomaticRIPOption Dither: enum CmdLine C
+*OrderDependency: 140 AnySetup *Dither
+*DefaultDither: Halftone
+*Dither Black/Monochrome printing, standard black cartridge: "%% FoomaticRIPOptionSetting: Dither=Black"
+*FoomaticRIPOptionSetting Dither=Black: " -dither Black"
+*Dither EconoBlack/Monochrome printing, re-usable economy black cartridge: "%% FoomaticRIPOptionSetting: Dither=EconoBlack"
+*FoomaticRIPOptionSetting Dither=EconoBlack: " -dither EconoBlack"
+*Dither FloydSteinberg/Floyd-Steinberg (not recommended for MicroDry): "%% FoomaticRIPOptionSetting: Dither=FloydSteinberg"
+*FoomaticRIPOptionSetting Dither=FloydSteinberg: " -dither FloydSteinb&&
+erg"
+*End
+*Dither Halftone/Halftone (recommended for general use): "%% FoomaticRIPOptionSetting: Dither=Halftone"
+*FoomaticRIPOptionSetting Dither=Halftone: " -dither Halftone"
+*Dither MultiColour/More than 4 colours, colours one page at a time: "%% FoomaticRIPOptionSetting: Dither=MultiColour"
+*FoomaticRIPOptionSetting Dither=MultiColour: " -dither MultiColour"
+*Dither None/No dithering: "%% FoomaticRIPOptionSetting: Dither=None"
+*FoomaticRIPOptionSetting Dither=None: " -dither None"
+*Dither Square/Square (experimental, not recommended): "%% FoomaticRIPOptionSetting: Dither=Square"
+*FoomaticRIPOptionSetting Dither=Square: " -dither Square"
+*CloseUI: *Dither
+
 *OpenUI *ColourCorrection/Colour Correction: PickOne
 *FoomaticRIPOption ColourCorrection: enum CmdLine C
 *OrderDependency: 110 AnySetup *ColourCorrection
@@ -1609,6 +2004,93 @@ one"
 Photo"
 *End
 *CloseUI: *ColourCorrection
+
+*OpenUI *KeepBlack/Keep pure black: Boolean
+*FoomaticRIPOption KeepBlack: bool CmdLine C
+*FoomaticRIPOptionSetting KeepBlack: " -keepblack"
+*OrderDependency: 190 AnySetup *KeepBlack
+*DefaultKeepBlack: False
+*KeepBlack True/KeepBlack: "%% FoomaticRIPOptionSetting: KeepBlack=True"
+*KeepBlack False/CorrectBlack: "%% FoomaticRIPOptionSetting: KeepBlack=False"
+*CloseUI: *KeepBlack
+
+*OpenUI *UseMultiColourRibbon/Use multi-colour ribbon: Boolean
+*FoomaticRIPOption UseMultiColourRibbon: bool CmdLine C
+*FoomaticRIPOptionSetting UseMultiColourRibbon: " -usemulticolourribbo&&
+n"
+*End
+*OrderDependency: 260 AnySetup *UseMultiColourRibbon
+*DefaultUseMultiColourRibbon: False
+*UseMultiColourRibbon True/UseMultiColourRibbon: "%% FoomaticRIPOptionSetting: UseMultiColourRibbon=True"
+*UseMultiColourRibbon False/UseStandardRibbons: "%% FoomaticRIPOptionSetting: UseMultiColourRibbon=False"
+*CloseUI: *UseMultiColourRibbon
+
+*CloseGroup: General
+
+*OpenGroup: CombinedJobs/Combined Jobs
+
+*OpenUI *JobType/Job Type: PickOne
+*FoomaticRIPOption JobType: enum CmdLine C
+*OrderDependency: 150 AnySetup *JobType
+*DefaultJobType: SinglePass
+*JobType MiddlePass/Middle pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=MiddlePass"
+*FoomaticRIPOptionSetting JobType=MiddlePass: " -midpass"
+*JobType FirstPass/First pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=FirstPass"
+*FoomaticRIPOptionSetting JobType=FirstPass: " -firstpass"
+*JobType LastPass/Last pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=LastPass"
+*FoomaticRIPOptionSetting JobType=LastPass: " -lastpass"
+*JobType SinglePass/Single Pass Job: "%% FoomaticRIPOptionSetting: JobType=SinglePass"
+*FoomaticRIPOptionSetting JobType=SinglePass: ""
+*CloseUI: *JobType
+
+*OpenUI *Overlay/Print next job over the current one: Boolean
+*FoomaticRIPOption Overlay: bool CmdLine C
+*FoomaticRIPOptionSetting Overlay: " -overlay"
+*OrderDependency: 230 AnySetup *Overlay
+*DefaultOverlay: False
+*Overlay True/Overlay: "%% FoomaticRIPOptionSetting: Overlay=True"
+*Overlay False/DoNotOverlay: "%% FoomaticRIPOptionSetting: Overlay=False"
+*CloseUI: *Overlay
+
+*OpenUI *NoReset/Reset after job: Boolean
+*FoomaticRIPOption NoReset: bool CmdLine C
+*FoomaticRIPOptionSetting NoReset: " -noreset"
+*OrderDependency: 220 AnySetup *NoReset
+*DefaultNoReset: False
+*NoReset True/NoReset: "%% FoomaticRIPOptionSetting: NoReset=True"
+*NoReset False/Reset: "%% FoomaticRIPOptionSetting: NoReset=False"
+*CloseUI: *NoReset
+
+*CloseGroup: CombinedJobs
+
+*OpenGroup: Finishing/Finishing
+
+*OpenUI *CurlCorrection/Curl Correction: PickOne
+*FoomaticRIPOption CurlCorrection: enum CmdLine C
+*OrderDependency: 160 AnySetup *CurlCorrection
+*DefaultCurlCorrection: Default
+*CurlCorrection Default/Default behaviour: "%% FoomaticRIPOptionSetting: CurlCorrection=Default"
+*FoomaticRIPOptionSetting CurlCorrection=Default: ""
+*CurlCorrection Always/Always: "%% FoomaticRIPOptionSetting: CurlCorrection=Always"
+*FoomaticRIPOptionSetting CurlCorrection=Always: " -forcecurlcorrectio&&
+n"
+*End
+*CurlCorrection Never/Never: "%% FoomaticRIPOptionSetting: CurlCorrection=Never"
+*FoomaticRIPOptionSetting CurlCorrection=Never: " -nocurlcorrection"
+*CloseUI: *CurlCorrection
+
+*OpenUI *Glossy/Glossy finishing: Boolean
+*FoomaticRIPOption Glossy: bool CmdLine C
+*FoomaticRIPOptionSetting Glossy: " -glossy"
+*OrderDependency: 170 AnySetup *Glossy
+*DefaultGlossy: False
+*Glossy True/Glossy: "%% FoomaticRIPOptionSetting: Glossy=True"
+*Glossy False/noGlossy: "%% FoomaticRIPOptionSetting: Glossy=False"
+*CloseUI: *Glossy
+
+*CloseGroup: Finishing
+
+*OpenGroup: Adjustment/Adjustment
 
 *OpenUI *Colours/Colours to be printed: PickOne
 *FoomaticRIPOption Colours: enum CmdLine C
@@ -1647,59 +2129,6 @@ Photo"
 *Colours YK/Yellow, Black: "%% FoomaticRIPOptionSetting: Colours=YK"
 *FoomaticRIPOptionSetting Colours=YK: " -colours y,k"
 *CloseUI: *Colours
-
-*OpenUI *PrintingMode/Printing Mode: PickOne
-*FoomaticRIPOption PrintingMode: enum CmdLine C
-*OrderDependency: 130 AnySetup *PrintingMode
-*DefaultPrintingMode: Colour
-*PrintingMode Black/Monochrome printing, standard black cartridge: "%% FoomaticRIPOptionSetting: PrintingMode=Black"
-*FoomaticRIPOptionSetting PrintingMode=Black: " -datamode Black"
-*PrintingMode Cassette/Do not care about cartridges, colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=Cassette"
-*FoomaticRIPOptionSetting PrintingMode=Cassette: " -datamode Cassette"
-*PrintingMode Colour/Colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=Colour"
-*FoomaticRIPOptionSetting PrintingMode=Colour: " -datamode Colour"
-*PrintingMode EconoBlack/Monochrome printing, re-usable economy black cartridge: "%% FoomaticRIPOptionSetting: PrintingMode=EconoBlack"
-*FoomaticRIPOptionSetting PrintingMode=EconoBlack: " -datamode EconoBl&&
-ack"
-*End
-*PrintingMode MultiColour/More than 4 colours, colours one page at a time: "%% FoomaticRIPOptionSetting: PrintingMode=MultiColour"
-*FoomaticRIPOptionSetting PrintingMode=MultiColour: " -datamode MultiC&&
-olour"
-*End
-*PrintingMode RasterCassette/Do not care about cartridges, each line in all colours: "%% FoomaticRIPOptionSetting: PrintingMode=RasterCassette"
-*FoomaticRIPOptionSetting PrintingMode=RasterCassette: " -datamode Ras&&
-terCassette"
-*End
-*PrintingMode RasterColour/Each line in all colours: "%% FoomaticRIPOptionSetting: PrintingMode=RasterColour"
-*FoomaticRIPOptionSetting PrintingMode=RasterColour: " -datamode Raste&&
-rColour"
-*End
-*CloseUI: *PrintingMode
-
-*FoomaticRIPOption Model: enum CmdLine C 210
-*FoomaticRIPOptionSetting Model=Printiva-600U: " -model Printiva-600U"
-
-*OpenUI *Dither/Dithering: PickOne
-*FoomaticRIPOption Dither: enum CmdLine C
-*OrderDependency: 140 AnySetup *Dither
-*DefaultDither: Halftone
-*Dither Black/Monochrome printing, standard black cartridge: "%% FoomaticRIPOptionSetting: Dither=Black"
-*FoomaticRIPOptionSetting Dither=Black: " -dither Black"
-*Dither EconoBlack/Monochrome printing, re-usable economy black cartridge: "%% FoomaticRIPOptionSetting: Dither=EconoBlack"
-*FoomaticRIPOptionSetting Dither=EconoBlack: " -dither EconoBlack"
-*Dither FloydSteinberg/Floyd-Steinberg (not recommended for MicroDry): "%% FoomaticRIPOptionSetting: Dither=FloydSteinberg"
-*FoomaticRIPOptionSetting Dither=FloydSteinberg: " -dither FloydSteinb&&
-erg"
-*End
-*Dither Halftone/Halftone (recommended for general use): "%% FoomaticRIPOptionSetting: Dither=Halftone"
-*FoomaticRIPOptionSetting Dither=Halftone: " -dither Halftone"
-*Dither MultiColour/More than 4 colours, colours one page at a time: "%% FoomaticRIPOptionSetting: Dither=MultiColour"
-*FoomaticRIPOptionSetting Dither=MultiColour: " -dither MultiColour"
-*Dither None/No dithering: "%% FoomaticRIPOptionSetting: Dither=None"
-*FoomaticRIPOptionSetting Dither=None: " -dither None"
-*Dither Square/Square (experimental, not recommended): "%% FoomaticRIPOptionSetting: Dither=Square"
-*FoomaticRIPOptionSetting Dither=Square: " -dither Square"
-*CloseUI: *Dither
 
 *OpenUI *GammaCorrection/Gamma Correction: PickOne
 *FoomaticRIPOption GammaCorrection: float CmdLine C
@@ -1917,52 +2346,6 @@ erg"
 *GammaSaturation 10.0/10.0: "%% FoomaticRIPOptionSetting: GammaSaturation=10.0"
 *CloseUI: *GammaSaturation
 
-*OpenUI *CurlCorrection/Curl Correction: PickOne
-*FoomaticRIPOption CurlCorrection: enum CmdLine C
-*OrderDependency: 160 AnySetup *CurlCorrection
-*DefaultCurlCorrection: Default
-*CurlCorrection Default/Default behaviour: "%% FoomaticRIPOptionSetting: CurlCorrection=Default"
-*FoomaticRIPOptionSetting CurlCorrection=Default: ""
-*CurlCorrection Always/Always: "%% FoomaticRIPOptionSetting: CurlCorrection=Always"
-*FoomaticRIPOptionSetting CurlCorrection=Always: " -forcecurlcorrectio&&
-n"
-*End
-*CurlCorrection Never/Never: "%% FoomaticRIPOptionSetting: CurlCorrection=Never"
-*FoomaticRIPOptionSetting CurlCorrection=Never: " -nocurlcorrection"
-*CloseUI: *CurlCorrection
-
-*OpenUI *Glossy/Glossy finishing: Boolean
-*FoomaticRIPOption Glossy: bool CmdLine C
-*FoomaticRIPOptionSetting Glossy: " -glossy"
-*OrderDependency: 170 AnySetup *Glossy
-*DefaultGlossy: False
-*Glossy True/Glossy: "%% FoomaticRIPOptionSetting: Glossy=True"
-*Glossy False/noGlossy: "%% FoomaticRIPOptionSetting: Glossy=False"
-*CloseUI: *Glossy
-
-*OpenUI *JobType/Job Type: PickOne
-*FoomaticRIPOption JobType: enum CmdLine C
-*OrderDependency: 150 AnySetup *JobType
-*DefaultJobType: SinglePass
-*JobType MiddlePass/Middle pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=MiddlePass"
-*FoomaticRIPOptionSetting JobType=MiddlePass: " -midpass"
-*JobType FirstPass/First pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=FirstPass"
-*FoomaticRIPOptionSetting JobType=FirstPass: " -firstpass"
-*JobType LastPass/Last pass of an overlayed printout: "%% FoomaticRIPOptionSetting: JobType=LastPass"
-*FoomaticRIPOptionSetting JobType=LastPass: " -lastpass"
-*JobType SinglePass/Single Pass Job: "%% FoomaticRIPOptionSetting: JobType=SinglePass"
-*FoomaticRIPOptionSetting JobType=SinglePass: ""
-*CloseUI: *JobType
-
-*OpenUI *KeepBlack/Keep pure black: Boolean
-*FoomaticRIPOption KeepBlack: bool CmdLine C
-*FoomaticRIPOptionSetting KeepBlack: " -keepblack"
-*OrderDependency: 190 AnySetup *KeepBlack
-*DefaultKeepBlack: False
-*KeepBlack True/KeepBlack: "%% FoomaticRIPOptionSetting: KeepBlack=True"
-*KeepBlack False/CorrectBlack: "%% FoomaticRIPOptionSetting: KeepBlack=False"
-*CloseUI: *KeepBlack
-
 *OpenUI *LFAdjust/Line Feed Adjustment: PickOne
 *FoomaticRIPOption LFAdjust: int CmdLine C
 *FoomaticRIPOptionPrototype LFAdjust: " -lfadjust %s"
@@ -2023,24 +2406,6 @@ n"
 *LFAdjust 125/125: "%% FoomaticRIPOptionSetting: LFAdjust=125"
 *LFAdjust 127/127: "%% FoomaticRIPOptionSetting: LFAdjust=127"
 *CloseUI: *LFAdjust
-
-*OpenUI *NoReset/Reset after job: Boolean
-*FoomaticRIPOption NoReset: bool CmdLine C
-*FoomaticRIPOptionSetting NoReset: " -noreset"
-*OrderDependency: 220 AnySetup *NoReset
-*DefaultNoReset: False
-*NoReset True/NoReset: "%% FoomaticRIPOptionSetting: NoReset=True"
-*NoReset False/Reset: "%% FoomaticRIPOptionSetting: NoReset=False"
-*CloseUI: *NoReset
-
-*OpenUI *Overlay/Print next job over the current one: Boolean
-*FoomaticRIPOption Overlay: bool CmdLine C
-*FoomaticRIPOptionSetting Overlay: " -overlay"
-*OrderDependency: 230 AnySetup *Overlay
-*DefaultOverlay: False
-*Overlay True/Overlay: "%% FoomaticRIPOptionSetting: Overlay=True"
-*Overlay False/DoNotOverlay: "%% FoomaticRIPOptionSetting: Overlay=False"
-*CloseUI: *Overlay
 
 *OpenUI *PHAdjust/Density: PickOne
 *FoomaticRIPOption PHAdjust: int CmdLine C
@@ -2150,17 +2515,6 @@ n"
 *PHAdjust 49/49: "%% FoomaticRIPOptionSetting: PHAdjust=49"
 *PHAdjust 50/50: "%% FoomaticRIPOptionSetting: PHAdjust=50"
 *CloseUI: *PHAdjust
-
-*OpenUI *UseMultiColourRibbon/Use multi-colour ribbon: Boolean
-*FoomaticRIPOption UseMultiColourRibbon: bool CmdLine C
-*FoomaticRIPOptionSetting UseMultiColourRibbon: " -usemulticolourribbo&&
-n"
-*End
-*OrderDependency: 260 AnySetup *UseMultiColourRibbon
-*DefaultUseMultiColourRibbon: False
-*UseMultiColourRibbon True/UseMultiColourRibbon: "%% FoomaticRIPOptionSetting: UseMultiColourRibbon=True"
-*UseMultiColourRibbon False/UseStandardRibbons: "%% FoomaticRIPOptionSetting: UseMultiColourRibbon=False"
-*CloseUI: *UseMultiColourRibbon
 
 *OpenUI *XShift/Horizontal (X-)Shift (in dots): PickOne
 *FoomaticRIPOption XShift: int CmdLine C
@@ -2299,6 +2653,8 @@ n"
 *YShift 580/580: "%% FoomaticRIPOptionSetting: YShift=580"
 *YShift 600/600: "%% FoomaticRIPOptionSetting: YShift=600"
 *CloseUI: *YShift
+
+*CloseGroup: Adjustment
 
 
 *% Generic boilerplate PPD stuff as standard PostScript fonts and so on

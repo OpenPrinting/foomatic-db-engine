@@ -97,141 +97,6 @@ it will have the constraints:
 This way the manual entering of Foomatic daya will get much easier.
 
 
-Collective options
-------------------
-
-This is a new option type to make it easier for users to choose the
-best settings for a certain printing task, even if the driver has very
-many options. The idea is to have an enumerated choice option which
-does not directly modify something in the driver's command line but
-sets several of the other options.
-
-For example we could have a "Document Type" option with the following
-choices:
-
-   Draft
-   Office document
-   Photo
-   Custom
-
-It would set the options "Media Type", "Resolution", and "Dither" as
-follows:
-
-   Choice           Media Type      Resolution        Dither
-   ------------------------------------------------------------------
-   Draft            Plain Paper     300x300 dpi       Fast
-   Office document  Plain Paper     600x600 dpi       Floyd-Steinberg
-   Photo            Photo Paper     1200x1200 dpi     Floyd-Steinberg
-
-and in the Custom mode it would let the user set the options
-individually. Not mentioned options as "Page Size" and "Media Source"
-are always set individually by the user. A GUI should gray out "Media
-Type", "Resolution", and "Dither" when "Document Type" is not set to
-"Custom".
-
-An XML implementation could look like:
-
-<option type="enum" id="opt/DocType">
-  <!-- A multilingual <comments> block can appear here, too;
-       it should be treated as documentation for the user. -->
-  <arg_longname>
-   <en>Document Type</en>
-  </arg_longname>
-  <arg_shortname>
-   <en>DocType</en><!-- backends only know <en> shortnames! -->
-  </arg_shortname>
-  <arg_execution>
-   <arg_order>100</arg_order>
-   <arg_spot>Z</arg_spot>
-   <arg_collective />
-   <arg_options>
-    <arg_option>MediaType</arg_option>
-    <arg_option>Resolution</arg_option>
-    <arg_option>Dither</arg_option>
-   </arg_options>
-  </arg_execution>
-  <constraints>
-     <constraint sense="true">
-      <driver>easyprint</driver>
-      <arg_defval>ev/Office</arg_defval>
-     </constraint>
-  </constraints>
-  <enum_vals>
-   <enum_val id="ev/Draft">
-    <ev_longname>
-     <en>Draft</en>
-    </ev_longname>
-    <!-- A multilingual <comments> block can appear here, too;
-         it should be treated as documentation for the user. -->
-    <ev_shortname>
-     <en>Draft</en>
-     <!-- Until someone tells me how to learn the user locale in
-          backends, the shortname must be monolingual in <en>! -->
-    </ev_shortname>
-    <ev_settings>
-     <ev_setting>MediaType=Plain</ev_setting>
-     <ev_setting>Resolution=300</ev_setting>
-     <ev_setting>Dither=Fast</ev_setting>
-    </ev_settings>
-   </enum_val>
-   <enum_val id="ev/Office">
-    <ev_longname>
-     <en>Office Document</en>
-    </ev_longname>
-    <!-- A multilingual <comments> block can appear here, too;
-         it should be treated as documentation for the user. -->
-    <ev_shortname>
-     <en>Office</en>
-     <!-- Until someone tells me how to learn the user locale in
-          backends, the shortname must be monolingual in <en>! -->
-    </ev_shortname>
-    <ev_settings>
-     <ev_setting>MediaType=Plain</ev_setting>
-     <ev_setting>Resolution=600</ev_setting>
-     <ev_setting>Dither=FloydSteinberg</ev_setting>
-    </ev_settings>
-   </enum_val>
-   <enum_val id="ev/Photo">
-    <ev_longname>
-     <en>Photo</en>
-    </ev_longname>
-    <!-- A multilingual <comments> block can appear here, too;
-         it should be treated as documentation for the user. -->
-    <ev_shortname>
-     <en>Photo</en>
-     <!-- Until someone tells me how to learn the user locale in
-          backends, the shortname must be monolingual in <en>! -->
-    </ev_shortname>
-    <ev_settings>
-     <ev_setting>MediaType=Photo</ev_setting>
-     <ev_setting>Resolution=1200</ev_setting>
-     <ev_setting>Dither=FloydSteinberg</ev_setting>
-    </ev_settings>
-   </enum_val>
-   <enum_val id="ev/Custom">
-    <ev_longname>
-     <en>Custom Settings</en>
-    </ev_longname>
-    <!-- A multilingual <comments> block can appear here, too;
-         it should be treated as documentation for the user. -->
-    <ev_shortname>
-     <en>Custom</en>
-     <!-- Until someone tells me how to learn the user locale in
-          backends, the shortname must be monolingual in <en>! -->
-    </ev_shortname>
-    <ev_settings>
-    </ev_settings>
-   </enum_val>
-  </enum_val>
-</option>
-  
-The choice "Custom" has an empty settings block, this means, the user
-can set the options individually. One could also have a collective
-option without "Custom" choice to implement an option which modifies
-the command line at two places or which once modifies the command line
-and second, sends a PJL option.
-
-
 Option conflicts
 ----------------
 
@@ -353,40 +218,6 @@ In a PPD file the option entry would be surrounded by
 
    *CloseGroup: Finishing
 
-In the Perl structure there could be two additional entries:
-
-    {
-      'vals_byname' => {
-        'Tray1' => {
-          'comment' => 'Tray 1',
-          'idx' => 'TRAY_TRAY_1',
-          'value' => 'Tray1',
-          'driverval' => 'TRAY_TRAY_1'
-        },
-        'EnvFeed' => {
-          'comment' => 'Env Feed',
-          'idx' => 'TRAY_ENVELOPE_FEEDER',
-          'value' => 'EnvFeed',
-          'driverval' => 'TRAY_ENVELOPE_FEEDER'
-        }
-      },
-      'style' => 'C',
-      'comment' => 'Media Source',
-      'vals' => [
-        {},
-        {}
-      ],
-      'order' => '100',
-      'spot' => 'A',
-      'proto' => ' tray=%s',
-      'idx' => 'opt/omni-tray',
-      'default' => 'Tray1',
-      'type' => 'enum',
-      'name' => 'InputSlot',
-      'group' => 'Media',
-      'group_comment' => 'Media Options'
-    },
-
 Options without group should be treated as before or get into some
 default group.
 
@@ -452,9 +283,9 @@ Resulting code in Foomatic Perl data structure:
 Pickmany options
 ----------------
 
-Pickmany options could have the same XML and Perl file structures as
-the "enum" options but have the type "pickmany". They should allow to
-assign a comma separated list of choices to the option:
+Pickmany options could have the same XML file structures as the "enum"
+options but have the type "pickmany". They should allow to assign a
+comma separated list of choices to the option:
 
    lpr -P laserjet -o option=value1,value2,value3 file.ps
 
