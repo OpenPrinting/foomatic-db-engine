@@ -48,10 +48,16 @@ typedef struct { /* structure for a driver entries (linear list) */
 
 typedef struct { /* structure for a driver entries (linear list) */
   char                  id[128];   /* ID of printer */
-  driverlist_t          *drivers;  /* pointer to the list of the drivers with
-				      which tis printer works */
+  driverlist_t          *drivers;  /* pointer to the list of the drivers
+				      with which this printer works */
   struct printerlist_t  *next;     /* pointer to next printer */
 } printerlist_t;
+
+typedef struct { /* structure for printer ID translations (linear list) */
+  char                  *oldid,    /* old ID of printer */
+                        *newid;    /* current ID of printer */
+  struct idlist_t       *next;     /* pointer to next entry */
+} idlist_t;
 
 /*
  * function to load a file into the memory
@@ -73,8 +79,8 @@ char  /* O - pointer to the file in memory */
 
   inputfile = fopen(filename, "r");
   if (inputfile == NULL) {
-    fprintf(stderr, "Cannot read file %s!", filename);
-    exit(1);
+    fprintf(stderr, "Cannot read file %s!\n", filename);
+    return NULL;
   }
 
   /* Read the whole file into the memory */
@@ -92,6 +98,102 @@ char  /* O - pointer to the file in memory */
      option file */
   data = (char *)realloc(data, size + 128); 
   if (data != "") return(data); else { free((void *)data); return(NULL); }
+}
+
+/*
+ * function to load the printer ID translation table
+ */
+
+idlist_t /* O - pointer to the printer ID translation table */
+*loadidlist(const char *filename) { /* I - file name */
+  char          *idlistbuffer = NULL; /* ID list in memory */
+  char          *scan; /* pointer for scanning through the list */
+  char          *oldid, *newid; /* pointer to IDs in the current line */
+  int           inoldid = 0, /* Are we reading and old or a new ID */
+                innewid = 0; /* currently */
+  idlist_t      *idlist = NULL, /* Pointer to ID list */
+                *currentitem = NULL, /* Pointer to current ID list item */
+                *newitem; /* Pointer to newly created ID list item */
+
+  idlistbuffer = loadfile(filename);
+  if (!idlistbuffer) return NULL;
+  for (scan = idlistbuffer; *scan != '\0'; scan++) {
+    switch(*scan) {
+    case '\r':
+    case '\n': /* line break */
+      /* line end */
+      if (inoldid) {
+	/* Line with only one word, ignore it */
+	inoldid = 0;
+	oldid = NULL;
+	break;
+      }
+    case '\t': /* tab */
+    case ' ': /* space */
+      /* white space */
+      if (inoldid) {
+	/* old ID completed */
+	inoldid = 0;
+	*scan = '\0';
+      }
+      if (innewid) {
+	/* new ID completed */
+	innewid = 0;
+	*scan = '\0';
+	if (oldid && newid && (*oldid != '#')) {
+	  /* found a pair of old ID and new ID, add it to the translation
+	     list */
+	  newitem = 
+	    (idlist_t *)malloc(sizeof(idlist_t));
+	  newitem->oldid = oldid;
+	  newitem->newid = newid;
+	  newitem->next = NULL;
+	  if (currentitem) {
+	    (idlist_t *)(currentitem->next) = newitem;
+	  } else {
+	    idlist = newitem;
+	  }
+	  currentitem = newitem;
+	}
+	oldid = NULL;
+	newid = NULL;
+      }
+      break;
+    default:
+      /* all other characters, so no whitespace now */
+      if (!(inoldid || innewid)) {
+	/* last character was whitespace */
+	if (oldid) {
+	  /* Beginning of second word in the line */
+	  innewid = 1;
+	  newid = scan;
+	} else {
+	  /* Beginning of first word in the line */
+	  inoldid = 1;
+	  oldid = scan;
+	}
+      }
+    }
+  }
+  return idlist;
+}
+
+/*
+ * function to translate an old printer ID into a new one
+ */
+
+char  /* O - new ID */
+*translateid(const char *oldid, /* I - Old ID */
+	     idlist_t *idlist) { /* I - ID translation table */
+  idlist_t      *currentitem = idlist; /* Pointer to current ID list item */
+
+  while(currentitem) {
+    if (strcmp(oldid, currentitem->oldid) == 0) {
+      return currentitem->newid;
+    }
+    currentitem = (idlist_t *)(currentitem->next);
+  }
+  return (char *)oldid;
 }
 
 /*
@@ -113,11 +215,12 @@ parse(const char **data, /* I/O - Data to process */
       int *nopjl,        /* I/O - 0: driver allows PJL options, 1: driver
 			    does not allow PJL options (has "<nnpjl />"
 			    flag in "<execution>" section) */
+      idlist_t *idlist,  /* I - ID translation table */
       int debug) {       /* I - Debug flag: If set, debugging output is
 			        produced */
 
-  char          fullpid[256];
-  char          fulldriver[256];
+  char          *trpid = NULL; /* current printer ID translated according
+				  to translation table */
   int           datalength = 0;  /* length of the XML file */
   int           linecount = 1;   /* Count the lines for error messages */
   int           nestinglevel = 0;/* How many XML environments are nested
@@ -216,10 +319,9 @@ parse(const char **data, /* I/O - Data to process */
   printerlist_t *plistpreventry;
   driverlist_t  *dlistpreventry;
 
-  /* Set the complete printer/driver id */
+  /* Translate printer ID */
+  if (pid) trpid = translateid(pid, idlist);
 
-  sprintf(fullpid, "printer/%s", pid);
-  sprintf(fulldriver, "driver/%s", driver);
   j = 0;
   datalength = strlen(*data); /* Compute the length of the file once,
 			         this is very time-intensive */
@@ -302,7 +404,7 @@ parse(const char **data, /* I/O - Data to process */
 		      if (debug)
 			fprintf
 			  (stderr,
-			   "      <nopjl /> found, option does not allow PJL options!\n");
+			   "      <nopjl /> found, driver does not allow PJL options!\n");
 		    }
 		  } else if (strcmp(currtagname, "id") == 0) {
 		    inid = nestinglevel + 1;
@@ -606,7 +708,10 @@ parse(const char **data, /* I/O - Data to process */
 		}
 		if (nestinglevel < inid) {
 		  inid = 0;
-		  if (strcmp(fullpid,currtagbody) == 0) {
+		  /* printer ID after the "printer/" in currtagbody is 
+		     used (to not compare the always equal "printer/" */
+		  if (strcmp(trpid, 
+			     translateid(currtagbody + 8, idlist)) == 0) {
 		    /* Found printer entry in driver file */
 		    printerentryfound = 1;
 		    printertobesaved = 1;
@@ -766,7 +871,14 @@ parse(const char **data, /* I/O - Data to process */
 		}
 		if (nestinglevel < inprinter) {
 		  inprinter = 0;
-		  if (inconstraint) strcat(cprinter, currtagbody);
+		  if (inconstraint) {
+		    /* Make always short printer IDs (w/o "printer/") */
+		    if (currtagbody[0] == 'p') {
+		      strcat(cprinter, currtagbody + 8);
+		    } else {
+		      strcat(cprinter, currtagbody);
+		    }
+		  }
 		}
 		if (nestinglevel < inmake) {
 		  inmake = 0;
@@ -797,8 +909,8 @@ parse(const char **data, /* I/O - Data to process */
 		    fprintf(stderr,"      Values of current printer/driver combo:\n");
 		    fprintf(stderr,"        make: |%s|, model: |%s|\n",
 			    make, model);
-		    fprintf(stderr,"        full PID: |%s|, driver: |%s|\n",
-			    fullpid, driver);
+		    fprintf(stderr,"        PID: |%s|, driver: |%s|\n",
+			    pid, driver);
 		  }
 		  if (!((cmake[0]) || (cmodel[0]) || 
 			(cprinter[0]) || (cdriver[0]))) {
@@ -823,8 +935,7 @@ parse(const char **data, /* I/O - Data to process */
 		       a make[/model] pair */
 		    if (cprinter[0]) {
 		      if (debug) fprintf(stderr,"        Checking PID\n");
-		      if ((strcmp(cprinter, fullpid) == 0) ||
-			  (strcmp(cprinter, pid) == 0))
+		      if (strcmp(translateid(cprinter, idlist), trpid) == 0)
 			printerscore = 2;
 		      else
 			printerscore = -1;
@@ -848,8 +959,8 @@ parse(const char **data, /* I/O - Data to process */
 		    if (cdriver[0]) {
 		      if (debug) 
 			fprintf(stderr,"        Checking driver\n");
-		      if ((strcmp(cdriver, fulldriver) == 0) ||
-			  (strcmp(cdriver, driver) == 0)) 
+		      if ((strcmp(cdriver, driver) == 0) ||
+			  (strcmp(cdriver + 7, driver) == 0)) 
 			driverscore = 1; /* driver matches */
 		      else
 			driverscore = -1; /* driver mismatch */
@@ -1034,6 +1145,7 @@ parse(const char **data, /* I/O - Data to process */
 		  inid = 0;
 		  /* Get the short printer ID (w/o "printer/") */
 		  strcpy(cprinter, currtagbody + 8);
+		  strcpy(cprinter, translateid(cprinter, idlist));
 		  if (debug)
 		    fprintf(stderr,
 			    "    Overview: Printer: %s Driver: %s\n",
@@ -1178,6 +1290,7 @@ parse(const char **data, /* I/O - Data to process */
     if (debug) fprintf(stderr, "    Data for this printer entry in the overview:\n      Printer ID: |%s|\n      Make: |%s|\n      Model: |%s|\n      Functionality: |%s|\n      Rec. driver: |%s|\n      Auto detect entry: |%s|\n",
 	    cprinter, cmake, cmodel, cfunctionality, cdriver,cautodetectentry);
     if ((cprinter[0]) && (cmake[0]) && (cmodel[0]) && (cfunctionality[0])) {
+      strcpy(cprinter, translateid(cprinter, idlist));
       strcat((char *)(*data), "  <printer>\n    <id>");
       strcat((char *)(*data), cprinter);
       strcat((char *)(*data), "</id>\n    <make>");
@@ -1247,6 +1360,9 @@ main(int  argc,     /* I - Number of command-line arguments */
   char          optionfilename[1024]; /* Name of current option XML file*/
   char          optiondirname[1024];  /* Name of the directory with the XML
 					 files for the options */
+  char          oldidfilename[1024];  /* Name of the file with the
+					 translation table for old printer
+					 IDs */
   const char    *printerbuffer = NULL;
   const char    *driverbuffer = NULL;
   char          **optbuffers = NULL;
@@ -1262,8 +1378,10 @@ main(int  argc,     /* I - Number of command-line arguments */
   DIR           *printerdir;
   struct dirent *direntry;
   printerlist_t *printerlist = NULL;
-  printerlist_t *plistpointer;   /* pointers to navigate through the printer */
-  driverlist_t  *dlistpointer;   /* list for the overview */
+  printerlist_t *plistpointer;  /* pointers to navigate through the 
+				   printer */
+  driverlist_t  *dlistpointer;  /* list for the overview */
+  idlist_t      *idlist;        /* I - ID translation table */
   
   /* Show the help message whem no command line arguments are given */
 
@@ -1349,6 +1467,19 @@ main(int  argc,     /* I - Number of command-line arguments */
   if (libdir == NULL)
     libdir = "/usr/share/foomatic";
 
+  /* Load translation table for old printer IDs */
+  sprintf(oldidfilename, "%s/db/oldprinterids",
+	  libdir);
+  idlist = loadidlist(oldidfilename);
+  if (debug) {
+    if (idlist) {
+      fprintf(stderr, "Printer ID translation table loaded!\n");
+    } else {
+      fprintf(stderr,
+     "Printer ID translation table corrupted, missing, or not readable!\n");
+    }
+  }
+
   if (!overview) {
 
     /*
@@ -1381,26 +1512,40 @@ main(int  argc,     /* I - Number of command-line arguments */
     if (debug) fprintf(stderr, "Printer file: %s\n", printerfilename);
     printerbuffer = loadfile(printerfilename);
     if (printerbuffer == NULL) {
-      fprintf(stderr, "Printer file %s corrupted!\n", driverfilename);
-      exit(1);
+      pid = translateid(pid, idlist);
+      sprintf(printerfilename, "%s/db/source/printer/%s.xml",
+	      libdir, pid);
+      printerbuffer = loadfile(printerfilename);
+      if (printerbuffer == NULL) {
+	fprintf(stderr, 
+		"Printer file %s corrupted, missing, or not readable!\n",
+		printerfilename);
+	exit(1);
+      } else {
+	fprintf(stderr, 
+		"WARNING: Obsolete printer ID used, using %s instead!\n",
+		pid);
+      }
     }
     if (debug) fprintf(stderr, "  Printer file loaded!\n");
     parse(&printerbuffer, pid, driver, printerfilename, NULL, 0, 
 	  (const char **)defaultsettings, num_defaultsettings, &nopjl,
-	  debug2);
+	  idlist, debug2);
     
     /* Read the driver file and check whether the printer is present */
     
     if (debug) fprintf(stderr, "Driver file: %s\n", driverfilename);
     driverbuffer = loadfile(driverfilename);
     if (driverbuffer == NULL) {
-      fprintf(stderr, "Driver file %s corrupted!\n", driverfilename);
+      fprintf(stderr, 
+	      "Driver file %s corrupted, missing, or not readable!\n",
+	      driverfilename);
       exit(1);
     }
     if (debug) fprintf(stderr, "  Driver file loaded!\n");
     parse(&driverbuffer, pid, driver, driverfilename, NULL, 1,
 	  (const char **)defaultsettings, num_defaultsettings, &nopjl,
-	  debug2);
+	  idlist, debug2);
     if (debug) {
       if (nopjl) {
 	fprintf(stderr, "  Driver forbids PJL options!\n");
@@ -1431,7 +1576,9 @@ main(int  argc,     /* I - Number of command-line arguments */
 	/* load the current option's XML file */
 	optbuffers[num_optbuffers-1] = loadfile(optionfilename);
 	if (optbuffers[num_optbuffers-1] == NULL) {
-	  fprintf(stderr, "Option file %s corrupted!\n", driverfilename);
+	  fprintf(stderr,
+		  "Option file %s corrupted, missing, or not readable!\n",
+		  optionfilename);
 	  exit(1);
 	}
 	if (debug) fprintf(stderr, "  Option file loaded!\n");
@@ -1439,7 +1586,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 	parse((const char **)(&(optbuffers[num_optbuffers-1])), pid, driver,
 	      optionfilename, NULL, 2,
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
-	      debug2);
+	      idlist, debug2);
 	/* If the parser discarded it (because it does not apply to our 
 	   printer/driver combo) remove the space for the pointer to it */
 	if (optbuffers[num_optbuffers-1] == NULL) {
@@ -1494,14 +1641,16 @@ main(int  argc,     /* I - Number of command-line arguments */
 	/* load the current driver's XML file */
 	driverbuffer = loadfile(driverfilename);
 	if (driverbuffer == NULL) {
-	  fprintf(stderr, "Driver file %s corrupted!\n", driverfilename);
+	  fprintf(stderr,
+		  "Driver file %s corrupted, missing, or not readable!\n",
+		  driverfilename);
 	  exit(1);
 	}
 	if (debug) fprintf(stderr, "  Driver file loaded!\n");
 	/* process it */
 	parse(&driverbuffer, NULL, NULL, driverfilename, &printerlist, 3, 
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
-	      debug2);
+	      idlist, debug2);
 	/* Delete the driver file from memory */
 	free((void *)driverbuffer);
 	driverbuffer = NULL;
@@ -1544,14 +1693,16 @@ main(int  argc,     /* I - Number of command-line arguments */
 	/* load the current printer's XML file */
 	printerbuffer = loadfile(printerfilename);
 	if (printerbuffer == NULL) {
-	  fprintf(stderr, "Printer file %s corrupted!\n", printerfilename);
+	  fprintf(stderr,
+		  "Printer file %s corrupted, missing, or not readable!\n",
+		  printerfilename);
 	  exit(1);
 	}
 	if (debug) fprintf(stderr, "  Printer file loaded!\n");
 	/* process it */
 	parse(&printerbuffer, NULL, NULL, printerfilename, &printerlist, 4,
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
-	      debug2);
+	      idlist, debug2);
 	/* put it out */
 	printf("%s", printerbuffer);
 	/* Delete the printer file from memory */

@@ -1,3 +1,9 @@
+2003-03-30  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-combo-xml.c: Allow printer/driver combo XML generation
+	  also when the driver or option XML files still use old numerical
+	  printer IDs (important for third-party drivers).
+
 2003-03-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-replaceoldprinterids.in: Script to replace references
