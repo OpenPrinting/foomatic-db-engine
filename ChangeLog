@@ -1,3 +1,9 @@
+2003-08-27  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: When using "foomatic-configure -P -r"
+	  recognize implicit classes as remotely defined printer (for
+	  now this works only for root).
+
 2003-08-26  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Let the information about the default

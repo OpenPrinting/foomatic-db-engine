@@ -2803,7 +2803,7 @@ sub load_cups_printersconf {
 	    }	
 	}
     }
-    if (($< != 0) || (($opt_r) && ($opt_Q))) {
+    if (($< != 0) || (($opt_r) && (($opt_Q) || ($opt_P)))) {
 	# Get info with the "lpstat" command, works for normal users and for
 	# remote printers.
 	open LPSTAT, "$sysdeps->{'cups-lpstat'} -l -d -p -v |" or 
@@ -2831,7 +2831,12 @@ sub load_cups_printersconf {
 		    if (!defined($itemshash->{$name})) {
 			push(@items, {});
 			$itemshash->{$name} = $#items;
-			#print Dumper($itemshash);
+			# If we are root and didn't see this entry
+			# in /etc/cups/printers.conf, this printer
+			# is remotely defined
+			if ($< == 0) {
+			    $items[$itemshash->{$name}]{'remote'} = 1;
+			}
 		    }
 		    $currentitem = $itemshash->{$name};
 		    $items[$currentitem]{'name'} ||= $name;
