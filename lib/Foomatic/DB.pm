@@ -1468,7 +1468,7 @@ sub checklongnames {
 	}
 	for my $i (@{$arg->{'vals'}}) {
 	    if (!($i->{'comment'})) {
-		$i->{'comment'} = longname($arg->{'value'});
+		$i->{'comment'} = longname($i->{'value'});
 	    }
 	}
     }

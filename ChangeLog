@@ -1,3 +1,8 @@
+2003-01-31  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixed bug in the checking for missing long
+	  names/translations in PPD files.
+
 2003-01-30  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Fixed bug of "foomatic" flag in the Perl
