@@ -105,14 +105,22 @@ typedef struct overviewPrinter {
   xmlChar *functionality;
   xmlChar *unverified;
   /* Printer auto-detection */
+  xmlChar *general_ieee;
+  xmlChar *general_mfg;
+  xmlChar *general_mdl;
+  xmlChar *general_des;
+  xmlChar *general_cmd;
+  xmlChar *par_ieee;
   xmlChar *par_mfg;
   xmlChar *par_mdl;
   xmlChar *par_des;
   xmlChar *par_cmd;
+  xmlChar *usb_ieee;
   xmlChar *usb_mfg;
   xmlChar *usb_mdl;
   xmlChar *usb_des;
   xmlChar *usb_cmd;
+  xmlChar *snmp_ieee;
   xmlChar *snmp_mfg;
   xmlChar *snmp_mdl;
   xmlChar *snmp_des;
@@ -170,16 +178,25 @@ typedef struct comboData {
   xmlChar *color;
   xmlChar *ascii;
   xmlChar *pjl;
+  xmlChar *printerppdentry;
   marginsPtr printermargins;
   /* Printer auto-detection */
+  xmlChar *general_ieee;
+  xmlChar *general_mfg;
+  xmlChar *general_mdl;
+  xmlChar *general_des;
+  xmlChar *general_cmd;
+  xmlChar *par_ieee;
   xmlChar *par_mfg;
   xmlChar *par_mdl;
   xmlChar *par_des;
   xmlChar *par_cmd;
+  xmlChar *usb_ieee;
   xmlChar *usb_mfg;
   xmlChar *usb_mdl;
   xmlChar *usb_des;
   xmlChar *usb_cmd;
+  xmlChar *snmp_ieee;
   xmlChar *snmp_mfg;
   xmlChar *snmp_mdl;
   xmlChar *snmp_des;
@@ -193,6 +210,8 @@ typedef struct comboData {
   xmlChar *url;
   xmlChar *cmd;
   xmlChar *nopjl;
+  xmlChar *driverppdentry;
+  xmlChar *comboppdentry;
   marginsPtr drivermargins;
   marginsPtr combomargins;
   /* Driver options */
@@ -217,16 +236,25 @@ typedef struct printerEntry {
   xmlChar *refill;
   xmlChar *ascii;
   xmlChar *pjl;
+  xmlChar *printerppdentry;
   marginsPtr printermargins;
   /* Printer auto-detection */
+  xmlChar *general_ieee;
+  xmlChar *general_mfg;
+  xmlChar *general_mdl;
+  xmlChar *general_des;
+  xmlChar *general_cmd;
+  xmlChar *par_ieee;
   xmlChar *par_mfg;
   xmlChar *par_mdl;
   xmlChar *par_des;
   xmlChar *par_cmd;
+  xmlChar *usb_ieee;
   xmlChar *usb_mfg;
   xmlChar *usb_mdl;
   xmlChar *usb_des;
   xmlChar *usb_cmd;
+  xmlChar *snmp_ieee;
   xmlChar *snmp_mfg;
   xmlChar *snmp_mdl;
   xmlChar *snmp_des;
@@ -255,6 +283,7 @@ typedef struct driverEntry {
   xmlChar *url;
   xmlChar *driver_type;
   xmlChar *cmd;
+  xmlChar *driverppdentry;
   marginsPtr drivermargins;
   xmlChar *comment;
   int     num_printers;
@@ -460,14 +489,22 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   printer->model = NULL;
   printer->functionality = NULL;
   printer->unverified = NULL;
+  printer->general_ieee = NULL;
+  printer->general_mfg = NULL;
+  printer->general_mdl = NULL;
+  printer->general_des = NULL;
+  printer->general_cmd = NULL;
+  printer->par_ieee = NULL;
   printer->par_mfg = NULL;
   printer->par_mdl = NULL;
   printer->par_des = NULL;
   printer->par_cmd = NULL;
+  printer->usb_ieee = NULL;
   printer->usb_mfg = NULL;
   printer->usb_mdl = NULL;
   printer->usb_des = NULL;
   printer->usb_cmd = NULL;
+  printer->snmp_ieee = NULL;
   printer->snmp_mfg = NULL;
   printer->snmp_mdl = NULL;
   printer->snmp_des = NULL;
@@ -523,11 +560,53 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "autodetect"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "parallel"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "general"))) {
+	  cur3 = cur2->xmlChildrenNode;
+	  if (debug) fprintf(stderr, "  Printer auto-detection info (general):\n");
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      printer->general_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n",
+				 printer->general_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	      printer->general_mfg =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    MFG: %s\n", printer->general_mfg);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "model"))) {
+	      printer->general_mdl =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    MDL: %s\n", printer->general_mdl);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "description"))) {
+	      printer->general_des =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    DES: %s\n", printer->general_des);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "commandset"))) {
+	      printer->general_cmd =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    CMD: %s\n", printer->general_cmd);
+	    }
+	    cur3 = cur3->next;
+	  }
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "parallel"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (parallel port):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      printer->par_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n",
+				 printer->par_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      printer->par_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -555,7 +634,14 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (USB):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      printer->usb_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n",
+				 printer->usb_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      printer->usb_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -583,7 +669,14 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (SNMP):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      printer->snmp_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n",
+				 printer->snmp_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      printer->snmp_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -641,15 +734,24 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->color = (xmlChar *)"0";
   ret->pjl = (xmlChar *)"undef";
   ret->ascii = (xmlChar *)"0";
+  ret->printerppdentry = NULL;
   ret->printermargins = NULL;
+  ret->general_ieee = NULL;
+  ret->general_mfg = NULL;
+  ret->general_mdl = NULL;
+  ret->general_des = NULL;
+  ret->general_cmd = NULL;
+  ret->par_ieee = NULL;
   ret->par_mfg = NULL;
   ret->par_mdl = NULL;
   ret->par_des = NULL;
   ret->par_cmd = NULL;
+  ret->usb_ieee = NULL;
   ret->usb_mfg = NULL;
   ret->usb_mdl = NULL;
   ret->usb_des = NULL;
   ret->usb_cmd = NULL;
+  ret->snmp_ieee = NULL;
   ret->snmp_mfg = NULL;
   ret->snmp_mdl = NULL;
   ret->snmp_des = NULL;
@@ -681,6 +783,11 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Recommended driver: %s\n", 
 			 ret->recdriver);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "ppdentry"))) {
+      ret->printerppdentry = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Extra lines for PPD file:\n%s\n", 
+			 ret->printerppdentry);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "pcmodel"))) {
       ret->pcmodel = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -725,11 +832,53 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "autodetect"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "parallel"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "general"))) {
+	  cur3 = cur2->xmlChildrenNode;
+	  if (debug) fprintf(stderr, "  Printer auto-detection info (general):\n");
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->general_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->general_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	      ret->general_mfg =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    MFG: %s\n", ret->general_mfg);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "model"))) {
+	      ret->general_mdl =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    MDL: %s\n", ret->general_mdl);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "description"))) {
+	      ret->general_des =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    DES: %s\n", ret->general_des);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "commandset"))) {
+	      ret->general_cmd =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    CMD: %s\n", ret->general_cmd);
+	    }
+	    cur3 = cur3->next;
+	  }
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "parallel"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (parallel port):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->par_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->par_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      ret->par_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -757,7 +906,14 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (USB):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->usb_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->usb_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      ret->usb_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -785,7 +941,14 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (SNMP):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->snmp_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->snmp_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      ret->snmp_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -836,6 +999,8 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->url = NULL;
   ret->cmd = NULL;
   ret->nopjl = (xmlChar *)"0";
+  ret->driverppdentry = NULL;
+  ret->comboppdentry = NULL;
   ret->drivermargins = NULL;
   ret->combomargins = NULL;
 
@@ -906,6 +1071,11 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  if (debug) fprintf(stderr, "  Driver command line:\n\n    %s\n\n",
 			     ret->cmd);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ppdentry"))) {
+	  ret->driverppdentry = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr, "  Extra lines for PPD file:\n%s\n", 
+			     ret->driverppdentry);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
 	  parseMargins(doc, cur2, &(ret->drivermargins), language, debug);
      	}
@@ -917,7 +1087,14 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "printer"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "margins"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ppdentry"))) {
+	      ret->comboppdentry = 
+		perlquote(xmlNodeListGetString(doc,
+					       cur3->xmlChildrenNode, 1));
+	      if (debug) 
+		fprintf(stderr, "  Extra lines for PPD file:\n%s\n", 
+			ret->comboppdentry);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "margins"))) {
 	      parseMargins(doc, cur3, &(ret->combomargins), 
 			   language, debug);
 	    }
@@ -1281,18 +1458,27 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   ret->color = (xmlChar *)"0"; 
   ret->maxxres = NULL;
   ret->maxyres = NULL;
+  ret->printerppdentry = NULL;
   ret->printermargins = NULL;
   ret->refill = NULL;
   ret->ascii = NULL;
   ret->pjl = (xmlChar *)"0";
+  ret->general_ieee = NULL;
+  ret->general_mfg = NULL;
+  ret->general_mdl = NULL;
+  ret->general_des = NULL;
+  ret->general_cmd = NULL;
+  ret->par_ieee = NULL;
   ret->par_mfg = NULL;
   ret->par_mdl = NULL;
   ret->par_des = NULL;
   ret->par_cmd = NULL;
+  ret->usb_ieee = NULL;
   ret->usb_mfg = NULL;
   ret->usb_mdl = NULL;
   ret->usb_des = NULL;
   ret->usb_cmd = NULL;
+  ret->snmp_ieee = NULL;
   ret->snmp_mfg = NULL;
   ret->snmp_mdl = NULL;
   ret->snmp_des = NULL;
@@ -1442,11 +1628,53 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "autodetect"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "parallel"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "general"))) {
+	  cur3 = cur2->xmlChildrenNode;
+	  if (debug) fprintf(stderr, "  Printer auto-detection info (general):\n");
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->general_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->general_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	      ret->general_mfg =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    MFG: %s\n", ret->general_mfg);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "model"))) {
+	      ret->general_mdl =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    MDL: %s\n", ret->general_mdl);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "description"))) {
+	      ret->general_des =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    DES: %s\n", ret->general_des);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "commandset"))) {
+	      ret->general_cmd =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
+					       1));
+	      if (debug) fprintf(stderr, "    CMD: %s\n", ret->general_cmd);
+	    }
+	    cur3 = cur3->next;
+	  }
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "parallel"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (parallel port):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->par_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->par_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      ret->par_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -1474,7 +1702,14 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (USB):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->usb_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->usb_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      ret->usb_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -1502,7 +1737,14 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  if (debug) fprintf(stderr, "  Printer auto-detection info (SNMP):\n");
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ieee1284"))) {
+	      ret->snmp_ieee =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
+					       1));
+	      if (debug) fprintf(stderr, "    IEEE1284: %s\n", 
+				 ret->snmp_ieee);
+
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "manufacturer"))) {
 	      ret->snmp_mfg =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 
 					       1));
@@ -1538,6 +1780,11 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
       ret->driver = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Recommended driver: %s\n", ret->driver);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "ppdentry"))) {
+      ret->printerppdentry = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Extra lines for PPD file:\n%s\n", 
+			 ret->printerppdentry);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "unverified"))) {
       ret->unverified = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Printer entry is unverified\n");
@@ -1593,6 +1840,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->url = NULL;
   ret->driver_type = NULL;
   ret->cmd = NULL;
+  ret->driverppdentry = NULL;
   ret->drivermargins = NULL;
   ret->comment = NULL;
   ret->num_printers = 0;
@@ -1638,6 +1886,11 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  if (debug) fprintf(stderr, "  Driver command line:\n\n    %s\n\n",
 			     ret->cmd);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ppdentry"))) {
+	  ret->driverppdentry = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr, "  Extra lines for PPD file:\n%s\n", 
+			     ret->driverppdentry);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "margins"))) {
 	  parseMargins(doc, cur2, &(ret->drivermargins), language, debug);
      	}
@@ -2099,6 +2352,25 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
     printf("            'id' => '%s',\n", printer->id);
     printf("            'make' => '%s',\n", printer->make);
     printf("            'model' => '%s',\n", printer->model);
+    if (printer->general_ieee) {
+      printf("            'general_ieee' => '%s',\n",
+	     printer->general_ieee);
+    }
+    if (printer->general_mfg) {
+      printf("            'general_mfg' => '%s',\n", printer->general_mfg);
+    }
+    if (printer->general_mdl) {
+      printf("            'general_mdl' => '%s',\n", printer->general_mdl);
+    }
+    if (printer->general_des) {
+      printf("            'general_des' => '%s',\n", printer->general_des);
+    }
+    if (printer->general_cmd) {
+      printf("            'general_cmd' => '%s',\n", printer->general_cmd);
+    }
+    if (printer->par_ieee) {
+      printf("            'par_ieee' => '%s',\n", printer->par_ieee);
+    }
     if (printer->par_mfg) {
       printf("            'par_mfg' => '%s',\n", printer->par_mfg);
     }
@@ -2111,6 +2383,9 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
     if (printer->par_cmd) {
       printf("            'par_cmd' => '%s',\n", printer->par_cmd);
     }
+    if (printer->usb_ieee) {
+      printf("            'usb_ieee' => '%s',\n", printer->usb_ieee);
+    }
     if (printer->usb_mfg) {
       printf("            'usb_mfg' => '%s',\n", printer->usb_mfg);
     }
@@ -2122,6 +2397,9 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
     }
     if (printer->usb_cmd) {
       printf("            'usb_cmd' => '%s',\n", printer->usb_cmd);
+    }
+    if (printer->snmp_ieee) {
+      printf("            'snmp_ieee' => '%s',\n", printer->snmp_ieee);
     }
     if (printer->snmp_mfg) {
       printf("            'snmp_mfg' => '%s',\n", printer->snmp_mfg);
@@ -2221,38 +2499,80 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   printf("  'color' => %s,\n", combo->color);
   printf("  'ascii' => %s,\n", combo->ascii);
   printf("  'pjl' => %s,\n", combo->pjl);
+  if (combo->printerppdentry) {
+    printf("  'printerppdentry' => '%s',\n", combo->printerppdentry);
+  } else {
+    printf("  'printerppdentry' => undef,\n");
+  }
   if (combo->printermargins) {
     printf("  'printermargins' => {\n");
     generateMarginsPerlData(combo->printermargins, debug);
     printf("  },\n");
   }
-  if (combo->par_mfg) {
-    printf("  'pnp_mfg' => '%s',\n", combo->par_mfg);
-    printf("  'par_mfg' => '%s',\n", combo->par_mfg);
+  if (combo->general_ieee) {
+    printf("  'pnp_ieee' => '%s',\n", combo->general_ieee);
+    printf("  'general_ieee' => '%s',\n", combo->general_ieee);
+  } else {
+    printf("  'pnp_ieee' => undef,\n");
+    printf("  'general_ieee' => undef,\n");
+  }
+  if (combo->general_mfg) {
+    printf("  'pnp_mfg' => '%s',\n", combo->general_mfg);
+    printf("  'general_mfg' => '%s',\n", combo->general_mfg);
   } else {
     printf("  'pnp_mfg' => undef,\n");
+    printf("  'general_mfg' => undef,\n");
+  }
+  if (combo->general_mdl) {
+    printf("  'pnp_mdl' => '%s',\n", combo->general_mdl);
+    printf("  'general_mdl' => '%s',\n", combo->general_mdl);
+  } else {
+    printf("  'pnp_mdl' => undef,\n");
+    printf("  'general_mdl' => undef,\n");
+  }
+  if (combo->general_des) {
+    printf("  'pnp_des' => '%s',\n", combo->general_des);
+    printf("  'general_des' => '%s',\n", combo->general_des);
+  } else {
+    printf("  'pnp_des' => undef,\n");
+    printf("  'general_des' => undef,\n");
+  }
+  if (combo->general_cmd) {
+    printf("  'pnp_cmd' => '%s',\n", combo->general_cmd);
+    printf("  'general_cmd' => '%s',\n", combo->general_cmd);
+  } else {
+    printf("  'pnp_cmd' => undef,\n");
+    printf("  'general_cmd' => undef,\n");
+  }
+  if (combo->par_ieee) {
+    printf("  'par_ieee' => '%s',\n", combo->par_ieee);
+  } else {
+    printf("  'par_ieee' => undef,\n");
+  }
+  if (combo->par_mfg) {
+    printf("  'par_mfg' => '%s',\n", combo->par_mfg);
+  } else {
     printf("  'par_mfg' => undef,\n");
   }
   if (combo->par_mdl) {
-    printf("  'pnp_mdl' => '%s',\n", combo->par_mdl);
     printf("  'par_mdl' => '%s',\n", combo->par_mdl);
   } else {
-    printf("  'pnp_mdl' => undef,\n");
     printf("  'par_mdl' => undef,\n");
   }
   if (combo->par_des) {
-    printf("  'pnp_des' => '%s',\n", combo->par_des);
     printf("  'par_des' => '%s',\n", combo->par_des);
   } else {
-    printf("  'pnp_des' => undef,\n");
     printf("  'par_des' => undef,\n");
   }
   if (combo->par_cmd) {
-    printf("  'pnp_cmd' => '%s',\n", combo->par_cmd);
     printf("  'par_cmd' => '%s',\n", combo->par_cmd);
   } else {
-    printf("  'pnp_cmd' => undef,\n");
     printf("  'par_cmd' => undef,\n");
+  }
+  if (combo->usb_ieee) {
+    printf("  'usb_ieee' => '%s',\n", combo->usb_ieee);
+  } else {
+    printf("  'usb_ieee' => undef,\n");
   }
   if (combo->usb_mfg) {
     printf("  'usb_mfg' => '%s',\n", combo->usb_mfg);
@@ -2273,6 +2593,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'usb_cmd' => '%s',\n", combo->usb_cmd);
   } else {
     printf("  'usb_cmd' => undef,\n");
+  }
+  if (combo->snmp_ieee) {
+    printf("  'snmp_ieee' => '%s',\n", combo->snmp_ieee);
+  } else {
+    printf("  'snmp_ieee' => undef,\n");
   }
   if (combo->snmp_mfg) {
     printf("  'snmp_mfg' => '%s',\n", combo->snmp_mfg);
@@ -2320,6 +2645,16 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'drivernopjl' => %s,\n", combo->nopjl);
   } else {
     printf("  'drivernopjl' => 0,\n");
+  }
+  if (combo->driverppdentry) {
+    printf("  'driverppdentry' => '%s',\n", combo->driverppdentry);
+  } else {
+    printf("  'driverppdentry' => undef,\n");
+  }
+  if (combo->comboppdentry) {
+    printf("  'comboppdentry' => '%s',\n", combo->comboppdentry);
+  } else {
+    printf("  'comboppdentry' => undef,\n");
   }
   if (combo->drivermargins) {
     printf("  'drivermargins' => {\n");
@@ -2439,6 +2774,11 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   if (printer->maxyres) {
     printf("  'maxyres' => '%s',\n", printer->maxyres);
   }
+  if (printer->printerppdentry) {
+    printf("  'ppdentry' => '%s',\n", printer->printerppdentry);
+  } else {
+    printf("  'ppdentry' => undef,\n");
+  }
   if (printer->printermargins) {
     printf("  'margins' => {\n");
     generateMarginsPerlData(printer->printermargins, debug);
@@ -2453,6 +2793,24 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   if (printer->pjl) {
     printf("  'pjl' => '%s',\n", printer->pjl);
   }
+  if (printer->general_ieee) {
+    printf("  'general_ieee' => '%s',\n", printer->general_ieee);
+  }
+  if (printer->general_mfg) {
+    printf("  'general_mfg' => '%s',\n", printer->general_mfg);
+  }
+  if (printer->general_mdl) {
+    printf("  'general_mdl' => '%s',\n", printer->general_mdl);
+  }
+  if (printer->general_des) {
+    printf("  'general_des' => '%s',\n", printer->general_des);
+  }
+  if (printer->general_cmd) {
+    printf("  'general_cmd' => '%s',\n", printer->general_cmd);
+  }
+  if (printer->par_ieee) {
+    printf("  'par_ieee' => '%s',\n", printer->par_ieee);
+  }
   if (printer->par_mfg) {
     printf("  'par_mfg' => '%s',\n", printer->par_mfg);
   }
@@ -2465,6 +2823,9 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   if (printer->par_cmd) {
     printf("  'par_cmd' => '%s',\n", printer->par_cmd);
   }
+  if (printer->usb_ieee) {
+    printf("  'usb_ieee' => '%s',\n", printer->usb_ieee);
+  }
   if (printer->usb_mfg) {
     printf("  'usb_mfg' => '%s',\n", printer->usb_mfg);
   }
@@ -2476,6 +2837,9 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   }
   if (printer->usb_cmd) {
     printf("  'usb_cmd' => '%s',\n", printer->usb_cmd);
+  }
+  if (printer->snmp_ieee) {
+    printf("  'snmp_ieee' => '%s',\n", printer->snmp_ieee);
   }
   if (printer->snmp_mfg) {
     printf("  'snmp_mfg' => '%s',\n", printer->snmp_mfg);
@@ -2537,6 +2901,11 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   }
   if (driver->cmd) {
     printf("  'cmd' => '%s',\n", driver->cmd);
+  }
+  if (driver->driverppdentry) {
+    printf("  'ppdentry' => '%s',\n", driver->driverppdentry);
+  } else {
+    printf("  'ppdentry' => undef,\n");
   }
   if (driver->drivermargins) {
     printf("  'margins' => {\n");

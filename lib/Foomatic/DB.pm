@@ -2196,6 +2196,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 			     $order, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
+			     (defined($default) ? $default : 'Unknown')),
+		     sprintf("*FoomaticRIPDefault%s: %s\n", 
+			     $name,
 			     (defined($default) ? $default : 'Unknown')));
 		if (!defined($default)) {
 		    my $whr = sprintf("%s %s driver %s",
@@ -2372,6 +2375,10 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? 
+			      sprintf("%.${digits}f", $default) : 'Unknown')),
+		     sprintf("*FoomaticRIPDefault%s: %s\n", 
+			     $name,
+			     (defined($default) ? 
 			      sprintf("%.${digits}f", $default) : 'Unknown')));
 		if (!defined($default)) {
 		    my $whr = sprintf("%s %s driver %s",
@@ -2499,7 +2506,6 @@ EOFPGSZ
 	    $postpipe .= "*End\n";
 	}
     }
-    my $blob = join('',@datablob);
     my $opts = join('',@optionblob);
     my $otherstuff = join('',@others);
     my $pcfilename;
@@ -2512,13 +2518,30 @@ EOFPGSZ
     }
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
+    my $ieee1284;
+    $ieee1284 = $dat->{'general_ieee'} or $ieee1284 = $dat->{'pnp_ieee'} or
+	$ieee1284 = $dat->{'par_ieee'} or $ieee1284 = $dat->{'usb_ieee'} or 
+	$ieee1284 = $dat->{'snmp_ieee'};
+    my $ieeemodel;
+    my $ieeemake;
+    if ($ieee1284) {
+	$ieee1284 =~ /(MDL|MODEL):([^:;]+);/;
+	$ieeemodel = $2;
+	$ieee1284 =~ /(MFG|MANUFACTURER):([^:;]+);/;
+	$ieeemake = $2;
+    }
     my $pnpmodel;
-    $pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
-	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = $model;
-    $pnpmodel = "($pnpmodel)" if $pnpmodel;
+    $pnpmodel = $dat->{'general_mdl'} or $dat->{'pnp_mdl'} or 
+	$pnpmodel = $dat->{'par_mdl'} or $pnpmodel = $dat->{'usb_mdl'} or
+	$pnpmodel = $ieeemodel or $pnpmodel = $model;
     my $pnpmake;
-    $pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
-	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = $make;
+    $pnpmake = $dat->{'general_mfg'} or $dat->{'pnp_mfg'} or 
+	$pnpmake = $dat->{'par_mfg'} or $pnpmake = $dat->{'usb_mfg'} or
+	$pnpmake = $ieeemake or $pnpmake = $make;
+    if ($ieee1284) {
+	$ieee1284 =~ s/;(.)/;\n  $1/gs;
+	$ieee1284 = "*1284DeviceID: \"\n  " . $ieee1284 . "\n\"\n*End";
+    }
     my $filename = join('-',($dat->{'make'},
 			     $dat->{'model'},
 			     $dat->{'driver'}));;
@@ -2542,7 +2565,21 @@ EOFPGSZ
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
     my $nickname = "$make $model, Foomatic + $drivername$driverrecommended";
+    my $modelname = "$make $model";
+    # Remove forbidden characters (Adobe PPD spec 4.3 section 5.3)
+    $modelname =~ s/[^A-Za-z0-9 \.\/\-\+]//gs;
     my $shortnickname = "$make $model, $drivername";
+
+    my $color;
+    if ($dat->{'color'}) {
+	$color = "*ColorDevice:	True\n*DefaultColorSpace: RGB";
+    } else {
+	$color = "*ColorDevice:	False\n*DefaultColorSpace: Gray";
+    }
+
+    my $extralines = join("\n", ($dat->{'printerppdentry'} .
+				 $dat->{'driverppdentry'} .
+				 $dat->{'comboppdentry'}));
 
     my $tmpl = get_tmpl();
     $tmpl =~ s!\@\@POSTPIPE\@\@!$postpipe!g;
@@ -2551,13 +2588,14 @@ EOFPGSZ
     $tmpl =~ s!\@\@PCFILENAME\@\@!$pcfilename!g;
     $tmpl =~ s!\@\@PNPMAKE\@\@!$pnpmake!g;
     $tmpl =~ s!\@\@PNPMODEL\@\@!$pnpmodel!g;
-    $tmpl =~ s!\@\@MODEL\@\@!$model!g;
+    $tmpl =~ s!\@\@MODEL\@\@!$modelname!g;
     $tmpl =~ s!\@\@NICKNAME\@\@!$nickname!g;
     $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
+    $tmpl =~ s!\@\@COLOR\@\@!$color!g;
+    $tmpl =~ s!\@\@IEEE1284\@\@!$ieee1284!g;
     $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
-    $tmpl =~ s!\@\@COMDATABLOB\@\@!$blob!g;
-    $tmpl =~ s!\@\@PAPERDIMENSION\@\@!!g;
+    $tmpl =~ s!\@\@EXTRALINES\@\@!$extralines!g;
     
     return ($tmpl);
 }
@@ -2817,13 +2855,13 @@ sub get_tmpl {
 *LanguageEncoding: ISOLatin1
 *PCFileName:	"\@\@PCFILENAME\@\@.PPD"
 *Manufacturer:	"\@\@PNPMAKE\@\@"
-*Product:	"\@\@PNPMODEL\@\@"
+*Product:	"(\@\@PNPMODEL\@\@)"
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
 *cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
 *%pprRIP:        foomatic-rip other
-*ModelName:     "\@\@NICKNAME\@\@"
+*ModelName:     "\@\@MODEL\@\@"
 *ShortNickName: "\@\@SHORTNICKNAME\@\@"
 *NickName:      "\@\@NICKNAME\@\@"
 *PSVersion:	"(3010.000) 550"
@@ -2834,19 +2872,18 @@ sub get_tmpl {
 *PSVersion:	"(3010.000) 705"
 *PSVersion:	"(3010.000) 800"
 *LanguageLevel:	"3"
-*ColorDevice:	True
-*DefaultColorSpace: RGB
+\@\@COLOR\@\@
 *FileSystem:	False
 *Throughput:	"1"
 *LandscapeOrientation: Plus90
 *TTRasterizer:	Type42
+\@\@IEEE1284\@\@
+\@\@EXTRALINES\@\@
 \@\@OTHERSTUFF\@\@
  
 \@\@OPTIONS\@\@
 
 *% Generic boilerplate PPD stuff as standard PostScript fonts and so on
-
-\@\@PAPERDIMENSION\@\@
 
 *DefaultFont: Courier
 *Font AvantGarde-Book: Standard "(001.006S)" Standard ROM
@@ -2885,7 +2922,6 @@ sub get_tmpl {
 *Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
 *Font ZapfDingbats: Special "(001.004S)" Standard ROM
 
-\@\@COMDATABLOB\@\@
 ENDTMPL
 }
 

@@ -1,3 +1,15 @@
+2003-02-24  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Added support for
+	  "<ppdentry>" tags to add arbitrary extra lines to the PPDs,
+	  added support for "<general>" and "<ieee1284>" tags in the
+	  "<autodetect>" section of a printer entry, Added "*1284DeviceID"
+	  keyword to generated PPDs, made disrinction between color and
+	  bw printers in the generated PPD files, fixed "*ModelName"
+	  to comply with PPD specs, added "FoomaticRIPDefault..." keywords
+	  to numerical options (see
+  http://www.linuxprinting.org/pipermail/foomatic-devel/2003q1/001250.html).
+	  
 2003-02-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-filters-ppds-install, foomatic-filters-ppds-README,
