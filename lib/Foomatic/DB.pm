@@ -2679,7 +2679,7 @@ sub getmarginsformarginrecord {
 	    ((defined($margins->{$i}{'left'}) ?
 	      $margins->{$i}{'left'} * $unitfactor : $left),
 	     (defined($margins->{$i}{'right'}) ?
-	      $margins->{$i}{'right'} * $unitfactor : $rigth),
+	      $margins->{$i}{'right'} * $unitfactor : $right),
 	     (defined($margins->{$i}{'top'}) ?
 	      $margins->{$i}{'top'} * $unitfactor : $top),
 	     (defined($margins->{$i}{'bottom'}) ?

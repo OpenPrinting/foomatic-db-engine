@@ -1,3 +1,8 @@
+2003-01-07  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixed a typo in the calculation of the
+	  values in the "*ImageableArea" lines of the PPD files.
+
 2003-01-05  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c: Support for margin settings in a printer
