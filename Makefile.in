@@ -327,7 +327,7 @@ filters-ppds: inplace
 	mkdir -p $${packagename}/share; \
 	mkdir -p $${packagename}/bin; \
 	mkdir -p $${packagename}/share/man/man1; \
-	./foomatic-compiledb -t ppd -j 3; \
+	./foomatic-compiledb -t ppd -j 1; \
 	sleep 10; \
 	( cd ppd; \
 	  for file in `ls -1 *.ppd`; do \
