@@ -5,12 +5,12 @@
 # combos are shown in frontends. This program also runs when Foomatic is not
 # installed.
 
-my $libdir;
+use Foomatic::Defaults;
 if ($#ARGV > -1) {
     $libdir = $ARGV[0];
 } elsif ($ENV{FOOMATICDB}) {
     $libdir = $ENV{FOOMATICDB};
-} else {
+} elsif (!$libdir) {
     $libdir = "/usr/share/foomatic";
 }
 

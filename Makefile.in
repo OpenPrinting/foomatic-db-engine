@@ -159,7 +159,8 @@ SBINFILES:=foomatic-kitload \
 	foomatic-getpjloptions foomatic-addpjloptions \
 	foomatic-preferred-driver foomatic-fix-xml \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
-	foomatic-printermap-to-gimp-print-xml
+	foomatic-printermap-to-gimp-print-xml \
+	foomatic-cleanupdrivers
 
 # Foomatic XML templates
 TEMPLATES:=pjl_enum_choice.xml pjl_enum_option.xml pjl_num_option.xml
@@ -175,7 +176,7 @@ install: install-bin install-man
 check-config:
 	@if [ -f .testing-stamp ] ; then \
 	   echo 'Cowardly refusing to install testing Defaults.pm.' ;\
-	   echo 'Use "make testing_clean; make defaults" to get a proper one.' ;\
+	   echo 'Use "make testing-clean; make defaults" to get a proper one.' ;\
 	   exit 1 ;\
 	fi
 
@@ -301,7 +302,7 @@ testing: defaults foomatic-combo-xml foomatic-perl-data man
 	echo -en '#!/bin/sh\nman ./\044\061.[1-9n] 2>/dev/null || man \044\061\n' > man || :
 	chmod a+rx man || :
 
-inplace-clean: testing_clean
+inplace-clean: testing-clean
 testing-clean: clean
 
 # Remove editor backup and temporary files

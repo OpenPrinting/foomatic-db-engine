@@ -4,6 +4,12 @@
 	  alternative Foomatic database location specifying it with the
 	  FOOMATICDB environment variable.
 
+	* Makefile.in: Added foomatic-cleanupdrivers to be installed into 
+	  /usr/sbin, fixed "testing-clean" target.
+
+	* foomatic-cleanupdrivers.in: Use default database location from
+	  Defaults.pm.
+
 2004-01-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed Tim Waugh's fix. It made an
