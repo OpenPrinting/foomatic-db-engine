@@ -170,7 +170,7 @@ sub sortargs {
     # exactly must have '\$' in the end.
     my @standardopts = (
 			# The most important composite option
-			"documenttype",
+			"printoutmode",
 			# Options which appear in the "General" group in 
 			# CUPS and similar media handling options
 			"pagesize",
@@ -560,10 +560,31 @@ sub sortvals {
 			"004800x4800",
 			"004800\\D",
 			"004800\$",
-			# Document types
+			# Printout Modes
+			"draft\$",
+			"draft\.gray",
+			"draft\.mono",
+			"draft\.",
 			"draft",
+			"normal\$",
+			"normal\.gray",
+			"normal\.mono",
+			"normal\.",
 			"normal",
+			"high\$",
+			"high\.gray",
+			"high\.mono",
+			"high\.",
 			"high",
+			"veryhigh\$",
+			"veryhigh\.gray",
+			"veryhigh\.mono",
+			"veryhigh\.",
+			"veryhigh",
+			"photo\$",
+			"photo\.gray",
+			"photo\.mono",
+			"photo\.",
 			"photo",
 			# Trays
 			"upper",

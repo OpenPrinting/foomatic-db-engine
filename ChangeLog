@@ -1,3 +1,11 @@
+2002-12-11  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Modified keyword lists for sorting options
+	  and choices according to the new agreement that the composite
+	  option for pre-made configurations has the name "PrintoutMode"
+	  and the choices "Draft", "Normal", "High", "VeryHigh", "Photo",
+	  with the modifiers ".Gray", and ".Mono".
+
 2002-12-10  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Improvements for composite options.
