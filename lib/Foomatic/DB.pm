@@ -580,7 +580,7 @@ sub ppdfromvartoperl {
 	# Windows.
 	$_ = undossify($_);
 	# Parse keywords
-	if (m!^\*ShortNickName:\s*\"(.*)$!) {
+	if (m!^\*NickName:\s*\"(.*)$!) {
 	    # "*ShortNickName: <code>"
 	    my $line = $1;
 	    # Store the value
@@ -609,6 +609,7 @@ sub ppdfromvartoperl {
 	    if ($dat->{'makemodel'} =~ /^(\S+)\s+(\S.*)$/) {
 		$dat->{'make'} = $1;
 		$dat->{'model'} = $2;
+		$dat->{'model'} =~ s/\s+Foomatic.*$//i;
 	    }
 	} elsif (m!^\*FoomaticIDs:\s*(\S+)\s+(\S+)\s*$!) {
 	    # "*FoomaticIDs: <printer ID> <driver ID>"

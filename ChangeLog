@@ -1,7 +1,14 @@
+2003-08-24  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixed reading make and model name of the
+	  printer from the PPD file to also work with the new Foomatic
+	  PPDs ("*ShortNickName" linited to 32 characters and no comma
+	  before the driver name).
+
 2003-08-14  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-compiledb.in: Let PPD pre-compilation process not choke
-	  one a driver entry with a non-existing printer (for example
+	  on a driver entry with a non-existing printer (for example
 	  mistyped) in its list.
 
 2003-08-12  Till Kamppeter <till.kamppeter@gmx.net>
