@@ -3417,6 +3417,7 @@ EOFPGSZ
     $tmpl =~ s!\@\@HEADCOMMENT\@\@!$headcomment!g;
     $tmpl =~ s!\@\@SAVETHISAS\@\@!$longname!g;
     $tmpl =~ s!\@\@PCFILENAME\@\@!$pcfilename!g;
+    $tmpl =~ s!\@\@MANUFACTURER\@\@!$make!g;
     $tmpl =~ s!\@\@PNPMAKE\@\@!$pnpmake!g;
     $tmpl =~ s!\@\@PNPMODEL\@\@!$pnpmodel!g;
     $tmpl =~ s!\@\@MODEL\@\@!$modelname!g;
@@ -3689,7 +3690,7 @@ sub get_tmpl {
 *LanguageVersion: English 
 *LanguageEncoding: ISOLatin1
 *PCFileName:	"\@\@PCFILENAME\@\@.PPD"
-*Manufacturer:	"\@\@PNPMAKE\@\@"
+*Manufacturer:	"\@\@MANUFACTURER\@\@"
 *Product:	"(\@\@PNPMODEL\@\@)"
 *cupsVersion:	1.0
 *cupsManualCopies: True
