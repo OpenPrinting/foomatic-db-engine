@@ -570,7 +570,7 @@ sub setup_lpd {
 	    } else {
 		$entry->{'str'}{'lp'} = $file;
 	    }
-	} elsif ($config->{'connect'} =~ m!^ptal:/(.+)$!) {
+	} elsif ($config->{'connect'} =~ m!^ptal://?([^/].*)$!) {
 	    # HPOJ MLC protocol
 	    my $devname = $1;
 	    $postpipe = "$sysdeps->{'ptal-connect'} $devname -print";
@@ -1159,7 +1159,7 @@ sub setup_cups {
 	    } else {
 		$cupsuri = "file:$cupsuri";
 	    }
-	} elsif (($config->{'connect'} =~ m!^ptal:/(.*)$!) &&
+	} elsif (($config->{'connect'} =~ m!^ptal://?([^/].*)$!) &&
 		 (!-x "$sysdeps->{'cups-backends'}/ptal")) {
 	    # If there is no "ptal" backend script for CUPS, use an URI
 	    # pointing to the pipe set up by ptal-printd.
@@ -1173,6 +1173,11 @@ sub setup_cups {
 	    $cupsuri = "file:$sysdeps->{'mtink-pipes'}/$1";
 	} else {
 	    $cupsuri=$config->{'connect'};
+	}
+	# Correct PTAL URIs: "ptal:/..." for HPOJ 0.9, "ptal://..." for newer
+	# HPOJ
+	if ($cupsuri =~ m!^ptal:/!) {
+	    $cupsuri = cups_correct_ptal_uri($cupsuri);
 	}
 	$lpadminline .= " -v \"$cupsuri\"";
     }
@@ -1435,7 +1440,7 @@ sub setup_pdq {
 	$entry->{'interface'} = "\"local-port\"";
 	$entry->{'interface_opts'} = "\{ \}";
 	$entry->{'interface_args'} = "\{ \"PORT\" = \"$file\" \}";
-    } elsif ($config->{'connect'} =~ m!^ptal:/(.+)$!) {
+    } elsif ($config->{'connect'} =~ m!^ptal://?([^/].*)$!) {
 	# HPOJ MLC protocol
 	my $devname = $1;
 	$devname =~ tr/:/_/;
@@ -1738,7 +1743,7 @@ sub setup_ppr {
 		$interface = "dummy";
 	    }
 	    $options = "";
-	} elsif ($config->{'connect'} =~ m!^ptal:/(.+)$!) {
+	} elsif ($config->{'connect'} =~ m!^ptal://?([^/].*)$!) {
 	    # HPOJ MLC protocol
 	    my $devname = $1;
 	    $devname =~ tr/:/_/;
@@ -2284,7 +2289,7 @@ sub setup_direct {
 	    } else {
 		$postpipe = "$sysdeps->{'cat'} > $file";
 	    }
-	} elsif ($config->{'connect'} =~ m!^ptal:/(.+)$!) {
+	} elsif ($config->{'connect'} =~ m!^ptal://?([^/].*)$!) {
 	    # HPOJ MLC protocol
 	    my $devname = $1;
 	    $postpipe = "$sysdeps->{'ptal-connect'} $devname -print";
@@ -3128,6 +3133,34 @@ sub load_direct_config {
     }
 
     return \@items;
+}
+
+sub cups_correct_ptal_uri {
+
+    # HPOJ 0.9 uses "ptal:..." URIs with one slash
+    # ("ptal:/mlc:usb:dj450") and the current CVS of HPOJ uses two
+    # slashes ("ptal://mlc:usb:dj450"). Correct the user-supplied URI
+    # according to what "lpinfo -v" reports.
+
+    my ($uri) = @_;
+    $uri =~ m!^ptal://?([^/].*)$!;
+    my $device = $1;
+
+    # PTAL URIs listed by "lpinfo -v"
+    open F, "$sysdeps->{'cups-lpinfo'} -v |" or return (@_);
+    while (my $line = <F>) {
+	chomp($line);
+	my $d = quotemeta($device);
+	if ($line =~ m!(ptal://?$d)$!) {
+	    my $realdevice = $1;
+	    close f;
+	    return $realdevice;
+	}
+    }
+    close F;
+
+    # Nothing found, do not correct the input
+    return @_;
 }
 
 sub cups_generate_usb_device_lists {

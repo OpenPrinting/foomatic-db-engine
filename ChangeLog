@@ -1,3 +1,10 @@
+2003-08-07  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: HPOJ after 0.9 needs two slashes instead
+	  of one in CUPS device URIs ("ptal://..."). Let
+	  foomatic-configure do the correct thing independent whether the
+	  user enters a "ptal" URI with one or two slashes.
+
 2003-08-03  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm, foomatic-ppdfile.in, foomatic-configure.in,
