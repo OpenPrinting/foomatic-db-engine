@@ -105,14 +105,17 @@ Implemented in 3.0.0rc1:
 
  - Support for option settings only acting on a certain page selection
    (example: First page on letterhead paper from tray 1, rest on plain
-   paper from tray 2). Settings must be put into the "%%BeginPageSetup"/
-   "%%EndPageSetup" sections (or at least right after the "%%Page:" 
-   comments) of the appropriate pages in the PostScript input file. If
-   necessary, the renderer (usually GhostScript) is stopped and restarted
-   in the middle of the job, when certain pages need a different command
-   line for the renderer. The bug of Star Office/OpenOffice.org
-   inserting the "%%BeginSetup...%%EndSetup" section after the first
-   "%%Page:" comment is taken care of.
+   paper from tray 2). Settings must be put into the
+   "%%BeginPageSetup"/ "%%EndPageSetup" sections (or at least right
+   after the "%%Page:" comments) of the appropriate pages in the
+   PostScript input file. They can also be specified on the command
+   line by specifying a page range before the option name (ex: "lpr -o
+   1,5-8:ColorMode=CMYK file.ps"). If necessary, the renderer (usually
+   GhostScript) is stopped and restarted in the middle of the job,
+   when certain pages need a different command line for the
+   renderer. The bug of Star Office/OpenOffice.org inserting the
+   "%%BeginSetup...%%EndSetup" section after the first "%%Page:"
+   comment is taken care of.
 
  - foomatic-rip does neither use temporary files on the disk, nor does it
    need to load huge documents completely into memory. All is done in data
