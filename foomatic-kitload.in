@@ -1,0 +1,119 @@
+#!@PERL@
+
+use Foomatic::Defaults;
+
+die "No \$libdir defined in Foomatic::Defaults!?"
+    unless $libdir;
+
+use Getopt::Std;
+getopts("d:hk:lf");
+help() if $opt_h;
+
+list() if $opt_l;
+
+if (! -d $opt_k) {
+    warn "No such directory `$opt_k'\n";
+    help();
+}
+
+# Only overwrite existing files if the "-f" ("force") flag is set.
+my $dontoverwrite;
+if ($opt_f) {
+    $dontoverwrite = "";
+} else {
+    $dontoverwrite = "k";
+}
+
+# OK, now sanity check and import
+my $destdir = $opt_d;
+my $dir = $opt_k;
+if (!(-d "$dir/printer" or -d "$dir/driver" or -d "$dir/opt")) {
+    die "No printer, driver, and/or opt directory in $dir; invalid kit?\n";
+}
+
+die "That's the library directory!\n"
+    if ($dir =~ m"$destdir$libdir/db/source/?");
+
+open FILES, "find $dir -type f -print |" 
+    or die "Cannot run find!?";
+while (<FILES>) {
+    chomp;
+    next if (m/^CVS$/);
+    die "Non-xml file $_!\n"
+	if (! m/\.xml$/);
+}
+close FILES or die "Cannot close pipe from find!";
+
+# OK, we think it's valid now.
+
+die "Foomatic library directory '$destdir$libdir/db' is not writable!\n"
+    if (! (-d "$destdir$libdir/db" and -w "$destdir$libdir/db"));
+
+# Make "tar" giving english output
+$ENV{'LC_ALL'} = "C";
+$ENV{'LANG'} = "C";
+
+# Copy the files
+my $retval = system("( cd $dir ; tar cf - --exclude CVS . ) | tar xv${dontoverwrite}Cf $destdir$libdir/db/source - 2> $destdir$libdir/kitload2.log | tee $destdir$libdir/kitload.log");
+#$retval = $retval / 256;
+#if ($retval) {
+#    die "Error copying files to $destdir$libdir/db/source: $?";
+#}
+
+# Clean up log file from files which could not be copied.
+open STDOUTLOG, "< $destdir$libdir/kitload.log" or
+    die "Cannot read $destdir$libdir/kitload.log!";
+my @stdoutlog = <STDOUTLOG>;
+close STDOUTLOG;
+open STDERRLOG, "< $destdir$libdir/kitload2.log" or
+    die "Cannot read $destdir$libdir/kitload2.log!";
+my $all_ok = 1;
+while ($eline = <STDERRLOG>) {
+    for $oline (@stdoutlog) {
+	$choline = $oline;
+	chomp($choline);
+	next if ($choline !~ m!.xml$!);
+	if ($eline =~ m!$choline!) {
+	    $oline = "";
+	    $all_ok = 0;
+	}
+    }
+}
+my $newlog = join("", @stdoutlog);
+close STDERRLOG;
+if ($newlog !~ m!.xml$!m) {
+    show_errors();
+    warn "\nNo file written into the database, probably this kit is already installed\nor it is empty!\n";
+    unlink "$destdir$libdir/kitload.log" or
+	die "Cannot delete $destdir$libdir/kitload.log!";
+} else {
+    if (!$all_ok) {
+	show_errors();
+	warn "\nSome files of the kit could not be written! The list of actually written\nfiles you find in $destdir$libdir/kitload.log.\n";
+    } else {
+	print "\nKit successfully installed! The list of written files you find in\n$destdir$libdir/kitload.log.\n";
+    }
+    open STDOUTLOG, "> $destdir$libdir/kitload.log" or
+	die "Cannot write $destdir$libdir/kitload.log!";
+    print STDOUTLOG $newlog;
+    close STDOUTLOG;
+}
+unlink "$destdir$libdir/kitload2.log" or
+    die "Cannot delete $destdir$libdir/kitload2.log!";
+
+exit 0;
+
+sub list {
+    print STDOUT "$libdir/db/source\n";
+    exit(0);
+}
+
+sub help {
+    print STDERR "Usage: foomatic-kitload -k kit-dir [-d destination prefix] [-l] [-f]\n";
+    exit(0);
+}
+
+sub show_errors {
+    warn "\nError messages of the copying process:\n\n";
+    print STDERR `cat $destdir$libdir/kitload2.log`;
+}

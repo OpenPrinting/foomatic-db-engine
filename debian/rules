@@ -1,0 +1,109 @@
+#!/usr/bin/make -f
+
+export DH_COMPAT=2
+
+PREFIX=/usr
+# CUPS_FILTERS=$(PREFIX)/sbin
+
+ARCH_INSTALLPREFIX=$(CURDIR)/debian/foomatic-bin
+INDEP_INSTALLPREFIX=$(CURDIR)/debian/foomatic-db
+ETCDIR=/etc/foomatic
+LIBDIR=$(PREFIX)/share/foomatic
+BINDIR=$(PREFIX)/bin
+SBINDIR=$(PREFIX)/sbin
+
+MAKEFLAGS:=$(MAKEFLAGS) PREFIX=$(PREFIX) PERL_INSTALLDIRS=vendor \
+	EXEC_PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+	LPRNG_CONF=/etc/lprng/lpd.conf
+#	LOG_PATH=/var/log/foomatic
+
+
+all: binary
+
+
+install-indep: INSTALLPREFIX=$(INDEP_INSTALLPREFIX)
+install-indep: build
+	dh_installdirs -i
+	INSTALLPREFIX=$(INSTALLPREFIX) $(MAKE) -ef Makefile install-db
+# Cleanup obsoleted drivers
+	$(RM) -v $(INSTALLPREFIX)$(LIBDIR)/db/source/driver/stp.xml
+	$(RM) -v $(INSTALLPREFIX)$(LIBDIR)/db/source/driver/cZ11.xml
+	$(RM) -v $(INSTALLPREFIX)$(LIBDIR)/db/source/driver/hpdj.xml
+	$(RM) -v $(INSTALLPREFIX)$(LIBDIR)/db/source/driver/lxm3200[mcp].xml
+	./foomatic-cleanupdrivers $(INSTALLPREFIX)/
+	touch install-indep
+
+
+install-arch: INSTALLPREFIX=$(ARCH_INSTALLPREFIX)
+install-arch: build
+	dh_installdirs -a
+	INSTALLPREFIX=$(INSTALLPREFIX) $(MAKE) -ef Makefile install-bin
+# FIXME: Why doesn't this get installed through lib/Makefile
+	cp -pv lib/Foomatic/Defaults.pm $(INSTALLPREFIX)/usr/share/perl5/Foomatic
+	$(RM) $(INSTALLPREFIX)$(ETCDIR)/filter.conf
+	touch install-arch
+
+
+install: install-indep install-arch
+
+
+build: 
+	$(MAKE) -ef Makefile build
+	touch build
+
+
+clean:
+	$(MAKE) -ef Makefile clean
+	$(RM) -r debian/$(ARCH_INSTALLPREFIX) debian/$(INDEP_INSTALLPREFIX)
+	$(RM) debian/*~
+	$(RM) build install-indep install-arch
+	dh_clean
+
+
+binary-indep: install-indep
+	dh_installdirs -i
+	dh_installdocs -i
+	dh_installexamples -i
+	dh_installchangelogs -i
+	dh_installmenu -i
+	dh_installcron -i
+# No manpages for the data files yet
+#	dh_installman -pfoomatic-db
+#	dh_movefiles -i
+	dh_strip -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_shlibdeps -i
+	dh_perl -i /usr/share/foomatic
+	dh_gencontrol -i
+	dh_makeshlibs -i
+	dh_installdeb -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+
+binary-arch: install-arch
+	dh_installdirs -a
+	dh_installdocs -a README TODO USAGE
+	dh_installexamples -a
+	dh_installchangelogs -a
+	dh_installmenu -a
+	dh_installcron -a
+	dh_installman -a
+	dh_installdebconf
+#	dh_movefiles -a
+	dh_strip -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_shlibdeps -a
+	dh_perl -a /usr/share/foomatic
+	dh_gencontrol -a
+	dh_makeshlibs -a
+	dh_installdeb -a
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-indep binary-arch
+
+
+.PHONY: binary binary-arch binary-indep clean

@@ -1,0 +1,54 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-COMPILEDB 1 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-compiledb \- compile the foomatic driver database
+.SH SYNOPSIS
+.BI foomatic-compiledb \ [ \-f \ ]\ [ \-j \ n\ ]\ [\ driver\ ...\ \ ]
+
+.SH DESCRIPTION
+.B foomatic-compiledb
+generates all Foomatic data files for a given spooler (or Foomatic combo
+XML files) and either all drivers/printers, or a selected range of drivers.
+It generally should not be necessary except for people who want to generate
+a set of Foomatic data files for distribution. For configuring single
+printers foomatic-datafile and especially foomatic-configure
+will automagically compute just what they need.
+
+.SS Options
+.TP 10
+.BI \-t \ type
+Output file type, one of ppd, cups, lprng, lpd, ppr, pdq, direct, oldcups, xml.
+Note: "oldcups" are the old-style CUPS-O-Matic PPDs (for XPP 1.0 and older, 
+KDE 2.x).
+
+.TP 10
+.BI \-f
+Force: Write into the destination directory even if it already exists.
+
+.TP 10
+.BI \-j \ n
+n = number of work processes to run
+
+.TP 10
+.I driver ...  
+only generate data files for these driver(s)
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-compiledb
+returns 0 unless something unexpected happens.
+
+.SH AUTHORS
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> and Till Kamppeter
+<\fItill.kamppeter@gmx.net\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+Existing files are always conserved instead of older files being
+overwritten. So deleting the destination directory (rm -rf dir) and
+calling foomatic-compiledb without the -f option is recommended.
+
+Please send bug reports to foomatic-devel@linuxprinting.org.

@@ -1,0 +1,113 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-PRINTJOB 1 "2001-01-06" "Foomatic Project"
+.SH NAME
+foomatic-printjob \- <put a short description here>
+.SH SYNOPSIS
+.B foomatic-printjob [ -s spooler ] [ -P queuename ] 
+.B [ -o option1=value1 -o option2 ... ] [ -i ] 
+.B [ file1 file2 ... ]
+
+.B foomatic-printjob -Q [ -s spooler ] [ -P queuename ] [ -i ] [ -a ]
+.B [ user1 user2 ... ]
+
+.B foomatic-printjob -R [ -s spooler ] [ -P queuename ] [ - ] [ -i ] 
+.B [ jobid1 jobid2 ... ]
+
+.B foomatic-printjob -C [ -s spooler ] [ -i ] command [ arguments ]
+
+.B foomatic-printjob -S [ -s spooler ] [ -i ]
+
+.B foomatic-printjob -h [ -s spooler ] [ -P queuename ] [ -i ]
+
+.SS Options
+.TP 10
+.BI \-s spooler
+Explicit spooler type (cups,lpd,lprng,pdq)
+
+.TP 10
+.BI \-P queuename
+Command should apply to this queue
+
+.TP 10
+.BI \-o option=value
+Set option to value
+
+.TP 10
+.BI \-o option
+Set the switch option
+
+.TP 10
+.BI \-# n
+Print n copies
+
+.TP 10
+.BI file1\ \ file2\ \ ...
+Files to be printed, when no file is given, standard input will be printed
+
+.TP 10
+.BI \-Q
+Query the jobs in a queue
+
+.TP 10
+.BI \-a
+Query the jobs in all queues
+
+.TP 10
+.BI user1\ \ user2\ \ ...
+Users whose jobs should be listed
+
+.TP 10
+.BI \-R
+Remove a job from a queue
+
+.TP 10
+.BI \-
+Remove all your jobs
+
+.TP 10
+.BI jobid1\ \ jobid2
+IDs of the jobs to be removed
+
+.TP 10
+.BI \-C
+Execute control commands for queue/job manipulation
+
+.TP 10
+.BI command\ [\ arguments\ ]
+Control command for queue/job manipulation. The 
+commands are the ones of the BSD "lpc" utility. Use
+the control command "help" to get a list of supported 
+commands. Note: the amount of commands varies with the
+spooler, but the same commands given under different 
+spoolers do the same thing.
+
+.TP 10
+.BI \-i
+Interactive mode: You will be asked if foomatic-printjob
+is in doubt about something. Otherwise foomatic-printjob
+uses auto-detection or quits with an error.
+
+.TP 10
+.BI \-S
+Save the chosen spooler as the default spooler
+
+.TP 10
+.BI \-h
+Show this message or show a list of available options if a queue is specified
+
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-printjob
+returns ...
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+This manpage needs some editing.
+

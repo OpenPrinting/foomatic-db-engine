@@ -1,0 +1,467 @@
+
+
+
+Here are some ideas on how new things could be implemented
+----------------------------------------------------------
+
+Suggested by Till
+
+The items are not sorted in a special way, especially they are not
+sorted by importance.
+
+
+Conserving Foomatic data for certain distros or old driver versions
+-------------------------------------------------------------------
+
+This can be realized most easily by CVS tags which start a new
+branch. When a distro or a driver is released one tags the CVS. So
+retrieving this CVS state gives a Foomatic package fitting to the
+appropriate distro or driver. Bug fixes for old distros or drivers
+which do not apply any more to the current state of Foomatic can be
+commited to the appropriate CVS branch.
+
+The web interface of linuxprinting.org could have buttons than where
+one can choose the driver or distro version for which one wants to
+have the Foomatic data.
+
+
+Printer compatibility classes
+-----------------------------
+
+Instead of needing to add many compatible printers to the drivers and
+to the constraints of options one could introduce compatibility
+classes. A compatibility class contains absolutely compatible
+printers, which means printers which work with the same drivers, the
+same options, and the same choices for the options. Then one can put
+the class name into the list of supported printers of a driver and
+also into the constraints of the options and so one avoids needint to
+insert tenth of printers everywhere. Especially there are many HP
+inkjets which are absolutely compatible to each other (around ten
+classes instead of 100 printers) and there are many clones of HP
+LaserJet printers.
+
+The classes could be defined in a new subdirectory "class" besides the
+existing "printer", "driver", and "option" subdirectories. The XML
+file could look as follows (this is the class of new HP inkjets as
+defined for the HPIJS driver. It contains only the "small" models with
+paper sizes up to Legal format):
+
+<class id="class/DJ9xxVIP_small">
+  <printers>
+    <printer>
+      <id>printer/635698</id><!-- HP DeskJet 960C -->
+    </printer>
+    <printer>
+      <id>printer/HP-DeskJet_980C</id>
+    </printer>
+    <printer>
+      <id>printer/530418</id><!-- HP DeskJet 990C -->
+    </printer>
+    ...
+  </printers>
+</class>
+
+Then the entry to include these printers in the HPIJS driver entry would
+reduce to
+
+  <printers>
+    ...
+    <printer>
+      <id>class/DJ9xxVIP_small</id>
+      <!-- HP DeskJet 990C compatible, max. Legal paper -->
+    </printer>
+    ...
+  </printers>
+
+The 1200-dpi photo quality choice is unique to this printer class, so
+it will have the constraints:
+
+    ...
+    <constraints>
+     <!-- Assume the choice doesn't apply... -->
+     <constraint sense='false'>
+      <driver>hpijs</driver>
+     </constraint>
+     <!-- ...except to these: -->
+     <constraint sense='true'>
+      <driver>hpijs</driver>
+      <printer>class/DJ9xxVIP_small</printer>
+     </constraint>
+     <constraint sense='true'>
+      <driver>hpijs</driver>
+      <printer>class/DJ9xxVIP_large</printer>
+     </constraint>
+    </constraints>
+    ...
+
+This way the manual entering of Foomatic daya will get much easier.
+
+
+Collective options
+------------------
+
+This is a new option type to make it easier for users to choose the
+best settings for a certain printing task, even if the driver has very
+many options. The idea is to have an enumerated choice option which
+does not directly modify something in the driver's command line but
+sets several of the other options.
+
+For example we could have a "Document Type" option with the following
+choices:
+
+   Draft
+   Office document
+   Photo
+   Custom
+
+It would set the options "Media Type", "Resolution", and "Dither" as
+follows:
+
+   Choice           Media Type      Resolution        Dither
+   ------------------------------------------------------------------
+   Draft            Plain Paper     300x300 dpi       Fast
+   Office document  Plain Paper     600x600 dpi       Floyd-Steinberg
+   Photo            Photo Paper     1200x1200 dpi     Floyd-Steinberg
+
+and in the Custom mode it would let the user set the options
+individually. Not mentioned options as "Page Size" and "Media Source"
+are always set individually by the user. A GUI should gray out "Media
+Type", "Resolution", and "Dither" when "Document Type" is not set to
+"Custom".
+
+An XML implementation could look like:
+
+<option type="enum" id="opt/DocType">
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+  <arg_longname>
+   <en>Document Type</en>
+  </arg_longname>
+  <arg_shortname>
+   <en>DocType</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+  <arg_execution>
+   <arg_order>100</arg_order>
+   <arg_spot>Z</arg_spot>
+   <arg_collective />
+   <arg_options>
+    <arg_option>MediaType</arg_option>
+    <arg_option>Resolution</arg_option>
+    <arg_option>Dither</arg_option>
+   </arg_options>
+  </arg_execution>
+  <constraints>
+     <constraint sense="true">
+      <driver>easyprint</driver>
+      <arg_defval>ev/Office</arg_defval>
+     </constraint>
+  </constraints>
+  <enum_vals>
+   <enum_val id="ev/Draft">
+    <ev_longname>
+     <en>Draft</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Draft</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_settings>
+     <ev_setting>MediaType=Plain</ev_setting>
+     <ev_setting>Resolution=300</ev_setting>
+     <ev_setting>Dither=Fast</ev_setting>
+    </ev_settings>
+   </enum_val>
+   <enum_val id="ev/Office">
+    <ev_longname>
+     <en>Office Document</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Office</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_settings>
+     <ev_setting>MediaType=Plain</ev_setting>
+     <ev_setting>Resolution=600</ev_setting>
+     <ev_setting>Dither=FloydSteinberg</ev_setting>
+    </ev_settings>
+   </enum_val>
+   <enum_val id="ev/Photo">
+    <ev_longname>
+     <en>Photo</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Photo</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_settings>
+     <ev_setting>MediaType=Photo</ev_setting>
+     <ev_setting>Resolution=1200</ev_setting>
+     <ev_setting>Dither=FloydSteinberg</ev_setting>
+    </ev_settings>
+   </enum_val>
+   <enum_val id="ev/Custom">
+    <ev_longname>
+     <en>Custom Settings</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Custom</en>
+     <!-- Until someone tells me how to learn the user locale in
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_settings>
+    </ev_settings>
+   </enum_val>
+  </enum_val>
+</option>
+  
+The choice "Custom" has an empty settings block, this means, the user
+can set the options individually. One could also have a collective
+option without "Custom" choice to implement an option which modifies
+the command line at two places or which once modifies the command line
+and second, sends a PJL option.
+
+
+Option conflicts
+----------------
+
+Option conflicts prevent the user from making choices which make
+printing impossible or simply do not make sense (as Duplex on
+transparencies or 1200 dpi on plain paper).
+
+I have already thought about adding a fourth subdirectory (besides
+"printer", "driver", "opt") named "conflict" containing files like
+
+<conflict id="conflict/noLargeCapacityTray">
+   <comments>
+     <en>
+        Large capacity tray not installed but either requested or needed
+        due to the requested amount of copies.
+     </en>
+   </comments>
+   <constraints>
+     <constraint sense="false">
+        <make>Brother</make>
+     </constraint>
+   <constraints>
+   <conflicting_settings>
+     <constraints>
+       <constraint sense="false">
+          <driver>ljet4</driver>
+       </constraint>
+     <constraints>
+     <message>
+       <en>
+         Large capacity tray requested but not installed!
+       </en>
+     </message>
+     <setting>LCTInstalled eq No</setting>
+     <setting>InputSlot eq LargeCapacity Tray4 Tray5</setting>
+   </conflicting_settings>
+   <conflicting_settings>
+     <message>
+       <en>
+         No tray for &value:Copies; sheets available!
+       </en>
+     </message>
+     <setting>LCTInstalled eq No</setting>
+     <setting>Copies gt 250</setting>
+   </conflicting_settings>
+</conflict>
+
+Here "eq" means "equal to one of the items listed" and "gt" means 
+greater than the given item. A conflict happens when all the conditions 
+in the <settings> lines are fullfilled and it should show the <message> 
+in the GUI. <constraints> mean the same as in the other files.
+
+
+Graying out options
+-------------------
+
+Some options do not make sense when other options have a certain
+setting, as for example adjustment of Cyan, Magenta, and Yellow when
+grayscale or bw printing is chosen. So one could add conditions to an
+option's XML file when it should be grayed out, as
+
+<option type="int" id="opt/MagentaLevel">
+  <grayout>
+    <setting>ColorMode eq Grayscale BlackAndWhite</setting>
+  </grayout>
+  ...
+
+The condition syntax is here the same as with the conflicts.
+
+
+Standard and Advanced options
+-----------------------------
+
+A GUI could only show the standard options by default and the advanced
+options only show up by clicking an "Advanced" button. This could simply
+by realized by adding a
+
+   <arg_advanced />
+
+tag to all options which should be advanced options. Perhaps one
+places it in the option constraints, so an option can be advanced for
+one driver and standard for another.
+
+
+Option groups
+-------------
+
+Option groups allow a more structured presentation of the options in a
+GUI. In XPP (CUPS frontend) for example all options except "PageSize",
+"InputSlot", "Duplex" go into an "Extra" group (this is a decision
+made by CUPS when there are no group definitions in the PPD
+file). With option groups there could be generated varipus tabs, as
+"Finishing", "Color correction", "Installable options", ... which
+would make it much easier to find the options in the GUI dialogs.
+
+Options could be grouped by adding a group name to every option XML file:
+
+<option type="enum" id="opt/pjl-stapling">
+  <arg_group_longname>
+   <en>Finishing Options</en>
+  </arg_group_longname>
+  <arg_group_shortname>
+   <en>Finishing</en>
+  </arg_group_shortname>
+  <arg_longname>
+   <en>Phone Number</en>
+  </arg_longname>
+  ...
+
+We use a long name and a short name here, as for the option names
+itself, one for the GUIs, the other internal identification or command
+line applications.
+
+In a PPD file the option entry would be surrounded by
+
+   *OpenGroup: Finishing/Finishing Options
+
+   ...
+
+   *CloseGroup: Finishing
+
+In the Perl structure there could be two additional entries:
+
+    {
+      'vals_byname' => {
+        'Tray1' => {
+          'comment' => 'Tray 1',
+          'idx' => 'TRAY_TRAY_1',
+          'value' => 'Tray1',
+          'driverval' => 'TRAY_TRAY_1'
+        },
+        'EnvFeed' => {
+          'comment' => 'Env Feed',
+          'idx' => 'TRAY_ENVELOPE_FEEDER',
+          'value' => 'EnvFeed',
+          'driverval' => 'TRAY_ENVELOPE_FEEDER'
+        }
+      },
+      'style' => 'C',
+      'comment' => 'Media Source',
+      'vals' => [
+        {},
+        {}
+      ],
+      'order' => '100',
+      'spot' => 'A',
+      'proto' => ' tray=%s',
+      'idx' => 'opt/omni-tray',
+      'default' => 'Tray1',
+      'type' => 'enum',
+      'name' => 'InputSlot',
+      'group' => 'Media',
+      'group_comment' => 'Media Options'
+    },
+
+Options without group should be treated as before or get into some
+default group.
+
+
+String and Password options
+---------------------------
+
+A string option could be used for a phone number of a fax machine (fax
+modem or multi-function device with fax capability). A password option
+could be used for some internal password protection facility of a
+device. The only difference between string and password options is
+that a GUI would show asterisks instead of the actual letters in an
+input field. Therefore the example shows only a "string"-type
+option. In a "password"-type option the option type has to be set to
+"password" instead of "string".
+
+XML:
+
+<option type="string" id="opt/fax-Phone">
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+  <arg_longname>
+   <en>Phone Number</en>
+  </arg_longname>
+  <arg_shortname>
+   <en>Phone</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+  <arg_execution>
+   <arg_order>100</arg_order>
+   <arg_spot>C</arg_spot>
+   <arg_substitution />
+   <arg_proto> --phone=&quot;%s&quot;</arg_proto>
+  </arg_execution>
+  <constraints>
+     <constraint sense="true">
+      <driver>fax</driver>
+      <arg_defval></arg_defval>
+     </constraint>
+  </constraints>
+  <arg_max_length>30</arg_max_length>
+</option>
+
+Resulting code in Foomatic Perl data structure:
+
+  'args_byname' => {
+    ...
+    'Phone' => {
+      'idx' => 'opt/fax-Phone',
+      'name' => 'Phone',
+      'type' => 'string',
+      'comment' => 'Phone Number',
+      'proto' => ' --phone="%s"',
+      'default' => '',
+      'max_length' => '30',
+      'spot' => 'C',
+      'order' => '100',
+      'style' => 'C'
+    }
+    ...
+  },
+
+
+Pickmany options
+----------------
+
+Pickmany options could have the same XML and Perl file structures as
+the "enum" options but have the type "pickmany". They should allow to
+assign a comma separated list of choices to the option:
+
+   lpr -P laserjet -o option=value1,value2,value3 file.ps
+
+The default value in the XML database entry file for this option
+should contain a comma-separated list of choice IDs or can be empty:
+
+   <arg_defval></arg_defval>
+
+   <arg_defval>ev/choice1,ev/choice2</arg_defval>
+

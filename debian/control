@@ -1,0 +1,30 @@
+Source: foomatic
+Section: text
+Priority: optional
+Maintainer: Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>
+Standards-Version: 3.5.6
+Build-Depends: debhelper (> 3.0.19), perl (>= 5.6.0-16)
+
+Package: foomatic-bin
+Architecture: any
+Depends: debconf (>= 0.5.00), ${perl:Depends}, libstorable-perl, libxml-grove-perl, libxml-twig-perl
+Recommends: gs | gs-aladdin, cupsys | lpr | lprng | pdq, foomatic-data, a2ps | mpage | enscript
+Conflicts: cupsomatic-ppd (<< 0.20010420-4)
+Replaces: cupsomatic-ppd (<< 0.20010420-4)
+Description: Printer/Driver database and print system - binaries
+ Foomatic is a printer and driver database with PPD generator and filter 
+ backends for various Printing systems from cups over lp* to pdq.
+ .
+ These are the architecture dependent files, i.e. the filter scripts
+ and perl libraries.
+
+Package: foomatic-db
+Architecture: all
+Provides: foomatic-data
+Depends: libstorable-perl, libxml-grove-perl, libxml-twig-perl, foomatic-bin
+Description: Printer/Driver database and print system - main database
+ Foomatic is a printer and driver database with PPD generator and filter 
+ backends for various Printing systems from cups over lp* to pdq.
+ .
+ This package contains the database.
+

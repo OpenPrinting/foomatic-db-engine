@@ -1,0 +1,91 @@
+
+lp|optra|upstairs|Lexmark Optra 40:\
+    :rp=lp1:\
+    :sd=/var/spool/lpd/lp:\
+    :rm=color-printer.picante.com:\
+    :sh:\
+    :mx#0:
+
+laser|oki|okidata|OkiPage 8z:\
+    :lp=/dev/oki4drv:\
+    :af=/usr/local/etc/oki8z.lom:\
+    :if=/usr/local/sbin/lpdomatic:\
+    :sd=/var/spool/lpd/oki8z:\
+    :sh:\
+    :mx#0:
+
+canon|downstairs|Canon BJC-4100:\
+    :lp=/dev/lp0:\
+    :af=/usr/local/etc/bjc4100.lom:\
+    :if=/usr/local/sbin/lpdomatic:\
+    :sd=/var/spool/lpd/canon:\
+    :sh:\
+    :mx#0:
+
+z32|Lexmark Z-32:\
+    :lp=/dev/lp0:\
+    :if=/usr/local/lexmark/z32/z32.sh:\
+    :sd=/var/spool/lpd/z32:\
+    :sh:\
+    :mx#0:
+z32-outfiles|raw:\
+    :lp=/dev/lp0:\
+    :sd=/var/spool/lpd/lp0:\
+    :sh:\
+    :mx#0:
+# Entry edited Tue Feb 27 01:04:15 2001 by foomatic-configure.
+# Additional configuration atop ./etc/queue34.lpd
+# Entry edited Tue Feb 27 01:05:27 2001 by foomatic-configure.
+# Additional configuration atop ./etc/queue34.lpd
+queue34|This *was* is a printer name|Somewhere Over There:\
+    :lf=/var/log/lp-errs:\
+    :lp=/dev/null:\
+    :sd=/var/spool/lpd/queue34:\
+    :af=./etc/queue34.lpd:\
+    :sh:\
+    :mx#0:
+
+
+# Entry edited Tue Feb 27 01:06:02 2001 by foomatic-configure.
+# Additional configuration atop ./etc/queue39.lpd
+# Entry edited Tue Feb 27 01:06:07 2001 by foomatic-configure.
+# Additional configuration atop ./etc/queue39.lpd
+# Entry edited Tue Feb 27 01:13:16 2001 by foomatic-configure.
+# Additional configuration atop ./etc/queue39.lpd
+queue39|This *was* is a printer name|Canon S4500|Somewhere Over There:\
+    :lf=/var/log/lp-errs:\
+    :lp=/dev/null:\
+    :sd=/var/spool/lpd/queue39:\
+    :af=./etc/queue39.lpd:\
+    :sh:\
+    :mx#0:
+
+
+# Entry edited Wed Feb 28 23:11:39 2001 by foomatic-configure.
+# Additional configuration atop ./etc/lpd/new1.lpd
+# Entry edited Wed Feb 28 23:14:01 2001 by foomatic-configure.
+# Additional configuration atop ./etc/lpd/new1.lpd
+new1|New One|Canon BJC-4400|Downstairs:\
+    :lf=/var/log/lp-errs:\
+    :lp=/dev/null:\
+    :af=./etc/lpd/new1.lpd:\
+    :sd=/var/spool/lpd/new1:\
+    :if=/usr/local/bin/lpdomatic:\
+    :sh:\
+    :mx#0:
+
+
+# Entry edited Thu Mar  1 00:25:58 2001 by foomatic-configure.
+# Additional configuration atop ./etc/lpd/queue18.lpd
+# Entry edited Thu Mar  1 00:27:51 2001 by foomatic-configure.
+# Additional configuration atop ./etc/lpd/queue18.lpd
+# Entry edited Thu Mar  1 00:29:01 2001 by foomatic-configure.
+# Additional configuration atop ./etc/lpd/queue18.lom
+queue18||HP DeskJet 1120C|:\
+    :lf=/var/log/lp-errs:\
+    :lp=/dev/null:\
+    :af=./etc/lpd/queue18.lom:\
+    :if=/usr/local/bin/lpdomatic:\
+    :sd=/var/spool/lpd/queue18:\
+    :sh:\
+    :mx#0:

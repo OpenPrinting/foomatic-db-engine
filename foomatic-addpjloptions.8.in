@@ -1,0 +1,58 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-ADDPJLOPTIONS 8 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-addpjloptions \- Edit PJL options into the foomatic database
+.SH SYNOPSIS
+.B foomatic-addpjloptions
+[\fIOPTION\fR]...
+
+.BI foomatic-addpjloptions [\ \-f \ ]\ [\ \-i \ ] \-p <printer\ ID>\ [\ <pjl\ option\ file>\ ]
+.BI foomatic-addpjloptions \-h
+
+.SH Description
+.B foomatic-addpjloptions
+adds the PJL options listed by a printer to the Foomatic database. The
+option list is read from a file if specified or else from standard input. 
+
+The appropriate printer ID must be provided through option \fB-p\fR. 
+
+.SS Options
+.TP 10
+.BI \-p <printer\ ID>
+Printer where to add the PJL options
+
+.B <pjl option file>
+File with PJL options returned by the printer. If this filename is not
+provided, the PJL options are taken from standard input.
+
+.B \-f
+Force adding PJL options, no questions.
+
+.B \-i
+Add the most important PJL options only.
+
+.B \-h
+Print a help message
+
+.SH FILES
+.TP 25
+foomatic-templates/pjl*.xml
+Necessary for successful operation.
+.PD 0
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-addpjloptions
+returns ...
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+The program needs three files 
+
+Please send bug reports to foomatic-devel@linuxprinting.org.

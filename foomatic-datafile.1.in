@@ -1,0 +1,50 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-DATAFILE 1 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-datafile \- <put a short description here>
+.SH SYNOPSIS
+.B foomatic-datafile \-t cups|pdq|lpd|mf|ppr|ppd \-d <driver> \-p <printerid> [-f]
+
+
+
+.SH DESCRIPTION
+.B foomatic-datafile
+will compute the spooler-specific datafile for any
+spooler/printer/driver tuple, or a spooler-independent PPD file for
+applications/clients being able to access the printer's options. Use
+the \fB-f\fR flag if you change any source or data files.
+
+
+.SS Options
+.TP 10
+.BI \-t
+datafile type
+
+.TP 10
+.BI \-d
+driver name
+
+.TP 10
+.BI \-p
+printer id
+
+.TP 10
+.BI \-f
+force data rebuild
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-datafile
+returns ...
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+This manpage needs much editing.
+
+Please send bug reports to foomatic-devel@linuxprinting.org.

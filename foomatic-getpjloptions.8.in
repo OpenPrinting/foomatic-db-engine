@@ -1,0 +1,47 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-GETPJLOPTIONS 8 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-getpjloptions \- <put a short description here>
+.SH SYNOPSIS
+.BI foomatic-getpjloptions device
+
+.BI foomatic-getpjloptions hostname\ port
+
+.SH DESCRIPTION
+.B foomatic-getpjloptions
+Reads the PJL options from local (parallel, USB, serial, ...) or remote
+(only socket, LPD is not bi-directional) printers to standard output. The
+output can be piped into foomatic-addpjloptions to add options to the database.
+
+
+.SS Options
+.TP 10
+.BI device
+where a local printer is connected, e.g. /dev/lp0, /dev/usb/lp0. Have
+your parallel port in EPP/bi-directional mode (see your BIOS
+settings).
+
+.TP 10
+.BI hostname
+Host name or IP of a network printer (HP JetDirect, Socket, ...)
+
+.TP 10
+.BI port
+Port on which your network printer listens.
+
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-getpjloptions
+returns ???
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+Uni-directional protocols as remote LPD are not supported..
+

@@ -1,0 +1,205 @@
+#!@PERL@ -w
+
+#
+# For using the old lib/Foomatic/DB_perl_xml.pm the lines
+#
+#    # Directory for the generated files
+#    \$cachedir = \$ENV{FOOMATIC_CACHEDIR} || '$ENV{CACHEDIR}';
+#
+# have to be inserted after
+#
+#    \$bindir = '$ENV{BINDIR}';
+#
+# (line 49 in this file).
+#
+
+use vars qw/$opt_inplace/;
+use Getopt::Long;
+GetOptions('inplace');
+
+my $filename = 'lib/Foomatic/Defaults.pm'; 
+my $pwd = `pwd`;
+chomp $pwd;
+
+open DEFAULTS, ">$filename" or die "Can't open $filename!";
+
+print DEFAULTS <<'EOH';
+package Foomatic::Defaults;
+
+use vars qw(@EXPORT @EXPORT_OK $libdir $bindir $sysdeps $DEBUG);
+#use vars qw(@EXPORT @EXPORT_OK $libdir $bindir $cachedir $sysdeps $DEBUG);
+
+require Exporter;
+@ISA = qw/Exporter/;
+@EXPORT = qw($libdir $bindir $sysdeps);
+#@EXPORT = qw($libdir $bindir $cachedir $sysdeps);
+@EXPORT_OK = qw($DEBUG);
+
+EOH
+
+    if (! $opt_inplace) {
+	print DEFAULTS <<EOF;
+# Debug flag; set this to enable debugging messages from Perl modules.
+\$DEBUG = '$ENV{DEBUG}';
+
+# Library directory; typically /usr/share/foomatic or somesuch.
+\$libdir = '$ENV{LIBDIR}';
+
+# Binary directory; typically /usr/bin or somesuch.
+\$bindir = '$ENV{BINDIR}';
+
+# System configuration list
+\$sysdeps = {
+    'foo-etc'    => '$ENV{ETCDIR}',
+    'lpdomatic'  => '$ENV{SBINDIR}/lpdomatic',
+    'lpd-dir'    => '$ENV{LPD_SPOOL}',
+    'lpd-log'    => '$ENV{LPD_LOG}',
+    'lpd-bin'    => '$ENV{LPD_BIN}',
+    'lpd-pcap'   => '$ENV{PRINTCAP}',
+    'lprng-conf' => '$ENV{LPRNG_CONF}',
+    'lpd-lpr'    => '$ENV{LPD_LPR}',
+    'lpd-lpq'    => '$ENV{LPD_LPQ}',
+    'lpd-lprm'   => '$ENV{LPD_LPRM}',
+    'lpd-lpc'    => '$ENV{LPD_LPC}',
+    'lprng-checkpc' => '$ENV{LPRNG_CHECKPC}',
+    'cupsomatic' => '$ENV{CUPS_FILTERS}/cupsomatic',
+    'cups-etc'   => '$ENV{CUPS_ETC}',
+    'cups-admin' => '$ENV{CUPS_ADMIN}',
+    'cups-lpstat' => '$ENV{CUPS_LPSTAT}',
+    'cups-ppds'  => '$ENV{CUPS_PPDS}',
+    'cups-filters' => '$ENV{CUPS_FILTERS}',
+    'cups-backends' => '$ENV{CUPS_BACKENDS}',
+    'cups-pconf' => '$ENV{CUPS_PCONF}',
+    'cups-lpr'   => '$ENV{CUPS_LPR}',
+    'cups-lpq'   => '$ENV{CUPS_LPQ}',
+    'cups-lprm'  => '$ENV{CUPS_LPRM}',
+    'cups-lpc'   => '$ENV{CUPS_LPC}',
+    'cups-lp'    => '$ENV{CUPS_LP}',
+    'cups-cancel' => '$ENV{CUPS_CANCEL}',
+    'cups-enable' => '$ENV{CUPS_ENABLE}',
+    'cups-disable' => '$ENV{CUPS_DISABLE}',
+    'cups-accept' => '$ENV{CUPS_ACCEPT}',
+    'cups-reject' => '$ENV{CUPS_REJECT}',
+    'cups-lpmove' => '$ENV{CUPS_LPMOVE}',
+    'cups-lpoptions' => '$ENV{CUPS_LPOPTIONS}',
+    'pdq-conf'   => '$ENV{PDQ_CONF}',
+    'pdq-printrc' => '$ENV{PDQ_PRINTRC}',
+    'pdq-foomatic' => '$ENV{PDQ_FOOMATIC}',
+    'pdq-print'  => '$ENV{PDQ_PRINT}',
+    'pdq-jobdir' => '$ENV{PDQ_JOBDIR}',
+    'ppromatic' => '$ENV{PPR_INTERFACES}/ppromatic',
+    'ppr-interfaces' => '$ENV{PPR_INTERFACES}',
+    'ppr-ppdfiles' => '$ENV{PPR_PPDFILES}',
+    'ppr-etc' => '$ENV{PPR_ETC}',
+    'ppr-ppr' => '$ENV{PPR_PPR}',
+    'ppr-ppad' => '$ENV{PPR_PPAD}',
+    'ppr-ppop' => '$ENV{PPR_PPOP}',
+    'directomatic'	=> '$ENV{BINDIR}/directomatic',
+    'direct-etc' => '$ENV{DIRECT_ETC}',
+    'direct-config' => '$ENV{DIRECT_CONFIG}',
+    'nc' => '$ENV{NC}',
+    'rlpr' => '$ENV{RLPR}',
+    'smbclient' => '$ENV{SMBCLIENT}',
+    'nprint' => '$ENV{NPRINT}',
+    'ptal-connect' => '$ENV{PTAL_CONNECT}',
+    'ptal-pipes' => '$ENV{PTAL_PIPES}',
+    'cat' => '$ENV{CAT}',
+    'wget' => '$ENV{WGET}',
+    'curl' => '$ENV{CURL}'
+};
+
+EOF
+
+} else {
+
+    # special inplace config; using local etc for testing, etc
+
+    print DEFAULTS <<EOP;
+
+# Debug flag; set this to enable debugging messages from Perl modules.
+\$DEBUG = '$ENV{DEBUG}';
+
+# Library directory; typically /usr/share/foomatic or somesuch.
+\$libdir = '$ENV{LOCALLIBDIR}';
+
+# Binary directory; typically /usr/bin or somesuch.
+\$bindir = '$pwd';
+
+# Directory for the generated files
+#\$cachedir = '$pwd/cache';
+
+# System configuration list
+\$sysdeps = {
+    'foo-etc'    => '$pwd/etc',
+    'lpdomatic'  => '$pwd/lpdomatic',
+    'lpd-dir'    => '$ENV{LPD_SPOOL}',
+    'lpd-log'    => '$ENV{LPD_LOG}',
+    'lpd-bin'    => '$ENV{LPD_BIN}',
+    'lpd-pcap'   => '$pwd/etc/printcap',
+    'lprng-conf' => '$ENV{LPRNG_CONF}',
+    'lpd-lpr'    => '$ENV{LPD_LPR}',
+    'lpd-lpq'    => '$ENV{LPD_LPQ}',
+    'lpd-lprm'   => '$ENV{LPD_LPRM}',
+    'lpd-lpc'    => '$ENV{LPD_LPC}',
+    'lprng-checkpc' => '$ENV{LPRNG_CHECKPC}',
+    # CUPS requires cupsomatic in the CUPS filters directory
+    'cupsomatic' => '$ENV{CUPS_FILTERS}/cupsomatic',
+    'cups-etc'   => '$ENV{CUPS_ETC}',
+    'cups-admin' => '$ENV{CUPS_ADMIN}',
+    'cups-lpstat' => '$ENV{CUPS_LPSTAT}',
+    'cups-ppds'  => '$ENV{CUPS_PPDS}',
+    'cups-filters' => '$ENV{CUPS_FILTERS}',
+    'cups-backends' => '$ENV{CUPS_BACKENDS}',
+    'cups-pconf' => '$ENV{CUPS_PCONF}',
+    'cups-lpr'   => '$ENV{CUPS_LPR}',
+    'cups-lpq'   => '$ENV{CUPS_LPQ}',
+    'cups-lprm'  => '$ENV{CUPS_LPRM}',
+    'cups-lpc'   => '$ENV{CUPS_LPC}',
+    'cups-lp'    => '$ENV{CUPS_LP}',
+    'cups-cancel' => '$ENV{CUPS_CANCEL}',
+    'cups-enable' => '$ENV{CUPS_ENABLE}',
+    'cups-disable' => '$ENV{CUPS_DISABLE}',
+    'cups-accept' => '$ENV{CUPS_ACCEPT}',
+    'cups-reject' => '$ENV{CUPS_REJECT}',
+    'cups-lpmove' => '$ENV{CUPS_LPMOVE}',
+    'cups-lpoptions' => '$ENV{CUPS_LPOPTIONS}',
+    'pdq-conf'   => '$ENV{PDQ_CONF}',
+    'pdq-printrc' => '$ENV{PDQ_PRINTRC}',
+    'pdq-foomatic' => '$ENV{PDQ_FOOMATIC}',
+    'pdq-print'  => '$ENV{PDQ_PRINT}',
+    'pdq-jobdir' => '$ENV{PDQ_JOBDIR}',
+    # PPR requires ppromatic in the PPR interfaces directory
+    'ppromatic' => '$ENV{PPR_INTERFACES}/ppromatic',
+    'ppr-interfaces' => '$ENV{PPR_INTERFACES}',
+    'ppr-ppdfiles' => '$ENV{PPR_PPDFILES}',
+    'ppr-etc' => '$ENV{PPR_ETC}',
+    'ppr-ppr' => '$ENV{PPR_PPR}',
+    'ppr-ppad' => '$ENV{PPR_PPAD}',
+    'ppr-ppop' => '$ENV{PPR_PPOP}',
+    'directomatic'	=> '$pwd/directomatic',
+    'direct-etc' => '$ENV{DIRECT_ETC}',
+    'direct-config' => '$ENV{DIRECT_CONFIG}',
+    'nc' => '$ENV{NC}',
+    'rlpr' => '$ENV{RLPR}',
+    'smbclient' => '$ENV{SMBCLIENT}',
+    'nprint' => '$ENV{NPRINT}',
+    'ptal-connect' => '$ENV{PTAL_CONNECT}',
+    'ptal-pipes' => '$ENV{PTAL_PIPES}',
+    'cat' => '$ENV{CAT}',
+    'wget' => '$ENV{WGET}',
+    'curl' => '$ENV{CURL}'
+};
+
+EOP
+
+}
+
+close DEFAULTS;
+
+# Emacs tabulator/indentation
+
+### Local Variables:
+### tab-width: 8
+### perl-indent-level: 4
+### End:
+

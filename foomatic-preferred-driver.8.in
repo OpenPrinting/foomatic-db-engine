@@ -1,0 +1,25 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-PREFERRED-DRIVER 8 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-preferred-driver \- <put a short description here>
+.SH SYNOPSIS
+.B foomatic-preferred-driver
+.\"[\fIOPTION\fR]...
+
+[To be edited]
+
+.SH SEE ALSO
+.IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-preferred-driver
+returns ...
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+This manpage contains no useful information.
+

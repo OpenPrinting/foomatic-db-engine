@@ -1,0 +1,27 @@
+<option type="enum" id="opt/@@OPTIONID@@">
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+  <arg_longname>
+   <en>@@LONGOPTION@@</en>
+  </arg_longname>
+  <arg_shortname>
+   <en>@@SHORTOPTION@@</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+  <arg_execution>
+   <arg_order>100</arg_order>
+   <arg_spot>A</arg_spot>
+   <arg_required />
+   <arg_pjl />
+   <arg_proto>SET @@OPTION@@=%s</arg_proto>
+  </arg_execution>
+  <constraints>
+     <constraint sense="true">
+      <make>@@MAKE@@</make>
+      <model>@@MODEL@@</model>
+      <arg_defval>ev/@@DEFAULT@@</arg_defval>
+     </constraint>
+  </constraints>
+  <enum_vals>
+   @@CHOICES@@
+  </enum_vals>
+</option>

@@ -1,0 +1,27 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-COMBO-XML 1 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-combo-xml \- <put a short description here>
+.SH SYNOPSIS
+.B foomatic-combo-xml
+[\fIOPTION\fR]...
+.SH DESCRIPTION
+The Foomatic acceleration engine written in C (by Till), it computes
+printer/driver combo XML files and the printer overview XML file.
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-combo-xml
+returns ???
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+This manpage needs editing.
+
+Please send bug reports to foomatic-devel@linuxprinting.org.

@@ -1,0 +1,50 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-KITLOAD 8 "2001-05-07" "Foomatic Project"
+.SH NAME
+foomatic-kitload \- installs a data kit into the foomatic database.
+.SH SYNOPSIS
+.B foomatic-kitload
+[\fI -k kit-dir\fR]
+[\fI -d dest-dir\fR]...
+.SH DESCRIPTION
+.B foomatic-kitload
+installs a foomatic data kit into the local data library.  It takes a 
+\fI-k\fR \fIdirname\fR
+option, where \fIdirname\fR is the toplevel directory of a foomatic
+driver "kit".  A "kit" is a selection of XML source files arranged
+exactly as in the source/section of the master database (ie, opt/driver/printer/ subdirs).
+
+GIMP-Print's foomatic-generator produces exactly such a kit.
+
+Foomatic-kitload is moderately paranoid about kits: the kit must
+contain at least one of \fIprinter\fR, \fIdriver\fR or \fIopt\fR; the
+kit must contain only files ending in \fI.xml\fR, the kit cannot be
+the local library itself, etc.  But it does not inspect the contents
+of the kit files in any way.
+
+
+.SS Options
+.TP 10
+.BI \-k \ dirname
+dirname is the toplevel directory of a foomatic driver "kit". 
+.TP 10
+.BI \-d \ destdir
+destdir is a prefix to prepend to the install path.  This will not normally
+be required, but is useful if installing into a temporary `staging area'
+prior to installing in the final destination.
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-kitload
+returns 0 on success, 255 or something else when an error occurs.
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+
+Please send bug reports to foomatic-devel@linuxprinting.org.

@@ -1,0 +1,328 @@
+#!@PERL@
+
+# This is foomatic-preferred driver, it reads the printer database
+# overview and puts default driver entries (<driver>..</driver>) into
+# every printer's XML database entry.
+
+use Foomatic::Defaults;
+use Foomatic::DB qw/get_overview/;
+# Needs "get_overview" to be added to the "@EXPORT_OK" list of DB.pm!
+
+# Read out the program name with which we were called, but discard the path
+$0 =~ m!/([^/]+)\s*$!;
+$progname = $1;
+
+my $db = new Foomatic::DB;
+
+# Get the printer overview list as a Perl data structure
+$db->get_overview();
+
+my $printer;
+for $printer (@{$db->{'overview'}}) {
+    print "$printer->{'make'} $printer->{'model'} ($printer->{'id'})";
+    if ($printer->{'driver'}) { # We have already a default driver
+	# Check whether this driver is one which supports the printer
+	# If yes, this printer has a correct default driver so we do not
+	# need to set a new default driver
+	my $found = 0;
+	for $d (@{$printer->{'drivers'}}) {
+	    if ($d eq $printer->{'driver'}) {
+		$found = 1;
+		last;
+	    }
+	}
+	if ($found) {
+	    print " (Keeping old default driver): $printer->{'driver'}\n";
+	    next;
+	} else {
+	    print " (Default driver wrong)";
+	}
+    } else {
+	print " (No default driver defined)";
+    }
+    #Sort drivers appropriate to ranking list
+    my @sorted = sort sortdrivers @{$printer->{'drivers'}};
+    print ": @sorted --> $sorted[0]\n";
+    $printer->{'driver'} = $sorted[0];
+    if ($printer->{'driver'}) {
+	open PRINTERENTRY, "< $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be read!\n";
+	my  @printerentryfield = <PRINTERENTRY>;
+	close PRINTERENTRY;
+	
+	my $printerentry = join ('', @printerentryfield);
+	if ($printerentry =~ m!<driver>(.+)</driver>!s) {
+	    $printerentry =~ 
+	      s!<driver>(.+)</driver>!<driver>$printer->{'driver'}</driver>!sg;
+	} elsif ($printerentry =~ m=(<!\-\-unknown preferred "driver"\-\->)=s){
+	    $printerentry =~ 
+	      s=(<!\-\-unknown preferred "driver"\-\->)=\n  <driver>$printer->{'driver'}</driver>=sg;
+	} elsif ($printerentry =~ m!<unverified\s*/>!s) {
+	    $printerentry =~
+		s!<unverified\s*/>!<unverified />\n  <driver>$printer->{'driver'}</driver>!sg;
+	} elsif ($printerentry =~ m!</functionality>!s) {
+	    $printerentry =~
+		s!</functionality>!</functionality>\n  <driver>$printer->{'driver'}</driver>!sg;
+	} else {
+	    $printerentry =~
+		s!</model>!</model>\n  <driver>$printer->{'driver'}</driver>!sg;
+	}
+	open PRINTERENTRY, "> $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be written!\n";
+	print PRINTERENTRY $printerentry;
+	close PRINTERENTRY;
+    }
+}
+
+exit 0;
+
+sub sortdrivers ($$) {
+ 
+    # All sorting done case-sensitive and characters which are not a letter
+    # or number are taken out!!
+ 
+    # List of driver names in a ranking which driver should be preferred
+    # against other drivers.
+    # The terms must fit to the beginning of the line, terms which must fit
+    # exactly must have '\$' in the end.
+    my @drivers =      (
+			# Laser printers (except winprinters)
+			"epl5800", # Additional functionality for Epson
+			"epl2050", # Laser printers
+			"epl2050p",
+			"hl1250", # Special Brother drivers should be preferred
+			"hl1240", # for Brother printers
+                        "Postscript", # Tray selection, 1200+ dpi, color laser
+			"alc2000", # Epson color lasers print in color 
+			"alc8500", # with these drivers from Epson
+			"cljet5\$", # color laser PCL
+			"cljet5c",
+			"pxlcolor", # 1200 dpi color laser PCL
+			"pxlmono", # 1200 dpi, faster than "lj5gray"
+			"epl5900", # This driver has a bug, "pxlmono" works
+				   # correctly 
+			"lj5gray", # 1200 dpi
+			"lj5mono",
+			"ljet4\$", # HP laser drivers, the newer, the better
+			"ljet4d",
+			"lj4dithp",
+			"lj4dith\$",
+			"hl7x0", # Brother driver, proprietary language,
+				 # to prefer when there is also PCL
+				 # emulation
+			"ljet3d",
+			"ljet3\$",
+			"ljet2p",
+			"ljetplus",
+			"laserjet",
+			# HP PPA inkjets, when a printer is supported by one
+			# of these drivers, it is for sure not supported by
+			# any other driver.
+			"pnm2ppa", # color
+			"pbm2ppa", # bw
+			# Lexmark 3200, the GIMP-Print support for this
+			# printer is broken
+			"lxm3200\$",
+			"lxm3200c",
+			"lxm3200m",
+			"lxm3200p",
+			# Canon BJC-8200, these UPPs are probably better
+			# than GIMP-Print
+			"bj8pa06n.upp",
+			"bj8oh06n.upp",
+			"bj8ts06n.upp",
+			"bj8gc12f.upp",
+			"bj8hg12f.upp",
+			"bj8pp12f.upp",
+			# HP and compatible inkjets
+			"hpijs", # HP drivers, with Duplex and 1200 dpi
+			"cdj970", # Duplex support
+			"DJ", # HP drivers, but no duplex
+			"chp2200", # HP driver
+			"gimp-print-ijs", # IJS plug-in driver of GIMP-Print
+			"gimp-print", # Tray selection on laser, best 
+				      # quality on inkjets (for HP HP's
+				      # driver is better
+			"stp", # Predecessor of GIMP-Print
+			"cdj1600", # Relatively good drivers for HP inkjets
+			"cdj890",  # not covered by GIMP-Print or the HP
+			"cdj880",  # drivers
+			"cdj850",
+			"cdj670",
+			"pcl3", # When nothing else works ...
+			"hpdj", # Predecessor of pcl3
+			"sharp.upp", # Gets Sharp inkjets to work without
+			             # a lot of hassle
+			"cdj550\$",
+			"cdj550.upp",
+			"cdj500",
+			"djet500", # Somewhat old-fashioned
+			"deskjet",
+			# Canon inkjets
+			"s400a1.upp", # New printer, UPPs are probably 
+			"s400b1.upp", # better than "bjc600"/"bjc800"
+			"bjc800", # More flexible than the Uniprint drivers
+			"bjc600",
+			"bj200",
+			"bj10e",
+			"bjc6000a1.upp",
+			"bjc6000b1.upp",
+			"bjc610a0.upp",
+			"bjc610a1.upp",
+			"bjc610a2.upp",
+			"bjc610a3.upp",
+			"bjc610a4.upp",
+			"bjc610a5.upp",
+			"bjc610a6.upp",
+			"bjc610a7.upp",
+			"bjc610a8.upp",
+			"bjc610b1.upp",
+			"bjc610b2.upp",
+			"bjc610b3.upp",
+			"bjc610b4.upp",
+			"bjc610b6.upp",
+			"bjc610b7.upp",
+			"bjc610b8.upp",
+			# Epson inkjets
+			"st640ih.upp",
+			"st640ihg.upp",
+			"st640p.upp",
+			"st640pg.upp",
+			"st640pl.upp",
+			"st640plg.upp",
+			"stc640p.upp",
+			"Stp720p.upp",
+			"Stp720pl.upp",
+			"Stp870p.upp",
+			"Stp870pl.upp",
+			"stcolor",
+			"st800",
+			"PM760p.upp",
+			"PM760pl.upp",
+			"PM820p.upp",
+			"PM820pl.upp",
+			"Stc670p.upp",
+			"Stc670pl.upp",
+			"Stc680p.upp",
+			"Stc680pl.upp",
+			"Stc760p.upp",
+			"Stc760pl.upp",
+			"Stc777p.upp",
+			"Stc777pl.upp",
+			"stc1520h.upp",
+			"stc800ih.upp",
+			"stc800p.upp",
+			"stc800pl.upp",
+			"stc740ih.upp",
+			"stc740p.upp",
+			"stc740pl.upp",
+			"stc600ih.upp",
+			"stc600p.upp",
+			"stc600pl.upp",
+			"stc500p.upp",
+			"stc500ph.upp",
+			"stc300.upp",
+			"stc300bm.upp",
+			"stc300bl.upp",
+			"stc2.upp",
+			"stc2_h.upp",
+			"stc2s_h.upp",
+			"stc.upp",
+			"stc_h.upp",
+			"stc_l.upp",
+			"stcany.upp",
+			# Lexmark inkjets
+			"cZ11somsom",
+			"cZ11",
+			"lx5000",
+			"lex7000",
+			"lex5700",
+			"lx5700m",
+			"pbm2l7k",
+			# Thermo sublimation printers
+			"ppmtomd", # The successor of "ppmtocpva"
+			"ppmtocpva",
+			"md5k",
+			"md2k",
+			# Others
+			"t4693d8",
+			"t4693d4",
+			"t4693d2",
+			"necp2x.upp",
+			"necp2x6.upp",
+			"declj250", # More adjustable options
+			"lj250",
+			"pj", # More adjustable options
+			"paintjet",
+			"pjxl", # More adjustable options
+			"pjetxl",
+			"pjxl300",
+			"iwhi",
+			"iwlo",
+			"necp6",  # in most cases the NEC PinWriter P6 (+)
+			"epsonc", # is used without colour add-on.
+			"epson",
+			"eps9high",
+			"eps9mid",
+			"lq850",
+			"cjet",
+			"lbp8",
+			"oki182",
+			"ibmpro",
+			# Japanese printer drivers
+			"rpdl",
+			"pr201",
+			"pr150",
+			"picty180",
+			"npdl",
+			"ml600",
+			"mj8000c",
+			"mj700v2c",
+			"mj6000c",
+			"mj500c",
+			"md50Mono",
+			"md50Eco",
+			"md1xMono",
+			"lp2000",
+			"lj4dithp",
+			"lips4v",
+			"lips4",
+			"lips2p",
+			"lbp320",
+			"lbp310",
+			"jj100",
+			"fmpr",
+			"fmlbp",
+			"filter800_3300",
+			"filter800",
+			"filter770",
+			"filter760",
+			"escpage",
+			"dj505j",
+			"bjc880j",
+			"bjc800j",
+			"bj10vh",
+			"bj10v",
+			"bj10",
+			"sj48",
+			# Omni is in experimental state, so other drivers
+			# give probably better output
+			"omni"
+			);
+
+    my $first = $_[0];
+    my $second = $_[1];
+    # The driver names to compare are absolutely equal ->
+    #    Bug in database ==> ignore
+    if ($first eq $second) {return 0};
+
+    # Check whether they are in the @standardopts list
+    my $i;
+    for ($i = 0; $i <= $#drivers; $i++) {
+        my $firstinlist = ($first =~ /^$drivers[$i]/);
+        my $secondinlist = ($second =~ /^$drivers[$i]/);
+        if (($firstinlist) && (!$secondinlist)) {return -1};
+        if (($secondinlist) && (!$firstinlist)) {return 1};
+    }
+
+    # No preference found, stop here
+    die "No preference found between $first and $second!\n";
+}

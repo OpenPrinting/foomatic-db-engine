@@ -1,0 +1,35 @@
+#!@PERL@
+
+# This is foomatic-cleanupdrivers. It removes all driver XML files which have
+# an empty command line. So one can avoid that "unusable" printer/driver
+# combos are shown in frontends. This program also runs when Foomatic is not
+# installed.
+
+my $libdir;
+if ($#ARGV > -1) {
+    $libdir = $ARGV[0];
+} else {
+    $libdir = "/usr/share/foomatic";
+}
+
+# Read out the program name with which we were called, but discard the path
+$0 =~ m!/([^/]+)\s*$!;
+$progname = $1;
+
+# Read the directory with the driver's XML entries
+opendir DRIVERDIR, "$libdir/db/source/driver" ||
+    die "Cannot open driver XML directory!\n";
+my $driver;
+while ($driver = readdir(DRIVERDIR)) {
+    open DRIVERENTRY, "< $libdir/db/source/driver/$driver" || die "   Database entry for the driver $driver cannot be read!\n";
+    my @driverentryfield = <DRIVERENTRY>;
+    close DRIVERENTRY;
+    my $driverentry = join ('', @driverentryfield);
+    if (($driverentry =~ m!<prototype>\s*</prototype>!sg) ||
+	($driverentry =~ m!<prototype\s*/\s*>!sg)) {
+	unlink("$libdir/db/source/driver/$driver") ||
+	    die "Cannot delete $driver!\n";
+	print "$driver has an empty command line, deleted!\n";
+    }
+}
+closedir DRIVERDIR;

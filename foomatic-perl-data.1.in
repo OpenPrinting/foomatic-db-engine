@@ -1,0 +1,46 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-PERL-DATA 1 "2002-04-22" "Foomatic Project"
+.SH NAME
+foomatic-perl-data \- generate Perl data structures from XML
+.SH SYNOPSIS
+.B foomatic-perl-data
+[ \fI-O\fR ] [ \fI-C\fR ] [ \fI-P\fR ] [ \fI-D\fR ] 
+[ \fI-o option=setting\fR ] [ \fI-o ...\fR ] [ \fI-v\fR ] [ \fIfilename\fR ]
+
+.SS Options
+.BI	-O
+Parse overview XML data
+
+.BI	-C
+Parse printer/driver combo XML data (default)
+
+.BI	-P
+Parse printer entry XML data
+
+.BI	-D
+Parse driver entry XML data
+
+.BI	-o \ option=setting 
+Default option settings for the generated Perl data (combo only)
+
+.BI	-v
+Verbose (debug) mode
+
+.BI	filename
+Read input from a file and not from standard input
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-perl-data
+returns ...
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using output from the associated binary.
+
+.SH BUGS
+This manpage needs editing.
+

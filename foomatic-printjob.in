@@ -1,0 +1,1145 @@
+#!@PERL@
+
+# This is foomatic-printjob, a program to print and manage printing
+# jobs with the same commands independent whether the spooler is CUPS,
+# LPD, LPRng, or PDQ.
+
+# It also comprises half of a programattic API for user tools: you can
+# learn and control everything about the properties of printing jobs
+# here. With the sister program foomatic-configure, you can do
+# everything related to print queue static state: install, modify,
+# remove queues, query queue, printer, and driver info.
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+
+# Read out the program name with which we were called, but discard the path
+
+$0 =~ m!/([^/]+)\s*$!;
+$progname = $1;
+
+# We use the library Getopt::Long here, so that we can have more than one "-o"
+# option on one command line.
+
+use Getopt::Long;
+Getopt::Long::Configure("no_ignore_case", "pass_through");
+GetOptions("P=s" => \$opt_P,         # which queue (Printer)?
+	   "d=s" => \$opt_d,         # which queue (Destination)?
+	   "s=s" => \$opt_s,         # which Spooler?
+	   "o=s" => \@opt_o,         # printing Options
+	   "Q"   => \$opt_Q,         # Query jobs in queue
+	   "R"   => \$opt_R,         # Remove job(s)
+	   "C"   => \$opt_C,         # Control job(s)/queue(s)
+	   "S"   => \$opt_S,         # set default Spooler
+	   "h"   => \$opt_h);        # Help!
+
+help() if ($opt_h && !$opt_P);
+
+my $db = new Foomatic::DB;
+
+my $in_config = {'queue'   => $opt_P,
+		 'options' => \@opt_o,
+		 'spooler' => $opt_s};
+
+# Default action: Printing
+my $action = 'print';
+
+# Determine the action by the name how we were called
+if ($progname =~ m!^lpc!) { # 'lpc*' ==> control 
+    $action = 'control';
+} elsif ($progname =~ m!^lprm!) { # 'lprm*' ==> remove jobs 
+    $action = 'remove';
+} elsif ($progname =~ m!^lpq!) { # 'lpq*' ==> list jobs 
+    $action = 'query';
+} elsif (($progname =~ m!^lpr!) || ($progname =~ m!^lp!)) { 
+    # 'lpr*', 'lp*' ==> print 
+    $action = 'print';
+}
+
+# Determine the action by a command line option
+$action = ($opt_R ? 'remove' : $action);
+$action = ($opt_Q ? 'query' : $action);
+$action = ($opt_C ? 'control' : $action);
+
+my $procs = { 'lpd' => { 'print'    => \&print_lpd,
+			 'query'    => \&query_lpd,
+		         'remove'   => \&remove_lpd,
+		         'control'  => \&control_lpd },
+	      'lprng'=>{ 'print'    => \&print_lprng,
+			 'query'    => \&query_lprng,
+			 'remove'   => \&remove_lprng,
+			 'control'  => \&control_lpd },
+	      'cups' =>{ 'print'    => \&print_cups,
+			 'query'    => \&query_cups,
+			 'remove'   => \&remove_cups,
+			 'control'  => \&control_cups },
+	      'pdq'  =>{ 'print'    => \&print_pdq,
+			 'query'    => \&query_pdq,
+			 'remove'   => \&remove_pdq,
+			 'control'  => \&control_pdq } };
+
+if (!(defined($in_config->{'queue'}))) {
+    # No job handling without knowing the name of the queue
+    # PRINTER environment variable
+    if (defined($opt_d)) {
+	$in_config->{'queue'} = $opt_d;
+    } elsif (defined($ENV{PRINTER})) {
+	$in_config->{'queue'} = $ENV{PRINTER};
+    } else {
+	# Use spoolers default
+    }
+}
+
+if (!defined($in_config->{'spooler'})) {
+
+    # Personal default spooler
+    if (($> != 0) && (-f "$ENV{'HOME'}/.defaultspooler")) {
+	$s = `cat $ENV{'HOME'}/.defaultspooler`;
+	chomp $s;
+    }
+    
+    # System default spooler
+    if ((!defined($s)) && (-f "$sysdeps->{'foo-etc'}/defaultspooler")) {
+	$s = `cat $sysdeps->{'foo-etc'}/defaultspooler`;
+	chomp $s;
+    }
+    
+    if (!defined($s)) {
+	$s = detect_spooler();
+    }
+
+    die "Unable to identify spooler, please specify one with \"-s\"!\n"
+	unless $s;
+
+    if (defined($opt_i)) {
+	print STDERR "You appear to be using $s.  Correct? ";
+	my $yn = <STDIN>;
+	die "\n" if ($yn !~ m!^y!i);
+    }
+
+    $in_config->{'spooler'} = $s;
+}
+
+if (defined($opt_S)) {
+    if ($> == 0) { # Program invoked as "root"?
+	# Set system default spooler
+	open DEFAULTFILE, "> $sysdeps->{'foo-etc'}/defaultspooler" ||
+	    die "Cannot write $sysdeps->{'foo-etc'}/defaultspooler!\n";
+	print DEFAULTFILE "$in_config->{'spooler'}\n";
+	close DEFAULTFILE;
+	exit 0;
+    } else {
+	# Set personal default spooler
+	open DEFAULTFILE, "> $ENV{'HOME'}/.defaultspooler" ||
+	    die "Cannot write $ENV{'HOME'}/.defaultspooler!\n";
+	print DEFAULTFILE "$in_config->{'spooler'}\n";
+	close DEFAULTFILE;
+	exit 0;
+    }
+}
+
+# Call proper proc
+exit &{$procs->{$in_config->{'spooler'}}{$action}}($in_config);
+
+### Printing/Job manipulation functions for LPD
+
+sub print_lpd {
+    my ($config) = $_[0];
+
+    #sysdeps->{'lpd-lpr'} = "/home/test/lpr-0.71/lpr/lpr";
+
+    # Auto-detect whether the "lpr" executable is the VA-Linux version or not
+    my $valinuxlpr = 
+	!(system "strings $sysdeps->{'lpd-lpr'} | grep option > /dev/null");
+
+    # Printing command
+    my $commandline = "$sysdeps->{'lpd-lpr'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Add the driver-specific options supplied by the user, if any
+    # For the VA-Linux implementation of "lpr" (gnulpr) options are passed
+    # with '-o option=value -o switch', for the BSD implementation they are
+    # passe with '-J"option=value switch"'.
+    if ($valinuxlpr) {
+	# VA-Linux/gnulpr
+	if ($#{$config->{'options'}} >= 0) {
+	    for (@{$config->{'options'}}) {
+		$commandline .= " -o $_";
+	    }
+	}
+    } else {
+	# BSD
+	if ($#{$config->{'options'}} >= 0) {
+	    $commandline .= " -J\"";
+	    for (@{$config->{'options'}}) {
+		$commandline .= "$_ ";
+	    }
+	    $commandline .= "\"";
+	}
+    }
+
+    # Add the remaining command line arguments, they are the names of
+    # the files to print and also spooler-specific options
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+sub query_lpd {
+    my ($config) = $_[0];
+
+    # standard lpq, emulate -a of lpq-cups
+    # Read additional options
+    GetOptions("a"   => \$opt_a);        # List jobs on all printers
+    
+    if (defined($opt_a)) {
+	# Get all printer queues
+	open QUEUELIST, "$sysdeps->{'lpd-lpc'} status 2>&1 | grep \":\$\" | ";
+	my @queuelist = <QUEUELIST>;
+	close QUEUELIST;
+	# List the jobs on all the queues
+	for (@queuelist) {
+	    my $queue = $_;
+	    chomp $queue;
+	    print "$queue\n";
+	    $queue =~ s/:$//;
+	    my $result = (system "$sysdeps->{'lpd-lpq'} -P $queue @ARGV") >> 8;
+	    if ($result != 0) {return $result};
+	}
+    } else {
+	# List the jobs on the specified queue
+	my $queue = "";
+	if (defined($config->{'queue'})) {
+	    $queue = " -P $config->{'queue'}";
+	}
+	return (system "$sysdeps->{'lpd-lpq'}$queue @ARGV") >> 8;
+    }
+}
+
+sub remove_lpd {
+    my ($config) = $_[0];
+    
+    # Remove a job with the standard "lprm" command
+
+    # Removing command
+    my $commandline = "$sysdeps->{'lpd-lprm'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Add the remaining command line arguments, they are the numbers
+    # of the jobs to kill, the users whose jos to remove and also
+    # spooler-specific options
+
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+sub control_lpd {
+    my ($config) = $_[0];
+    
+    # Control the printing system with the standard "lpc" command
+
+    # Control command
+    my $commandline = "$sysdeps->{'lpd-lpc'}";
+
+    # Add the remaining command line arguments, they are the control command
+    # with its arguments
+
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+### Printing/Job manipulation functions for LPRng
+
+sub print_lprng {
+    my ($config) = $_[0];
+
+    # Printing command
+    my $commandline = "$sysdeps->{'lpd-lpr'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Add the driver-specific options supplied by the user, if any
+    if ($#{$config->{'options'}} >= 0) {
+	for (@{$config->{'options'}}) {
+	    $commandline .= " -Z $_";
+	}
+    }
+
+    # Add the remaining command line arguments, they are the names of
+    # the files to print and also spooler-specific options
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+sub query_lprng {
+    my ($config) = $_[0];
+
+    # We filter the output of lpq and rearrange it to have the same format
+    # as of LPD and CUPS.
+
+    GetOptions("l"   => \$opt_l);       # Long, more verbose output
+
+    # List the jobs on the specified queue
+    my $queue = "";
+    if (defined($config->{'queue'})) {
+	$queue = " -P $config->{'queue'}";
+    }
+    open LPQOUTPUT, "$sysdeps->{'lpd-lpq'}$queue @ARGV |" || return 1;
+    my @lpqoutput = <LPQOUTPUT>;
+    close LPQOUTPUT;
+    # Filter the output
+    for $line (@lpqoutput) {
+	chomp $line;
+	if ($line =~ m!^\s*(\S+)\s+([^@\s]+)@[^@\+\s]+\+[0-9]+\s+\S+\s+([0-9]+)\s+(\S+)\s+([0-9]+)\s+[0-9:]+\s*$!) {
+	    my ($rank, $owner, $jobid, $file, $size) = ($1, $2, $3, $4, $5);
+	    if (defined($opt_l)) {
+		my $owner_rank = "$owner: $rank";
+		if (length($owner_rank) > 40) {
+		    $owner_rank = substr($owner_rank, 0, 40);
+		}
+		if (length($file) > 40) {$file = substr($file, 0, 40);}
+		print sprintf("\n%-40s [job %d]\n\t%-40s %d bytes\n",
+			      $owner_rank, $jobid, $file, $size);
+	    } else {
+		if (length($rank) > 6) {$rank = substr($rank, 0, 6)};
+		if (length($owner) > 8) {$owner = substr($owner, 0, 8)};
+		if (length($file) > 37) {$file = substr($file, 0, 37)};
+		print sprintf("%-6s %-8s % 6d %-37s %d bytes\n",
+			      $rank, $owner, $jobid, $file, $size);
+	    }
+	} elsif ($line =~ m!\s*Rank\s+Owner!) {
+	    if (!defined($opt_l)) {
+		print "Rank   Owner       Job File(s)                               Total Size\n";
+	    }
+	} else {
+	    print("$line\n");
+	}
+    }
+}
+
+sub remove_lprng {
+    my ($config) = $_[0];
+    
+    # Remove a job with the standard "lprm" command and emulate the "-"
+    # option of the lprm command of BSD LPD
+
+    # Removing command
+    my $commandline = "$sysdeps->{'lpd-lprm'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Replace the "-" option by the "all" option
+    my $alljobs = "";
+    for ($i = 0; ($i <= $#ARGV); $i++) {
+	if ($ARGV[$i] =~ m!^\s*\-\s*$!) {
+	    $alljobs = " all";
+	    splice(@ARGV,$i,1);
+	    $i--;
+	}
+    }
+    $commandline .= $alljobs;
+
+    # Add the remaining command line arguments, they are the numbers
+    # of the jobs to kill, the users whose jos to remove and also
+    # spooler-specific options
+
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+sub control_lprng {
+
+    # The lpc command of lprng is compatible to the one of LPD, it has only
+    # many more commands. So we use the "control_lpd" function also for
+    # lprng.
+
+}
+
+### Printing/Job manipulation functions for CUPS
+
+sub print_cups {
+    my ($config) = $_[0];
+
+    # Printing command
+    my $commandline = "$sysdeps->{'cups-lpr'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Add the driver-specific options supplied by the user, if any
+    if ($#{$config->{'options'}} >= 0) {
+	for (@{$config->{'options'}}) {
+	    $commandline .= " -o $_";
+	}
+    }
+
+    # Add the remaining command line arguments, they are the names of
+    # the files to print and also spooler-specific options
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+sub query_cups {
+    my ($config) = $_[0];
+
+    # List the jobs on the specified queue
+    my $queue = "";
+    if (defined($config->{'queue'})) {
+	$queue = " -P $config->{'queue'}";
+    }
+    return (system "$sysdeps->{'cups-lpq'}$queue @ARGV") >> 8;
+
+}
+
+sub remove_cups {
+    my ($config) = $_[0];
+    
+    # Remove a job with the standard "lprm" command
+
+    # Removing command
+    my $commandline = "$sysdeps->{'cups-lprm'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Add the remaining command line arguments, they are the numbers
+    # of the jobs to kill, the users whose jos to remove and also
+    # spooler-specific options
+
+    $commandline .= " @ARGV";
+
+    # Do it!
+
+    #print "$commandline\n";
+    return (system $commandline) >> 8;
+
+}
+
+sub control_cups {
+    my ($config) = $_[0];
+
+    # CUPS has no LPD/LPRng-compatible lpc command, so we must emulate
+    # this functionality with the command line tools of CUPS.
+
+    # The first command line argument (of the remaining ones) is the
+    # control command (standard commands of lpc for LPD/LPRng)
+
+    my $command = shift (@ARGV);
+
+    if (!defined($command)) {
+	die "You must supply a control command with the \"-C\" option!\n";
+    } elsif (lc($command) eq "up") { # Turn on queue (queueing/printing)
+	return (system "$sysdeps->{'cups-enable'} @ARGV; $sysdeps->{'cups-accept'} @ARGV") >> 8;
+    } elsif (lc($command) eq "down") { # Turn off queue (queueing/printing)
+	return (system "$sysdeps->{'cups-disable'} @ARGV; $sysdeps->{'cups-reject'} @ARGV") >> 8;
+    } elsif (lc($command) eq "start") { # Turn on queue (printing)
+	return (system "$sysdeps->{'cups-enable'} @ARGV") >> 8;
+    } elsif (lc($command) eq "stop") { # Turn off queue (printing)
+	return (system "$sysdeps->{'cups-disable'} @ARGV") >> 8;
+    } elsif (lc($command) eq "enable") { # Accept new jobs
+	return (system "$sysdeps->{'cups-accept'} @ARGV") >> 8;
+    } elsif (lc($command) eq "disable") { # Reject new jobs
+	return (system "$sysdeps->{'cups-reject'} @ARGV") >> 8;
+    } elsif (lc($command) eq "move") { # Move jobs
+	if (($#ARGV < 1) or ($#ARGV > 2)) {
+	    die "Usage of the \"move\" control command:\n\n   move oldqueue [ jobID ] newqueue\n\n";
+	}
+	# The first argument is always the source printer
+	my $fromqueue = shift (@ARGV);
+	# The second argument is the job ID or the destination
+	my $jobid = shift (@ARGV);
+	# The third argument is the destination
+	my $toqueue = shift (@ARGV);
+	if (!defined($toqueue)) {
+	    # No job ID given, move all jobs in the given queue
+	    $toqueue = $jobid;
+	    open LINES, "$sysdeps->{'cups-lpq'} -P $fromqueue |";
+	    my @lines = <LINES>;
+	    close LINES;
+	    for (@lines) {
+		if ($_ =~ m!^\s*\S+\s+\S+\s+([0-9]+)\s+!) {
+		    system "$sysdeps->{'cups-lpmove'} $fromqueue-$1 $toqueue";
+		}
+	    }
+	    return;
+	} else {
+	    # Treat the specified job
+	    return (system "$sysdeps->{'cups-lpmove'} $fromqueue-$jobid $toqueue") >> 8;
+	}
+    } elsif ((lc($command) eq "hold") ||    # Hold job
+	     (lc($command) eq "release") || # Resume job
+	     (lc($command) eq "topq")) {    # Bring job to the top of the
+	                                    # queue
+	if (($#ARGV < 0) or ($#ARGV > 1)) {
+	    die "Usage of the \"$command\" control command:\n\n   $command queue [ jobID ] \n\n";
+	}
+	# Clean up the command
+	$command = lc($command);
+	if ($command eq "release") {$command = "resume";} 
+	if ($command eq "topq") {$command = "immediate";} 
+	# The first argument is always the queue
+	my $queue = shift (@ARGV);
+	# The second argument is the job ID
+	my $jobid = shift (@ARGV);
+	if (!defined($jobid)) {
+	    # No job ID given, treat all jobs in the given queue
+	    open LINES, "$sysdeps->{'cups-lpq'} -P $queue |";
+	    my @lines = <LINES>;
+	    close LINES;
+	    for (@lines) {
+		if ($_ =~ m!^\s*\S+\s+\S+\s+([0-9]+)\s+!) {
+		    system "$sysdeps->{'cups-lp'} -i $queue-$1 -H $command";
+		}
+	    }
+	    return;
+	} else {
+	    # Treat the specified job
+	    return (system "$sysdeps->{'cups-lp'} -i $queue-$jobid -H $command") >> 8;
+	}
+    } elsif (lc($command) eq "status") { # Queue status listing
+	return (system "$sysdeps->{'cups-lpc'} status @ARGV") >> 8;
+    } elsif (lc($command) eq "help") { # List the available commands
+	print "The following control commands are available:\n\n";
+	print "   up queue                : Turn on queue (queueing/printing)\n";
+	print "   down queue              : Turn off queue (queueing/printing)\n";
+	print "   start queue             : Turn on printing on queue\n";
+	print "   stop queue              : Turn off printing on queue\n";
+	print "   enable queue            : Make queue accepting new jobs\n";
+	print "   disable queue           : Make queue rejecting new jobs\n";
+	print "   move oldqueue [ jobid ] newqueue : \n";
+	print "       Move job jobid in oldqueue to newqueue\n";
+	print "       Move all jobs in oldqueue to newqueue when jobid not given\n";
+	print "   hold queue [ jobid ]    : Hold job jobid or all jobs in queue\n";
+	print "   release queue [ jobid ] : Release job jobid or all jobs in queue\n";
+	print "   topq queue jobid        : Print job jobid in queue immediately\n";
+	print "   status [ queue ]        : Status of queue or of all queues\n";
+	print "   help                    : This help message\n\n";
+    } else {
+	die "Command \"$command\" not recognized!\n";
+    }
+	
+}
+
+### Printing/Job manipulation functions for PDQ
+
+sub print_pdq {
+    my ($config) = $_[0];
+
+    # Printing command
+    my $commandline = "$sysdeps->{'pdq-print'}";
+
+    # Add the printer queue argument
+    if (defined($config->{'queue'})) {
+	$commandline .= " -P $config->{'queue'}";
+    }
+
+    # Add the driver-specific options supplied by the user, if any
+    if ($#{$config->{'options'}} >= 0) {
+	for (@{$config->{'options'}}) {
+	    my $option = $_;
+	    if ($option =~ m!^\s*([^=]+=[\+\-0-9\.]+)\s*$!) {
+		# Foomatic treats numerical options as PDQ arguments ("-a"),
+		# but there can be enumerated options with numbers as choices,
+		# so we give the option in both styles. Since PDQ silently
+		# ignores non-existent options, the wrong form of the option
+		# will be ignored.
+		$commandline .= " -aOPT_$1";
+	    }
+	    # Enumerated and boolean options are PDQ options ("-o"),
+	    # the "=" has to be replaced by "_" to work with the
+	    # PDQ-O-MATIC-generated configuration
+	    $option =~ s/=/_/;  # Replace only the first "="
+	    $commandline .= " -o$option";
+	}
+    }
+
+    # The "-#" option for multiple copies is not supported by the print
+    # command "pdq". So we launch "pdq" once per copy. Thw command line
+    # will be modified appropriately directly before the printing command
+    # is launched.
+    # Note: '#' as option name is not supported by the Perl library
+    # Getopt::Long.
+    my $num_copies = 1;
+    my $file_in_args = 0;
+    my $i;
+    for ($i = 0; ($i <= $#ARGV); $i++) {
+	if ($ARGV[$i] =~ m!^\s*\-\#\s*([0-9]+)\s*$!) {
+	    $num_copies = $1;
+	    splice(@ARGV,$i,1);
+	    $i--;
+	} elsif ($ARGV[$i] =~ m!^\s*\-\#\s*$!) {
+	    if ((defined $ARGV[$i+1]) && 
+		($ARGV[$i+1] =~ m!^\s*([0-9]+)\s*$!)) {
+		$num_copies = $1;
+		splice(@ARGV,$i,2);
+		$i--;
+	    }
+	} elsif ($ARGV[$i] =~ m!^\s*[^\-]+!) {
+	    $file_in_args = 1;
+	}
+    }
+
+    # Add the remaining command line arguments, they are the names of
+    # the files to print and also spooler-specific options
+    $commandline .= " @ARGV";
+
+    # Do it!
+    #print "$commandline\n"; return 0;
+
+    if ($num_copies == 1) {
+	return (system $commandline) >> 8;
+    } else {
+	if ($file_in_args == 0) {
+	    # We print from standard input, so we must buffer it to be able
+	    # to print multiple copies
+	    my @job_contents = <STDIN>;
+	    my $i;
+	    for ($i = 0; $i < $num_copies; $i++) {
+		open PIPE, "| $commandline" || 
+		    die "Could not launch printing command!\n";
+		print PIPE @job_contents;
+		close PIPE;
+	    }
+	    return 0;
+	} else {
+	    # We print files
+	    my $result = 0;
+	    my $i;
+	    for ($i = 0; $i < $num_copies; $i++) {
+		$result = (system $commandline) >> 8;
+		if ($result != 0) {return $result};
+	    }
+	    return 0;
+	}
+    }
+}
+
+sub query_pdq {
+    my ($config) = $_[0];
+
+    # PDQ has no possiblity to list the printing jobs from the command
+    # line.  So we read the *.status files in ~/.printjobs and generate
+    # the job entry lines from that information.
+
+    # Read additional options
+    GetOptions("a"   => \$opt_a,        # List jobs on all printers
+	       "l"   => \$opt_l);       # Long, more verbose output
+
+    # Make sure that a printer is specified when the "-a" option is not
+    # given
+    if ((!(defined($opt_a))) && (!(defined($config->{'queue'})))) {
+	$config->{'queue'} = get_pdq_default_printer();
+    }
+
+    # If the user specified job numbers, list them. User names on the
+    # command line do not make much sense, because under PDQ a user can
+    # only see ones own jobs, they are supported here to do not break
+    # front ends
+    my $joblist = {};
+    my $userlist = {};
+    my $listalljobs = 1;
+    my $listallusers = 1;
+    my $i;
+    for ($i = 0; ($i <= $#ARGV); $i++) {
+	if ($ARGV[$i] =~ m!^\s*([0-9]+)\s*$!) {
+	    my $job=$1;
+	    # Fill up the number with zeros so that it has three digits
+	    while (length($job) < 3) {$job = "0" . $job;}
+	    $joblist->{$job} = 1;
+	    $listalljobs = 0;
+	    splice(@ARGV,$i,1);
+	    $i--;
+	} elsif ($ARGV[$i] =~ m!^\s*[^\-]+!) {
+	    my $user=$ARGV[$i];
+	    $userlist->{$user} = 1;
+	    $listallusers = 0;
+	    splice(@ARGV,$i,1);
+	    $i--;
+	} else {
+	    die "Unknown option: $ARGV[$i]\n";
+	}
+    }
+
+    # When we list only the jobs for a specific printer, display the
+    # printer status at first. In PDQ the printer status cannot be
+    # retrived from the command line, so we put a dummy line
+    # "<printer> is ready".
+    if (!(defined($opt_a))) {
+	if (!pdq_check_printer($config->{'queue'})) {
+	    die "$config->{'queue'}: unknown printer\n";
+	}
+	print "$config->{'queue'} is ready\n";
+    }
+
+    # Read in the names of all job status files in ~/.printjobs/
+    my @jobnumbers = ();
+    opendir PJDIR, "$ENV{'HOME'}/.printjobs" || 
+	return 0;  # No ~/.printjobs/ directory ==> no jobs
+    while ($filename = readdir(PJDIR)) {
+	if ($filename =~ m!^([0-9][0-9][0-9]).status$!) {
+	    push (@jobnumbers, $1);
+	}
+    }
+    close PJDIR;
+    # Sort the filenames in descending order to get the most recent jobs
+    # listed at first
+    @jobnumbers = sort {$b cmp $a} @jobnumbers;
+
+    # Now list the jobs
+    my $firstline = 1;
+    for ($i = 0; $i <= $#jobnumbers; $i ++) {
+	# Omit this job if job numbers are specified on the command line, but
+	# not the one of this job
+	next if (($listalljobs == 0) && 
+		 (!(defined($joblist->{$jobnumbers[$i]}))));
+	# Read the job status file
+	next if !open JOBSTATUSFILE, 
+	"< $ENV{'HOME'}/.printjobs/$jobnumbers[$i].status";
+	my $jobstatusdata = join("", <JOBSTATUSFILE>);
+	close JOBSTATUSFILE;
+	# Extract the important fields from the file
+	# Status:
+	my $status = "";
+	if ($jobstatusdata =~ m!^\s*status\s*\=\s*{([^{}]*)}\s*$!m) {
+	    $status = $1;
+	}
+	# Omit this job when it has no status field or when the job is
+	# already finished, cancelled, or aborted
+	next if (($status eq "") || ($status =~ m!aborted!) || 
+		 ($status =~ m!finished!) || ($status =~ m!cancelled!));
+	# Avoid spaces in the status field, so that frontends can separate the
+	# fields from the job list more easily.
+	$status =~ s/\s//g;
+	# Printer
+	my $printer;
+	if ($jobstatusdata =~ m!^\s*printer\s*\=\s*{([^{}]*)}\s*$!m) {
+	    $printer = $1;
+	}
+	# Omit this job when we are querying only the jobs of another printer
+	next if ((!(defined($opt_a))) && ($printer ne $config->{'queue'}));
+	# Owner
+	my $owner;
+	if ($jobstatusdata =~ 
+	m!^\s*env_driver\s*\=\s*{.*\"LOGNAME\"\s*=\s*\"([^\"]*)\".*}\s*$!m) {
+	    $owner = $1;
+	}
+	# Omit this job if user names are specified on the command line, but
+	# not the owner of this job
+	next if (($listallusers == 0) && 
+		 (!(defined($userlist->{$owner}))));
+	# File
+	my $file;
+	if ($jobstatusdata =~ m!^\s*input_filename\s*\=\s*{([^{}]*)}\s*$!m) {
+	    $file = $1;
+	}
+	# Size of job input file
+	my $size;
+	if (-f "$ENV{'HOME'}/.printjobs/$jobnumbers[$i].raw") {
+	    $size = (stat("$ENV{'HOME'}/.printjobs/$jobnumbers[$i].raw"))[7];
+	}
+
+	# Now get the info nicely onto the screen
+	my $outputline;
+	if ($opt_l) {
+	    # Long (3+ lines per job) mode
+	    my $owner_status = "$owner: $status";
+	    if (length($owner_status) > 40) {
+		$owner_status = substr($owner_status, 0, 40);
+	    }
+	    if (length($file) > 40) {$file = substr($file, 0, 40);}
+	    $outputline = sprintf("\n%-40s [job %d]\n\t%-40s %d bytes\n",
+				  $owner_status, $jobnumbers[$i], $file,
+				  $size);
+	} else {
+	    # Short (1 line per job) mode
+	    if ($firstline == 1) {
+		# headline
+		print "Rank   Owner      Job  File(s)                               Total Size\n";
+		$firstline = 0;
+	    }
+	    if (length($status) > 6) {$status = substr($status, 0, 6);}
+	    if (length($owner) > 10) {$owner = substr($owner, 0, 10);}
+	    if (length($file) > 37) {$file = substr($file, 0, 37);}
+	    $outputline = sprintf("%-6s %-10s % 3d  %-37s %d bytes\n",
+				  $status, $owner, $jobnumbers[$i], $file,
+				  $size);
+	}
+	print $outputline;
+    }
+
+    # Say "no entries" if no job was listed
+    if ($firstline == 1) {
+	print "no entries\n";
+    }
+    
+}
+
+sub remove_pdq {
+    my ($config) = $_[0];
+
+    # PDQ has no possiblity to remove printing jobs from the command
+    # line.  "xpdq" cancels jobs by "touch"ing <job id>.cancelled
+    # files in ~/.printjobs and setting the permissions of these files
+    # to 0600.
+
+    # Make sure that a printer is specified when the "-a" option is not
+    # given
+    if (!(defined($config->{'queue'}))) {
+	$config->{'queue'} = get_pdq_default_printer();
+    }
+
+    # If the user specified job numbers, list them. User names on the
+    # command line do not make much sense, because under PDQ a user can
+    # only see ones own jobs, they are supported here to do not break
+    # front ends
+    my $joblist = {};
+    my $userlist = {};
+    my $nojob = 1;
+    my $nouser = 1;
+    my $opt_alljobs = 0;
+    my $i;
+    for ($i = 0; ($i <= $#ARGV); $i++) {
+	if ($ARGV[$i] =~ m!^\s*([0-9]+)\s*$!) {
+	    my $job=$1;
+	    # Fill up the number with zeros so that it has three digits
+	    while (length($job) < 3) {$job = "0" . $job;}
+	    $joblist->{$job} = 1;
+	    $nojob = 0;
+	    splice(@ARGV,$i,1);
+	    $i--;
+	} elsif ($ARGV[$i] =~ m!^\s*[^\-]+!) {
+	    my $user=$ARGV[$i];
+	    $userlist->{$user} = 1;
+	    $nouser = 0;
+	    splice(@ARGV,$i,1);
+	    $i--;
+	} elsif ($ARGV[$i] =~ m!^\s*\-\s*$!) {
+	    $opt_alljobs = 1;
+	    splice(@ARGV,$i,1);
+	    $i--;
+	} else {
+	    die "Unknown option: $ARGV[$i]\n";
+	}
+    }
+
+    # Does the chosen printer exist
+    if (!pdq_check_printer($config->{'queue'})) {
+	die "$config->{'queue'}: unknown printer\n";
+    }
+
+    # Read in the names of all job status files in ~/.printjobs/
+    my @jobnumbers = ();
+    opendir PJDIR, "$ENV{'HOME'}/.printjobs" || 
+	return 0;  # No ~/.printjobs/ directory ==> no jobs
+    while ($filename = readdir(PJDIR)) {
+	if ($filename =~ m!^([0-9][0-9][0-9]).status$!) {
+	    push (@jobnumbers, $1);
+	}
+    }
+    close PJDIR;
+    # Sort the filenames in descending order to get the most recent
+    # (probably still waiting) jobs removed at first
+    @jobnumbers = sort {$b cmp $a} @jobnumbers;
+
+    # Now search the jobs to remove
+    my $nothingremoved = 1;
+    my $mostrecent = 1;
+    for ($i = 0; $i <= $#jobnumbers; $i ++) {
+	# Read the job status file
+	next if !open JOBSTATUSFILE, 
+	"< $ENV{'HOME'}/.printjobs/$jobnumbers[$i].status";
+	my $jobstatusdata = join("", <JOBSTATUSFILE>);
+	close JOBSTATUSFILE;
+	# Extract the important fields from the file
+	# Status:
+	my $status = "";
+	if ($jobstatusdata =~ m!^\s*status\s*\=\s*{([^{}]*)}\s*$!m) {
+	    $status = $1;
+	}
+	# Omit this job when it is already finished, cancelled, or aborted
+        # (then it cannot be killed any more)
+	next if (($status eq "") || ($status =~ m!aborted!) || 
+		 ($status =~ m!finished!) || ($status =~ m!cancelled!));
+	# Printer
+	my $printer;
+	if ($jobstatusdata =~ m!^\s*printer\s*\=\s*{([^{}]*)}\s*$!m) {
+	    $printer = $1;
+	}
+	# Omit this job when we want to remove jobs on another printer
+	next if ((!(defined($opt_a))) && ($printer ne $config->{'queue'}));
+	# Owner
+	my $owner;
+	if ($jobstatusdata =~ 
+	m!^\s*env_driver\s*\=\s*{.*\"LOGNAME\"\s*=\s*\"([^\"]*)\".*}\s*$!m) {
+	    $owner = $1;
+	}
+
+	# Kill the job when it is in the scope of jobs defined by the
+	# command line
+	if ((($nojob == 0) && (defined($joblist->{$jobnumbers[$i]}))) || 
+	    (($nouser == 0) && (defined($userlist->{$owner}))) ||
+	    (($opt_alljobs == 1) && ($ENV{'LOGNAME'} eq $owner)) ||
+	    (($opt_alljobs == 1) && ($ENV{'LOGNAME'} eq "root")) ||
+	    (($mostrecent == 1) && ($nojob == 1) && ($nouser == 1) && 
+	     ($opt_alljobs == 0))) {
+	    system("touch $ENV{'HOME'}/.printjobs/$jobnumbers[$i].cancelled; chmod 0600 $ENV{'HOME'}/.printjobs/$jobnumbers[$i].cancelled");
+	    print STDERR "Cancel request for job $jobnumbers[$i] submitted!\n";
+	    $nothingremoved = 0;
+	}
+	$mostrecent = 0;
+    }
+
+    # Say "No cancel request sent" if no job was killed
+    if ($nothingremoved == 1) {
+	print STDERR "no cancel request sent\n";
+    }
+}
+
+sub control_pdq {
+
+    # PDQ does not have functionality for enabling/disabling queues, 
+    # holding/releasing/moving jobs, etc.
+
+    die "Advanced queue/job manipulation functionality is not supported under PDQ!\n";
+
+}
+
+sub get_pdq_default_printer {
+
+    # Read the help message of PDQ
+    open PDQHELP, "pdq --help 2>&1 |";
+    $pdqhelp = join ("", <PDQHELP>);
+    close PDQHELP;
+
+    # Search the "default" line
+    if ($pdqhelp =~ m!default\s+printer.*\s+(\S+)\s*$!mg) {
+	return $1;
+    } else {
+	die "No default printer defined, you have to specify a printer with \"-P\" or \"-d\"!\n";
+    }
+
+}
+
+sub pdq_check_printer {
+    my $printer = $_[0];
+
+    # Read the help message of PDQ
+    open PDQHELP, "pdq --help 2>&1 |";
+    $pdqhelp = join ("", <PDQHELP>);
+    close PDQHELP;
+
+    # Search the appropriate printer entry
+    return ($pdqhelp =~ m!^\s+$printer\s+\-\s+.*\s+\-\s*$!mg);
+
+}
+
+sub detect_spooler {
+    # If tcp/localhost:631 opens, cups
+    my $page = $db->getpage('http://localhost:631/', 1);
+    if ($page =~ m!Common UNIX Printing System!) {
+	return 'cups';
+    }
+
+    # Else if /etc/printcap, some sort of lpd thing
+    if (-f $sysdeps->{'lpd-pcap'}) {
+	# If -f /etc/lpd.conf, lprng
+	if (-f $sysdeps->{'lprng-conf'}) {
+	    return 'lprng';
+	} elsif (-x $sysdeps->{'lpd-bin'}) {
+	    # There's a /usr/sbin/lpd
+	    return 'lpd';
+	}
+    }
+
+    # pdq executable in our path somewhere?
+    for (split(':', $ENV{'PATH'})) {
+	if (-x "$_/pdq") {
+	    return 'pdq';
+	}
+    }
+
+    return undef;
+}
+
+sub unimp {
+    die "Sorry, $action for your spooler is unimplemented...\n";
+}
+
+sub help {
+
+    my $action = 'all';
+# Set up the help message depending on how we were called
+    if ($progname =~ m!^lpc!) { # 'lpc*' ==> control 
+	$action = 'control';
+	print STDERR <<EOF;
+Usage: $progname [ -s spooler ] [ -i ] command [ arguments ]
+    or $progname -h
+EOF
+    } elsif ($progname =~ m!^lprm!) { # 'lprm*' ==> remove jobs 
+	$action = 'remove';
+	print STDERR <<EOF; 
+Usage: $progname [ -s spooler ] [ -P queuename ] [ - ] [ -i ] [ jobid1 jobid2 ... ]
+    or $progname -h
+EOF
+    } elsif ($progname =~ m!^lpq!) { # 'lpq*' ==> list jobs 
+	$action = 'query';
+	print STDERR <<EOF;
+Usage: $progname [ -s spooler ] [ -P queuename ] [ -i ] [ -a ] [ user1 user2 ... ]
+    or $progname -h
+EOF
+    } elsif (($progname =~ m!^lpr!) || ($progname =~ m!^lp!)) { # 'lpr*', 'lp*' ==> print 
+	$action = 'print';
+	print STDERR <<EOF;
+Usage: $progname [ -s spooler ] [ -P queuename ] \
+               [ -o option1=value1 -o option2 ... ] [ -i ] [ file1 file2 ... ]
+    or $progname -S [ -s spooler ] [ -i ]
+    or $progname -h [ -s spooler ] [ -P queuename ] [ -i ]
+EOF
+    } else { # name does not determine the action
+	print STDERR <<EOF;
+Usage: $progname [ -s spooler ] [ -P queuename ] \
+               [ -o option1=value1 -o option2 ... ] [ -i ] \
+	       [ file1 file2 ... ]
+    or $progname -Q [ -s spooler ] [ -P queuename ] [ -i ] [ -a ] \
+	       [ user1 user2 ... ]
+    or $progname -R [ -s spooler ] [ -P queuename ] [ - ] [ -i ] \
+	       [ jobid1 jobid2 ... ]
+    or $progname -C [ -s spooler ] [ -i ] command [ arguments ]
+    or $progname -S [ -s spooler ] [ -i ]
+    or $progname -h [ -s spooler ] [ -P queuename ] [ -i ]
+EOF
+    }
+
+     print STDERR <<EOF;
+
+ -s spooler      Explicit spooler type (cups,lpd,lprng,pdq)
+EOF
+
+    if ($action ne 'control') {
+	print STDERR <<EOF;
+ -P queuename    Command should apply to this queue
+EOF
+    }
+
+    if (($action eq 'print') || ($action eq 'all')) {
+	print STDERR <<EOF;
+ -o option=value Set option to value
+ -o option       Set the switch option
+ -\# n            Print n copies
+ file1 file2 ... Files to be printed, when no file is given, standard input
+                 will be printed
+EOF
+    }
+
+    if ($action eq 'all') {
+	print STDERR <<EOF;
+ -Q              Query the jobs in a queue
+EOF
+    }
+
+    if (($action eq 'query') || ($action eq 'all')) {
+	print STDERR <<EOF;
+ -a              Query the jobs in all queues
+ user1 user2 ... Users whose jobs should be listed
+EOF
+    }
+
+    if ($action eq 'all') {
+	print STDERR <<EOF;
+ -R              Remove a job from a queue
+EOF
+    }
+
+    if (($action eq 'remove') || ($action eq 'all')) {
+	print STDERR <<EOF;
+ -               Remove all your jobs
+ jobid1 jobid2   IDs of the jobs to be removed
+EOF
+    }
+
+    if ($action eq 'all') {
+	print STDERR <<EOF;
+ -C              Execute control commands for queue/job manipulation
+EOF
+    }
+
+    if (($action eq 'control') || ($action eq 'all')) {
+	print STDERR <<EOF;
+ command [ arguments ]  Control command for queue/job manipulation. The 
+                 commands are the ones of the BSD "lpc" utility. Use
+		 the control command "help" to get a list of supported 
+                 commands. Note: the amount of commands varies with the
+                 spooler, but the same commands given under different 
+                 spoolers do the same thing.
+EOF
+    }
+
+    print STDERR <<EOF;
+ -i              Interactive mode: You will be asked if $progname
+                 is in doubt about something. Otherwise $progname
+		 uses auto-detection or quits with an error.
+EOF
+
+    if (($action eq 'print') || ($action eq 'all')) {
+	print STDERR <<EOF;
+ -S              Save the chosen spooler as the default spooler
+ -h              Show this message or show a list of available options if a 
+                 queue is specified
+
+EOF
+    } else {
+	print STDERR <<EOF;
+ -h              Show this message
+
+EOF
+    }
+
+    exit 0;
+}

@@ -1,0 +1,210 @@
+#!@PERL@
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+
+my ($db) = new Foomatic::DB;
+
+use Getopt::Std;
+getopts('ft:j:h');
+my $force = ($opt_f ? 1 : 0);
+
+# Do the whole world
+
+if ($opt_h) {
+    print STDERR <<EOF;
+compile_db [ -f ] [ -t type ] [ -j n ] [driver1] [driver2] ...
+ -f       force: proceed even if the destination directory exists
+ -t type  output file type: ppd, cups, lprng, lpd, ppr, pdq, direct, 
+          oldcups, xml
+          Note: "oldcups" are the old-style CUPS-O-Matic PPDs.
+ -j n     n==number of work processes to run at the same time
+ driver1 driver2 ...  
+          only compile the database for these drivers
+EOF
+
+    exit 0;
+}
+
+# Default file type are generic PPD files
+if (!$opt_t) {
+    $opt_t = "ppd";
+}
+
+print STDERR "\n";
+
+if (($opt_t eq "ppd") || ($opt_t eq "cups") || ($opt_t eq "ppr")) {
+    # Generic PPDs
+    $filetype = "ppd";
+    $destdir = "ppd";
+    $suffix = ".ppd";
+    print STDERR "Generating generic PPD files (PPD-O-Matic)...\n";
+} elsif ($opt_t eq "oldcups") {
+    $filetype = "oldcups";
+    $destdir = "cups-ppd";
+    $suffix = "-cups.ppd";
+    print STDERR "Generating old CUPS PPD files (CUPS-O-Matic)...\n";
+} elsif (($opt_t eq "lpd") || ($opt_t eq "lprng")) {
+    $filetype = "lpd";
+    $destdir = "lpd-descr";
+    $suffix = ".foo";
+    print STDERR "Generating LPD printer description files (LPD-O-Matic)...\n";
+} elsif ($opt_t eq "pdq") {
+    $filetype = "pdq";
+    $destdir = "pdq-config";
+    $suffix = ".pdq";
+    print STDERR "Generating PDQ configuration files (PDQ-O-Matic)...\n";
+} elsif ($opt_t eq "direct") {
+    $filetype = "direct";
+    $destdir = "direct-descr";
+    $suffix = ".foo";
+    print STDERR "Generating printer description files for spooler-less printing\n(Direct-O-Matic)...\n";
+} elsif ($opt_t eq "xml") {
+    $filetype = "xml";
+    $destdir = "combo-xml";
+    $suffix = ".xml";
+    print STDERR "Generating Foomatic printer/driver combo XML files ...\n";
+} else {
+    die "Unknown file type: $opt_t!\n";
+}
+
+# Destination directory
+my $pwd = `pwd`;
+chomp $pwd;
+print STDERR "\nStoring files in directory $pwd/$destdir.\n";
+mkdir $destdir or $opt_f or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
+
+# Compute the overview
+$db->get_overview();
+
+# Which drivers should be processed?
+my @driverlist;
+if (@ARGV) {
+    @driverlist = grep {isdrivervalid($_)} @ARGV;
+} else {
+    @driverlist = grep {isdrivervalid($_)} $db->get_driverlist();
+}
+
+# Subprocess to compute all p/d combinations
+my @combos;
+if (open COMB, '-|') {
+    while(<COMB>) {
+	push (@combos, $_);
+    }
+    close COMB;			# wait for child end
+} else {
+    my $driver;
+    for $driver (@driverlist) {
+	my $printer;
+	for $printer ($db->get_printers_for_driver($driver)) {
+	    # Note this combo...
+	    print STDOUT "$printer,$driver\n";
+	}
+    }
+    exit 0;			# end of subprocessing
+}
+
+# OK, spawn n manager processes
+if ($opt_j > 1) {
+    while ($opt_j-- > 1) {
+	if (!fork()) {
+	    # Child, go on immediately
+	    last;
+	}
+    }
+}
+
+# Reorder combos randomly:
+my $ct = scalar(@combos);
+my @rcombos;
+while ($ct) {
+    my $idx = int(rand($ct--));
+    my $next = splice(@combos, $idx, 1);
+    push (@rcombos, $next);
+}
+
+# Now, the processing loop:
+my $combo;
+my $pcount=0;
+my $fileh=spawn_child();
+while($combo=pop(@rcombos)) {
+    print $fileh $combo;
+    if ($pcount++ > 25) {
+	close $fileh or die "\nError in child...\n";
+	$fileh = spawn_child();
+	$pcount=0;
+    }
+}
+close $fileh;
+
+print STDERR "Done.\n";
+
+exit (0);
+
+# Form a combo-computing child process to handle a flock of combos
+sub spawn_child {
+    if (open CHILD, '|-') {
+	return \*CHILD;
+    } else {
+	while ($line=<STDIN>) {
+
+	    my ($printer,$driver) = split(',',$line);
+	    chomp $driver;
+
+	    # Determine file name for the output file
+	    my $printerentry = $db->get_printer($printer);
+	    my $make = $printerentry->{'make'};
+	    $make =~ s/[\s\(\)\/]/_/g;
+	    $make =~ s/\+/plus/g;
+	    $make =~ s/__/_/g;
+	    my $model = $printerentry->{'model'};
+	    $model =~ s/[\s\(\)\/]/_/g;
+	    $model =~ s/\+/plus/g;
+	    $model =~ s/__/_/g;
+	    my $filename = "$destdir/$make-$model-$driver$suffix";
+	    #my $filename = "$destdir/$printer-$driver$suffix";
+
+	    # Skip entirely if we can
+	    next if (-f $filename);
+	    
+	    print STDERR "  ...printer $printer, driver $driver\n";
+	    
+	    # Generate the file ...
+	    if ($filetype eq 'xml') {
+		@data = $db->get_combo_data_xml($driver, $printer);
+	    } else {
+		$db->getdat($driver, $printer);
+		if ($filetype eq 'oldcups') {
+		    @data = $db->getcupsppd();
+		} elsif ($filetype eq 'pdq') {
+		    @data = $db->getpdqdata();
+		} elsif ($filetype eq 'lpd') {
+		    @data = $db->getlpddata();
+		} elsif ($filetype eq 'ppd') {
+		    @data = $db->getgenericppd();
+		} elsif ($filetype eq 'direct') {
+		    @data = $db->getlpddata();
+		}
+	    }
+	    open OUTPUT, "> $filename" ||
+		die "Cannot write $filename!";
+	    print OUTPUT join('', @data);
+	    close OUTPUT;
+	}
+
+	# No more input!
+	exit (0);
+    }    
+}
+
+sub isdrivervalid {
+    my ($driver) = @_;
+    # Check whether the driver has a valid command line
+    if ($filetype ne 'xml') {
+	my $driverentry = $db->get_driver($driver);
+	if ($driverentry->{'cmd'}) {return 1;}
+	return 0;
+    } else {
+	return 1;
+    }
+}

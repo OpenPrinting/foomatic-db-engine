@@ -1,0 +1,13 @@
+   <enum_val id="ev/@@CHOICEID@@">
+    <ev_longname>
+     <en>@@LONGCHOICE@@</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>@@SHORTCHOICE@@</en>
+     <!-- Until someone tells me how to learn the user locale in 
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>@@CHOICE@@</ev_driverval>
+   </enum_val>

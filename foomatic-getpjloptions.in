@@ -1,0 +1,67 @@
+#!@SH@
+#
+# Polls PJL options from local or network printers
+#
+
+#
+# Till Kamppeter (till.kamppeter@gmx.net)
+#
+# Copyright 2001 Till Kamppeter
+#
+# This software may be freely redistributed under the terms of the GNU
+# General Public License (http://www.gnu.org/).
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+
+NC=/usr/bin/nc
+CAT=/bin/cat
+PERL=/usr/bin/perl
+
+if [ ${1:-X} != X ] ; then
+    # We have at least one argument, so do the work
+    (
+	# PJL commands to request the printer information
+	echo -en "\033%-12345X"
+	echo -en "@PJL\r\n"
+	echo -en "@PJL INFO VARIABLES\r\n"
+	echo -en "@PJL INFO ID\r\n"
+	echo -en "@PJL INFO CONFIG\r\n"
+    ) | if [ ${2:-X} != X ]; then
+	# We have two arguments, do ethernet printer request
+	# Send commands to remote printer
+	${NC} -q 0 ${1} ${2} 2>/dev/null
+	# Wait one second for the printer to process the request
+        sleep 1
+	# Poll the printer's answer and filter out the newpage characters
+	${NC} -w 1 ${1} ${2} 2>/dev/null | ${PERL} -p -e "s/\014//"
+    else
+	# We have one argument, do local printer request
+	# Send commands to printer port
+	${CAT} > ${1}
+	# Wait one second for the printer to process the request
+	sleep 1
+	# Poll the printer's answer and filter out the newpage characters
+	${CAT} < ${1} | ${PERL} -p -e "s/\014//"
+    fi
+else
+    # No argument, show the help message
+    echo ""
+    echo "usage: foomatic-getpjloptions <device>"
+    echo "       foomatic-getpjloptions <hostname> <port>"
+    echo ""
+    echo "   <device>:   Device where a local printer is connected to"
+    echo "               examples: /dev/lp0, /dev/usb/lp0"
+    echo "               Have your parallel port in EPP/bi-directional mode"
+    echo "               (see your BIOS settings)."
+    echo "   <hostname>: Host name or IP of a network printer (HP JetDirect,"
+    echo "               Socket, ...)"
+    echo "   <port>:     Port of your network printer."
+    echo
+    echo "   Uni-directional protocols as remote LPD are not supported."
+    echo ""
+    echo "   The option list is sent to standard output."
+    echo ""
+fi

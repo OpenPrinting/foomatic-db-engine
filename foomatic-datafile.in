@@ -1,0 +1,59 @@
+#!@PERL@
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+use Getopt::Std;
+
+getopts("d:p:t:hf");
+help() if $opt_h;
+my $driver = $opt_d;
+my $poid   = $opt_p;
+my $type = $opt_t;
+my $force = ($opt_f ? 1 : undef);
+
+if (defined($driver) and defined($poid)) {
+
+    my $db = Foomatic::DB->new();
+    # Get all the data about this driver/printer pair
+    $db->getdat($driver, $poid, $force);
+
+    if (!$opt_t) {
+	$type = 'ppd';
+    }
+    my @data;
+
+    if ($type eq 'cups') {
+	@data = $db->getcupsppd();
+    } elsif ($type eq 'pdq') {
+	@data = $db->getpdqdata();
+    } elsif ($type eq 'lpd') {
+	@data = $db->getlpddata();
+    } elsif ($type eq 'lprng') {
+	@data = $db->getlpddata();
+    } elsif ($type eq 'mf') {
+	@data = $db->getmfdata();
+    } elsif ($type eq 'ppd') {
+	@data = $db->getgenericppd();
+    } elsif ($type eq 'ppr') {
+	@data = $db->getgenericppd();
+    } elsif ($type eq 'direct') {
+	@data = $db->getlpddata();
+    } else {
+	die "Unknown type $type!  Specify cups, pdq, lpd, lprng, mf, ppr, direct, or ppd.\n";
+    }
+    
+    print @data;
+}
+
+exit 0;
+
+sub help {
+    print <<HELP;
+foomatic-datafile -t cups|pdq|lpd|lprng|mf|ppr|direct|ppd -d <driver> -p <printerid> [-f]
+ -t: datafile type
+ -d: driver name
+ -p: printer id
+ -f: force data rebuild
+HELP
+
+}

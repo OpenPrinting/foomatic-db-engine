@@ -1,0 +1,58 @@
+#!@PERL@
+
+# This is foomatic-fix-xml, run this program if you have compiled
+# foomatic-perl-data against libxml 1.x and you have old database
+# entries with a leading blank line. libxml 1.x chokes on leading
+# blank lines.
+
+my $libdir;
+if ($#ARGV > -1) {
+    if ($ARGV[0] eq "-h") {
+	print STDERR "
+Usage: foomatic-fix-xml [ dir ]
+
+       dir: Directory where the Foomatic database is located, default:
+            /usr/share/foomatic
+
+";
+	exit(1);
+    } else {
+	$libdir = $ARGV[0];
+    }
+} else {
+    $libdir = "/usr/share/foomatic";
+}
+
+# A little bit of statistics
+my $filesmodified = 0;
+
+# Read the directory with the driver's XML entries
+for my $dir (qw/printer driver opt/) {
+    opendir DIR, "$libdir/db/source/$dir" ||
+	die "Cannot open driver XML directory!\n";
+    my $file;
+    while ($file = readdir(DIR)) {
+	next if ($file !~ /.xml$/);
+	open XMLFILE, "< $libdir/db/source/$dir/$file" || die "   Database entry $file cannot be read!\n";
+	my @contents = <XMLFILE>;
+	close XMLFILE;
+	my $filemodified = 0;
+	while ($contents[0] =~ /^\s*$/) {
+	    shift @contents;
+	    $filemodified = 1;
+	}
+	if ($contents[0] !~ /^</) {
+	    $contents[0] =~ s/^\s*</</;
+	    $filemodified = 1;
+	}
+	if ($filemodified) {
+	    open XMLFILE, "> $libdir/db/source/$dir/$file" || die "   Database entry $file cannot be written!\n";
+	    print XMLFILE join('', @contents);
+	    close XMLFILE;
+	    print "Corrected file $libdir/db/source/$dir/$file\n";
+	    $filesmodified ++;
+	}
+    }
+}
+closedir DIR;
+print "\nCorrected $filesmodified files.\n\n";

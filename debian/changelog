@@ -1,0 +1,110 @@
+foomatic (0.20020213-8) unstable; urgency=low
+
+  * The previous version was accidentally built as a native Package.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Sat,  9 Mar 2002 04:55:44 +0100
+
+foomatic (0.20020213-7) unstable; urgency=low
+
+  * Added missing documantation: README TODO USAGE. Closes: #136469
+  * Remove error message from postinst.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Mon,  4 Mar 2002 02:02:21 +0100
+
+foomatic (0.20020213-6) unstable; urgency=low
+
+  * Changed the default for preserve_manual_changes to parse.
+  * Fixed a bug in the parser routine.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Wed, 20 Feb 2002 03:28:52 +0100
+
+foomatic (0.20020213-5) unstable; urgency=low
+
+  * Added different ways to handle local changes.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Tue, 19 Feb 2002 15:31:11 +0100
+
+foomatic (0.20020213-4) unstable; urgency=low
+
+  * Updated descriptions in foomatic-bin.{templates,postinst}.
+  * Changed priorities in foomatic-bin.config according to policy.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Sun, 17 Feb 2002 18:47:53 +0100
+
+foomatic (0.20020213-3) unstable; urgency=low
+
+  * Changed default for ps_accounting to off (see bug #131786 and #133613)
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Fri, 15 Feb 2002 00:39:54 +0100
+foomatic (0.20020213-2) unstable; urgency=low
+
+  * Fixed unsetting of ps_accounting in generated filter.conf. Closes: #131786
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Thu, 14 Feb 2002 19:18:54 +0100
+
+foomatic (0.20020213-1) unstable; urgency=low
+
+  * Added Debconf interface to generate /etc/foomatic/filter.conf
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Wed, 13 Feb 2002 07:03:56 +0100
+
+foomatic (0.20020131-1) unstable; urgency=low
+
+  * Cleanup printer/driver database in install-indep target.
+  * Set LPRNG_CONF in debian/rules.
+  * Updated dependencies for cupsomatic-pppd. Closes: #129944, #128697
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Thu, 31 Jan 2002 20:56:39 +0100
+
+foomatic (0.20020120-1) unstable; urgency=low
+
+  * Filter scripts support an optional config file /etc/foomatic/filter.conf.
+  * Added dependencies on mpage|a2ps|enscript, replaces old cupsomatic-pppd.  
+  * Corrected section of lpdomatic manpage which was moved back to
+    /usr/sbin.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Mon, 21 Jan 2002 02:03:05 +0100
+
+foomatic (0.20020105-1) unstable; urgency=low
+
+  * Conflicts with cupsomatic-pppd.
+  * Added workaround for printcaps created/edited by lprngtool to the
+    foomatic-configure script.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Sun,  6 Jan 2002 03:38:20 +0100
+
+foomatic (0.20011231-1) unstable; urgency=low
+
+  * Removed bashism from debian/rules.
+  * Applied Jeff's Patches to debian/rules and did some cleanup.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Tue,  1 Jan 2002 04:55:27 +0100
+
+foomatic (0.20011223-1) unstable; urgency=low
+
+  * Corrected lpdomatic entry in debian/foomatic-bin.manpages.
+  * Edited lpdomatic and foomatic-gswrapper manpages.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Sun, 23 Dec 2001 22:30:33 +0100
+
+foomatic (0.20011210-1) unstable; urgency=low
+
+  * Made proper install and build targets in debian/rules and did some
+    cleanup there.
+  * Added manpage for directomatic.
+  * Included the following patches contributed by Jeff Licquia:
+  * Added proper Build-Depends.
+  * Updated Standards-Version.
+  * Fixed the descriptions to be formatted properly.
+  * Fixed the Perl libraries to be installed to the proper location.
+  * That Recommendation should be "cupsys", not "cups".
+  * Added pdq to the list of print spoolers in Recommends.
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Tue, 11 Dec 2001 05:57:13 +0100
+
+foomatic (0.20011206-1) unstable; urgency=low
+
+  * Initial Release
+
+ -- Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>  Tue, 20 Mar 2001 23:55:22 +0100
+

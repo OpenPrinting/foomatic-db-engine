@@ -1,0 +1,168 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+.\"
+.TH FOOMATIC-CONFIGURE 1 "2002-01-06" "Foomatic Project"
+.SH NAME
+foomatic-configure \- the main configuration program of the foomatic
+printing system.
+.SH SYNOPSIS
+.B foomatic-configure
+[\fIOPTION\fR]...
+
+.BI foomatic-configure\ \-n \ queuename \ [\ \-N \ description \ ]\ \ [\ \-L \ location \ ]\ \ [\ \-c \ connect \ ]\ \ [\ \-d \ driver \ ]\ \ [\ \-p \ printer \ ]\ \ [\ \-s \ spooler \ ]\ \ [\ \-C \ [\ sourcespooler\ ]\ sourcequeue \ ]\ \ [\ \-o \ option1=value1 \ \-o \ option2 \ ...\ ]\ [\ \-q\ ]\ [\ \--oldppd\ ]\
+
+.BI foomatic-configure\ \-D\ \-n \ queuename \ [\ \-s \ spooler \ ]\ [\ \-q\ ]
+
+.BI foomatic-configure\ \-R\ \-n \ queuename \ [\ \-s \ spooler \ ]\ [\ \-q\ ]
+
+.BI foomatic-configure\ \-Q\ \ [\ \-s \ spooler \ ]\ [\ \-n \ queuename \ ]\ [\ \-r\ ]
+
+.BI foomatic-configure\ \-P\ \ [\ \-s \ spooler \ ]\ [\ \-n \ queuename \ ]\ [\ index \ ]
+
+.BI foomatic-configure\ \-X\ \-p \ printer \ |\ \-d \ driver \ |
+.BI \-p \ printer \ \-d \ driver
+
+.BI foomatic-configure\ \-O
+
+.BI foomatic-configure\ \-h
+
+.BI foomatic-configure\ \--help
+
+.SH DESCRIPTION
+.B foomatic-configure 
+is a program to establish and configure print queues, drivers,
+spoolers, etc using the foomatic database and companion filters.
+
+It also comprises half of a programatic API for user tools: you can
+learn and control everything about the static properties of print
+queues here.  With the sister program foomatic-printjob, you can do
+everything related to print queue dynamic state: submit jobs, and
+query, cancel, reorder, and redirect them.
+
+.SS Options
+.TP 10
+.BI \-n \ queuename
+Configure this print queue
+.TP 10
+.BI \-N \ Name/Description
+Use this proper human-readable name/description
+.TP 10
+.BI \-L \ Location
+Short phrase describing this printer's location
+.TP 10
+.BI \-c \ connection
+Printer is connected thusly (ex file:/dev/lp0)
+.TP 10
+.BI \-d \ driver
+Foomatic database name for desired printer driver
+.TP 10
+.BI \-p \ printer
+Foomatic id for printer
+.TP 10
+.BI \-s \ spooler
+Explicit spooler type (cups, lpd, lprng, pdq, ppr, direct)
+.TP 10
+.BI \-o \ option=value
+Set the default of option to value
+.TP 10
+.BI \-o \ option
+Turn on option by default
+.TP 10
+.BI \--oldppd
+Use the old CUPS-O-Matic PPD files for CUPS queues (default are the PPD-O-Matic PPDs)
+.TP 10
+.BI \-D
+Set this queue as the default queue (just give \fB\-n\fP \fIqueuename\fP)
+.TP 10
+.BI \-R
+Remove this whole queue entirely (just give \fB\-n\fP \fIqueuename\fP)
+.TP 10
+.BI \-C \ [ \ sourcespooler \ ] \ sourcequeue
+Copy sourcequeue from sourcespooler (or the current one if sourcespooler is not given) into the queue given by \fB\-n\fP \fIqueuename\fP (of the current spooler).
+.TP 10
+.BI \-Q
+Query existing configuration (gives XML summary)
+.TP 10
+.BI \-r
+List also remotely defined queues (CUPS only)
+.TP 10
+.BI \-P \ [ \ index \ ]
+Get Perl dump of current configuration (as a Perl array named QUEUES, the first index is index, or zero if index is not given)
+.TP 10
+.BI \-O
+Print XML Overview of all known printer/drivers (this shows also the Foomatic IDs of the printers)
+.TP 10
+.BI \-X
+Print XML data for \fB\-p\fP \fIprinter\fP and/or \fB\-d\fP \fIdriver\fP object
+.TP 10
+.BI \-q
+Run quietly
+
+
+.SS Commands
+No commands, just options
+
+.SH FILES
+.TP 25
+@$sysdeps{'foo-etc'}@/lpd/<queue>
+.TP 25
+@$sysdeps{'foo-etc'}@/<queue>.xml
+.TP 25
+@$sysdeps{'lpd-pcap'}@
+The systems list of configured printers.
+.PD 0
+
+.SH SEE ALSO
+.IR foomatic-printjob (1),
+
+.SH EXIT STATUS
+.B foomatic-configure
+returns 0 if no errors occurred.
+
+.SH AUTHOR
+Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> for the foomatic
+project using comments from the source.
+
+.SH BUGS
+\fBfoomatic-configure\fR currently cannot handle printcap files in the
+\fBlprng\fR style.  As \fBlprng\fR can use BSD style printcaps this is
+not much of a problem, as long as the GUI based print manager
+\fBlprngtool\fR is not used.
+The difference between those formats is, that BSD style requires
+continuation lines in printer definitions to be ended with a colon and
+the newline character to be escaped with a backslash.  \fBLprng\fR has
+no such restriction.
+
+To use a printcap file generated or edited with \fBlprngtool\fR with
+\fBfoomatic-configure\fR it is necessary to add \fB:\\\fR to the end
+of all but the last line of every printer definition, just as shown
+below:
+.nf
+.sp
+.ft CW
+#comment
+# primary printer name
+lp
+#alternate names
+ |lp2|lp3
+ |Example of a printer
+ :sd=/usr/spool/LPD/lp
+ :rw:lp=/dev/lp:mx#100
+ :
+.sp
+.fi
+.LP
+must be converted to:
+.nf
+.sp
+.ft CW
+#comment
+# primary printer name
+lp\\
+ |lp2|lp3\\
+ |Example of a printer\\
+ :sd=/usr/spool/LPD/lp:\\
+ :rw:lp=/dev/lp:mx#100:
+.sp
+.fi
+.LP
+This manpage may be out of date.
