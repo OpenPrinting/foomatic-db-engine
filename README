@@ -1,6 +1,6 @@
 
-Foomatic 3.0.1rc2
-=================
+Foomatic 3.0.1
+==============
 
 foomatic-db-engine
 ------------------
@@ -305,7 +305,7 @@ Implemented in 3.0.0:
  - The Foomatic database uses clear-text printer IDs for all printers
    now.
 
-Implemented in 3.0.1rc1:
+Implemented in 3.0.1:
 
  - CUPS raster drivers can now be used with any spooler. This makes a
    lot of newer commercial or manufacturer-supplied printer drivers
@@ -358,14 +358,20 @@ Implemented in 3.0.1rc1:
 
  - Compatibility fixes for IRIX and the *BSD operating systems.
 
-Implemented in 3.0.1rc2:
-
  - Script to update the "gimp-print" driver entry in the database
    using the src/foomatic/foomatic-printermap file of the source
    tarball of GIMP-Print 4.2.x.
 
  - perltoxml() Perl function in DB.pm to generate XML database entries
    from PPD files (thanks to Tim Waugh from Red Hat).
+
+ - Let foomatic-ppdfile (which can be also called under the name
+   "foomatic-datafile", for compatibility with frontends) accept
+   and ignore the "-t" option for backwards compatibility. Now
+   the KDE Printing Manager works correctly again.
+
+ - Fixed PPD file generation so that the files pass the "cupstestppd"
+   of CUPS 1.1.20.
 
 Planned/Roadmap for future releases:
 
