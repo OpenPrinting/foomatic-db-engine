@@ -983,6 +983,11 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	      if (debug)
 		fprintf(stderr,
 			"    Option style: PJL command\n");
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_collective"))) {
+	      option->style = (xmlChar *)"X";
+	      if (debug)
+		fprintf(stderr,
+			"    Option style: Collective option\n");
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "arg_spot"))) {
 	      option->spot =
 		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
@@ -2103,7 +2108,9 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     if (combo->args[i]->grouppath) {
       printf("      'group' => '%s',\n", combo->args[i]->grouppath);
     }
-    printf("      'proto' => '%s',\n", combo->args[i]->proto);
+    if (combo->args[i]->proto) {
+      printf("      'proto' => '%s',\n", combo->args[i]->proto);
+    }
     if (combo->args[i]->required) {
       printf("      'required' => 1,\n");
     }

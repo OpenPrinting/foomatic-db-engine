@@ -1,3 +1,10 @@
+2002-12-03  Till Kamppeter <till.kamppeter@gmx.net>
+	* lib/Foomatic/DB.pm, foomatic-perl-data.c: First preparations
+	  for collective options, let these options being skipped for
+	  2.9.0 release, so that collective options can be added to the
+	  database before 2.9.1 without 2.9.0 breaking. Let options with
+	  unknown execution style being skipped in general.
+	
 2002-11-29  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* *: Tagged CVS for the release of foomatic-db-engine 2.9.0pre1. 

@@ -1511,6 +1511,22 @@ sub getppd {
 	my @group = split("/", $arg->{'group'});
 	my $idx = $arg->{'idx'};
 
+	# What is the execution style of the current option? Skip options
+        # of unknown execution style
+	my $optstyle = ($arg->{'style'} eq 'G' ? "PS" :
+			($arg->{'style'} eq 'J' ? "JCL" :
+			 ($arg->{'style'} eq 'C' ? "CmdLine" :
+	# Collective options not implemented in 2.9.0 release skip
+	# them.
+	#		  ($arg->{'style'} eq 'X' ? "Collective" :
+			  "Unknown")));
+	next if $optstyle eq "Unknown";
+
+	# The command prototype should not be empty, set default
+	if (!$cmd) {
+	    $cmd = "%s";
+	}
+
 	# Set default for missing section value
 	if (!defined($section)) {$section = "AnySetup";}
 
@@ -1562,8 +1578,6 @@ sub getppd {
 		if ($arg->{'style'} ne 'G') {
 		    # For non-PostScript options insert line with option
 		    # properties
-		    my $optstyle = ($arg->{'style'} eq 'J' ? 
-				    "JCL" : "CmdLine");
 		    push(@optionblob, sprintf
 			 ("*FoomaticRIPOption %s: enum %s %s\n",
 			  $name, $optstyle, $spot));
@@ -1766,8 +1780,6 @@ sub getppd {
 <</PageSize [ 5 -2 roll ] /ImagingBBox null>>setpagedevice";
 			} else {
 			    my $a = $arg->{'vals_byname'}{'Custom'};
-			    my $optstyle = ($arg->{'style'} eq 'J' ? 
-					    "JCL" : "CmdLine");
 			    my $header = sprintf
 				("*FoomaticRIPOptionSetting %s=%s",
 				 $name, $a->{'value'});
@@ -1814,8 +1826,6 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		# For non-PostScript options insert line with option
 		# properties
 		my $v = $arg->{'vals'}[0];
-		my $optstyle = ($arg->{'style'} eq 'J' ? 
-				"JCL" : "CmdLine");
 		my $header = sprintf
 		    ("*FoomaticRIPOptionSetting %s=%s",
 		     $name, $v->{'value'});
@@ -1864,8 +1874,6 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		my $foomaticstr = ripdirective($header, $cmd) . "\n";
 		# For non-PostScript options insert line with option
 		# properties
-		my $optstyle = ($arg->{'style'} eq 'J' ? 
-				"JCL" : "CmdLine");
 		push(@optionblob, sprintf
 		     ("*FoomaticRIPOption %s: bool %s %s\n",
 		      $name, $optstyle, $spot).
@@ -1969,9 +1977,6 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		# file syntax. This way the info about this option being
 		# a numerical one does not get lost
 
-		my $optstyle = ($arg->{'style'} eq 'J' ? "JCL" : 
-				($arg->{'style'} eq 'C' ? "CmdLine" :
-				 "PS"));
 		push(@optionblob, sprintf
 		     ("*FoomaticRIPOption %s: int %s %s\n",
 		      $name, $optstyle, $spot));
@@ -2147,9 +2152,6 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		# file syntax. This way the info about this option being
 		# a numerical one does not get lost
 
-		my $optstyle = ($arg->{'style'} eq 'J' ? "JCL" : 
-				($arg->{'style'} eq 'C' ? "CmdLine" :
-				 "PS"));
 		push(@optionblob, sprintf
 		     ("*FoomaticRIPOption %s: float %s %s\n",
 		      $name, $optstyle, $spot));
