@@ -2491,15 +2491,35 @@ sub getppd (  $ $ $ ) {
 			# the sizes out of the choices of the "PageSize"
 			# option.
 			my $size = $v->{'driverval'};
-			if (($size !~ /(\d+)\s+(\d+)/) &&
-			    # 2 positive integers separated by whitespace
-			    ($size !~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
+			if ($size =~ /([\d\.]+)x([\d\.]+)([a-z]+)\b/) {
+			    # 2 positive integers separated by 
+			    # an 'x' with a unit
+			    my $w = $1;
+			    my $h = $2;
+			    my $u = $3;
+			    if ($u =~ /^in(|ch(|es))$/i) {
+				$w *= 72.0;
+				$h *= 72.0;
+			    } elsif ($u =~ /^mm$/i) {
+				$w *= 72.0/25.4;
+				$h *= 72.0/25.4;
+			    } elsif ($u =~ /^cm$/i) {
+				$w *= 72.0/2.54;
+				$h *= 72.0/2.54;
+			    }
+			    $w = sprintf("%.2f", $w) if $w =~ /\./;
+			    $h = sprintf("%.2f", $h) if $h =~ /\./;
+			    $size = "$w $h";
+			} elsif (($size =~ /(\d+)[x\s]+(\d+)/) ||
+			    # 2 positive integers separated by 
+			    # whitespace or an 'x'
+				 ($size =~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
 			    # "-dDEVICEWIDTHPOINTS=..."/"-dDEVICEHEIGHTPOINTS=..."
-			    $size = getpapersize($value);
-			} else {
 			    $size = "$1 $2";
+			} else {
+			    $size = getpapersize($value);
 			}
-			$size =~ /^\s*(\d+)\s+(\d+)\s*$/;
+			$size =~ /^\s*([\d\.]+)\s+([\d\.]+)\s*$/;
 			my $width = $1;
 			my $height = $2;
 			if ($maxpagewidth < $width) {
@@ -3485,6 +3505,10 @@ sub getmarginsformarginrecord {
 	    }
 	}
     }
+    $left = sprintf("%.2f", $left) if $left =~ /\./;
+    $right = sprintf("%.2f", $right) if $right =~ /\./;
+    $top = sprintf("%.2f", $top) if $top =~ /\./;
+    $bottom = sprintf("%.2f", $bottom) if $bottom =~ /\./;
     return ($left, $right, $top, $bottom);
 }
 

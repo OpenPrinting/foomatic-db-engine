@@ -1,3 +1,9 @@
+2004-03-04  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Read paper size with unit out of the driverval
+	  (needed for Omni), restrict paper sizes in the PPD to 2 digits
+	  after the decimal point.
+
 2004-02-27  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Eliminated another Perl warning.
