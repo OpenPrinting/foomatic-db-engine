@@ -329,30 +329,31 @@ filters-ppds: inplace
 	mkdir -p $${packagename}/share; \
 	mkdir -p $${packagename}/bin; \
 	mkdir -p $${packagename}/share/man/man1; \
-	./foomatic-compiledb -t ppd -j 1; \
+	./foomatic-compiledb -t ppd -j 1 || exit 1; \
 	sleep 10; \
 	( cd ppd; \
 	  for file in `ls -1 *.ppd`; do \
 	    make=$${file%%-*}; \
-	    mkdir -p $$make; \
-	    mv $$file $$make/; \
+	    mkdir -p $$make || exit 1; \
+	    mv $$file $$make/ || exit 1; \
 	  done; \
-	  rm -f *.ppd; \
+	  rm -f *.ppd || exit 1; \
 	); \
-	mv ppd $${packagename}/share; \
-	cp $(LOCAL_FOOMATIC_RIP) $${packagename}/bin; \
+	mv ppd $${packagename}/share || exit 1; \
+	cp $(LOCAL_FOOMATIC_RIP) $${packagename}/bin || exit 1; \
 	local_foomatic_rip=$(LOCAL_FOOMATIC_RIP); \
 	foomatic_filters_root=$${local_foomatic_rip%/*}; \
 	cp $${foomatic_filters_root}/foomatic-gswrapper \
-	  $${packagename}/bin; \
-	cp $${foomatic_filters_root}/*.1 $${packagename}/share/man/man1; \
-	cp foomatic-filters-ppds-install $${packagename}/install; \
-	cp foomatic-filters-ppds-README $${packagename}/README; \
-	cp COPYING $${packagename}/COPYING; \
-	chmod -R a+rX,go-w $${packagename}; \
-	rm -f $${packagename}.tar.gz; \
+	  $${packagename}/bin || exit 1; \
+	cp $${foomatic_filters_root}/*.1 $${packagename}/share/man/man1 \
+	   || exit 1; \
+	cp foomatic-filters-ppds-install $${packagename}/install || exit 1; \
+	cp foomatic-filters-ppds-README $${packagename}/README || exit 1; \
+	cp COPYING $${packagename}/COPYING || exit 1; \
+	chmod -R a+rX,go-w $${packagename} || exit 1; \
+	rm -f $${packagename}.tar.gz || exit 1; \
 	unset GZIP; \
-	tar -cf - $${packagename} | gzip > $${packagename}.tar.gz
+	tar -cf - $${packagename} | gzip > $${packagename}.tar.gz || exit 1
 
 .PHONY: all defaults check-config build install install-bin \
 	man inplace testing clean inplace-clean testing-clean distclean \

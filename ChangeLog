@@ -1,3 +1,7 @@
+2003-04-27  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* Makefile.in: Stop if an error occurs when building the PPD package.
+
 2003-04-25  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-replaceoldprinterids.in: Changed default pattern on the
