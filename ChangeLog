@@ -1,3 +1,23 @@
+2002-12-10  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Improvements for composite options.
+
+	  Given highest priority in the sort order to the option name
+	  "DocumentType", the name of the composite option forseen to
+	  give quick access to the most important configurations.
+
+	  if the translation (longname) for the name of an option, a
+	  group, or a choice is missing, it will be generated from
+	  the shortname, using the new function "longname()".
+
+	  Do not take into account enumerated choice options with only one
+	  choice when setting option group definitions in the PPD file.
+
+	  Fixed closing of subgroups when the PPD file ends (there was
+	  "*CloseGroup", not "*CloseSubGroup").
+
+	  Suppress composite options on the "Execution details" web pages.
+	
 2002-12-09  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Introduced support for

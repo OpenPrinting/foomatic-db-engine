@@ -169,6 +169,8 @@ sub sortargs {
     # The terms must fit to the beginning of the line, terms which must fit
     # exactly must have '\$' in the end.
     my @standardopts = (
+			# The most important composite option
+			"documenttype",
 			# Options which appear in the "General" group in 
 			# CUPS and similar media handling options
 			"pagesize",
@@ -558,6 +560,11 @@ sub sortvals {
 			"004800x4800",
 			"004800\\D",
 			"004800\$",
+			# Document types
+			"draft",
+			"normal",
+			"high",
+			"photo",
 			# Trays
 			"upper",
 			"top",
@@ -1465,7 +1472,7 @@ sub sortoptions {
 
 
 #####################
-# PPD stuff
+# PPD generation
 #
 
 # member( $a, @b ) returns 1 if $a is in @b, 0 otherwise.
@@ -1632,36 +1639,45 @@ sub getppd {
 	# Set default for missing section value
 	if (!defined($section)) {$section = "AnySetup";}
 
+	# Set default for missing tranaslation/longname
+	if (!$com) {$com = longname($name);}
+
 	# Do we have to open or close one or more groups here?
 	# No group will be opened more than once, since the options
 	# are sorted to have the members of every group together
 
-	# Find the level on which the group path of the current option
-	# (@group) differs from the group path of the last option
-	# (@groupstack).
-        my $level = 0;
-	while (($level <= $#groupstack) and
-	       ($level <= $#group) and 
-	       ($groupstack[$level] eq $group[$level])) {
-	    $level++;
-	}
-	for (my $i = $#groupstack; $i >= $level; $i--) {
-	    # Close this group, the current option is not member
-	    # of it.
-	    push(@optionblob,
-		 sprintf("\n*Close%sGroup: %s\n",
-			 ($i > 0 ? "Sub" : ""), $groupstack[$i])
-		 );
-	    pop(@groupstack);
-	}
-	for (my $i = $level; $i <= $#group; $i++) {
-	    # Open this group, the current option is a member
-	    # of it.
-	    push(@optionblob,
-		 sprintf("\n*Open%sGroup: %s/%s\n",
-			 ($i > 0 ? "Sub" : ""), $group[$i], $group[$i])
-		 );
-	    push(@groupstack, $group[$i]);
+	# Only take into account the groups of options which will be
+	# visible user interface options in the PPD.
+	if (($type ne 'enum') || ($#{$arg->{'vals'}} > 0) ||
+	    ($name eq "PageSize") || ($arg->{'style'} eq 'G')) {
+	    # Find the level on which the group path of the current option
+	    # (@group) differs from the group path of the last option
+	    # (@groupstack).
+	    my $level = 0;
+	    while (($level <= $#groupstack) and
+		   ($level <= $#group) and 
+		   ($groupstack[$level] eq $group[$level])) {
+		$level++;
+	    }
+	    for (my $i = $#groupstack; $i >= $level; $i--) {
+		# Close this group, the current option is not member
+		# of it.
+		push(@optionblob,
+		     sprintf("\n*Close%sGroup: %s\n",
+			     ($i > 0 ? "Sub" : ""), $groupstack[$i])
+		     );
+		pop(@groupstack);
+	    }
+	    for (my $i = $level; $i <= $#group; $i++) {
+		# Open this group, the current option is a member
+		# of it.
+		push(@optionblob,
+		     sprintf("\n*Open%sGroup: %s/%s\n",
+			     ($i > 0 ? "Sub" : ""), $group[$i], 
+			     longname($group[$i]))
+		     );
+		push(@groupstack, $group[$i]);
+	    }
 	}
 
 	if ($type eq 'enum') {
@@ -1828,6 +1844,10 @@ sub getppd {
 			    $foomaticstr = ripdirective($header, $cmdval) . 
 				"\n";
 			}
+		    }
+		    # Make sure that the longname/translation exists
+		    if (!$v->{'comment'}) {
+			$v->{'comment'} = longname($v->{'value'});
 		    }
 		    # Code supposed to be inserted into the PostScript
 		    # data when this choice is selected.
@@ -2341,7 +2361,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
     for (my $i = $#groupstack; $i >= 0; $i--) {
 	push(@optionblob,
 	     sprintf("\n*Close%sGroup: %s\n",
-		     ($level > 0 ? "Sub" : ""), $groupstack[$i])
+		     ($i > 0 ? "Sub" : ""), $groupstack[$i])
 	     );
 	pop(@groupstack);
     }
@@ -2517,6 +2537,18 @@ sub getpage {
     }
 
     return $page;
+}
+
+# Generate a translation/longname from a shortname
+sub longname {
+    my $shortname = $_[0];
+    # A space before every upper-case letter in the middle preceeded by
+    # a lower-case one
+    $shortname =~ s/([a-z])([A-Z])/$1 $2/g;
+    # If there are three or more upper-case letters, assume the last as
+    # the beginning of the next word, the others as an abbreviation
+    $shortname =~ s/([A-Z][A-Z]+)([A-Z][a-z])/$1 $2/g;
+    return $shortname;
 }
 
 # Prepare strings for being part of an HTML document by, converting
@@ -2958,6 +2990,8 @@ sub getexecdocs {
 		# PJL arguments are not inserted at a spot in the command
 		# line
 		next argument if ($arg->{'style'} eq 'J');
+		# Composite options are not interesting here
+		next argument if ($arg->{'style'} eq 'X');
 		
 		my $name = htmlify($arg->{'name'});
 		my $varname = htmlify($arg->{'varname'});
@@ -3016,6 +3050,14 @@ sub getexecdocs {
 #    for $arg (sort { $a->{'order'} <=> $b->{'order'} } 
 #	      @{$dat->{'args'}}) {
 
+	# Composite options are not interesting here
+	next argt if ($arg->{'style'} eq 'X');
+
+	# Make sure that the longname/translation exists
+	if (!$arg->{'comment'}) {
+	    $arg->{'comment'} = longname($arg->{'name'});
+	}
+
 	my $name = htmlify($arg->{'name'});
 	my $cmd = htmlify($arg->{'proto'});
 	my $comment = htmlify($arg->{'comment'});
@@ -3061,6 +3103,12 @@ sub getexecdocs {
 	    my (@choicelist) = ();
 
 	    for $val (@{$arg->{'vals'}}) {
+
+		# Make sure that the longname/translation exists
+		if (!$val->{'comment'}) {
+		    $val->{'comment'} = longname($val->{'value'});
+		}
+
 		my ($value, $comment, $driverval) = 
 		    (htmlify($val->{'value'}),
 		     htmlify($val->{'comment'}),
@@ -3169,6 +3217,12 @@ sub get_summarydocs {
     my @docs;
 
     for $arg (@{$dat->{'args'}}) {
+
+	# Make sure that the longname/translation exists
+	if (!$arg->{'comment'}) {
+	    $arg->{'comment'} = longname($arg->{'name'});
+	}
+
 	my ($name,
 	    $required,
 	    $type,
@@ -3200,6 +3254,12 @@ sub get_summarydocs {
 	    push(@docs, "  Possible choices:\n");
 	    my $exarg;
 	    for (@{$arg->{'vals'}}) {
+
+		# Make sure that the longname/translation exists
+		if (!$_->{'comment'}) {
+		    $_->{'comment'} = longname($_->{'value'});
+		}
+
 		my ($choice, $comment) = ($_->{'value'}, $_->{'comment'});
 		push(@docs, "   * $choice: $comment\n");
 		$exarg=$choice;
@@ -3240,6 +3300,12 @@ sub getdocs {
     my @docs;
 
     for $arg (@{$dat->{'args'}}) {
+
+	# Make sure that the longname/translation exists
+	if (!$arg->{'comment'}) {
+	    $arg->{'comment'} = longname($arg->{'name'});
+	}
+
 	my ($name,
 	    $required,
 	    $type,
@@ -3271,6 +3337,12 @@ sub getdocs {
 	    push(@docs, "  Possible choices:\n");
 	    my $exarg;
 	    for (@{$arg->{'vals'}}) {
+
+		# Make sure that the longname/translation exists
+		if (!$_->{'comment'}) {
+		    $_->{'comment'} = longname($_->{'value'});
+		}
+
 		my ($choice, $comment) = ($_->{'value'}, $_->{'comment'});
 		push(@docs, "   * $choice: $comment\n");
 		$exarg=$choice;
