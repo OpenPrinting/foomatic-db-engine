@@ -2269,15 +2269,24 @@ EOFPGSZ
 
     my $headcomment =
 "*% For information on using this, and to obtain the required backend
-*% script, consult http://www.linuxprinting.org/ppd-doc.html
+*% script, consult http://www.linuxprinting.org/foomatic2.9/
+*%
+*% This file is published under the GNU General Public License
 *%
 *% PPD-O-MATIC (2.9.x or newer) generated this PPD file. It is for use with 
 *% all programs and environments which use PPD files for dealing with
-*% printer capabilty information. The printer must be configured with a
-*% Foomatic backend filter script of Foomatic 2.9.x or newer. This file and
-*% the backend filter script work together to support PPD-controlled printer
+*% printer capability information. The printer must be configured with the
+*% \"foomatic-rip\" backend filter script of Foomatic 2.9.x or newer. This 
+*% file and \"foomatic-rip\" work together to support PPD-controlled printer
 *% driver option access with arbitrary free software printer drivers and
-*% printing spoolers.";
+*% printing spoolers.
+*%
+*% To save this file on your disk, wait until the download has completed
+*% (the animation of the browser logo must stop) and then use the
+*% \"Save as...\" command in the \"File\" menu of your browser or in the 
+*% pop-up manu when you click on this document with the right mouse button.
+*% DO NOT cut and paste this file into an editor with your mouse. This can
+*% introduce additional line breaks which lead to unexpected results.";
 
     my $postpipe = "";
     if ($dat->{'postpipe'}) {
