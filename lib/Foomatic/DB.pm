@@ -2326,7 +2326,10 @@ EOFPGSZ
     my $filename = join('-',($dat->{'make'},
 			     $dat->{'model'},
 			     $dat->{'driver'}));;
-    $filename =~ s![ /]!_!g;
+    $filename =~ s![ /\(\)]!_!g;
+    $filename =~ s!__+!_!g;
+    $filename =~ s!_$!!;
+    $filename =~ s!^_!!;
     my $longname = "$filename.ppd";
 
     my $drivername = $dat->{'driver'};

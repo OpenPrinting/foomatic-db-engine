@@ -1,3 +1,8 @@
+2002-12-06  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Let parantheses being removed in the
+	  suggested file names for the PPDs.
+
 2002-12-05  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-preferred-driver.in: Added the "gdi" and "pbmtozjs"
