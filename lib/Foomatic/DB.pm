@@ -1671,9 +1671,9 @@ EOFPGSZ
 		$size = "$1 $2";
 	    }
 	    push(@imageablearea,
-		 "*ImageableArea $name/$comment: \"0 0 $size\"");
+		 "*ImageableArea $value/$comment: \"0 0 $size\"");
 	    push(@paperdimension,
-		 "*PaperDimension $name/$comment: \"$size\"");
+		 "*PaperDimension $value/$comment: \"$size\"");
 	}
 
 	push(@pageregion,
@@ -1922,9 +1922,9 @@ sub getgenericppd {
 			    next;
 			}
 			push(@imageablearea,
-			     "*ImageableArea $name/$comment: \"0 0 $size\"");
+			     "*ImageableArea $value/$comment: \"0 0 $size\"");
 			push(@paperdimension,
-			     "*PaperDimension $name/$comment: \"$size\"");
+			     "*PaperDimension $value/$comment: \"$size\"");
 		    }
 		    if ($arg->{'style'} eq 'G') {
 			# Ghostscript argument; offer up ps for insertion
