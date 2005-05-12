@@ -1,4 +1,10 @@
-2004-02-23  Till Kamppeter <till.kamppeter@gmx.net>
+2005-05-11  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* README: Corrected character list in "<arg_allowedchars>" in the
+	  example string option XML file. Improved instructions for
+	  "<arg_allowedchars>".
+
+2005-02-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Fixed bug of old non-Foomatic PPD not
 	  overtaken when applying "foomatic-configure" to a queue without
@@ -8,7 +14,7 @@
 	  options "0" or "1" was written into the PPD file and not
 	  "False" or "True".
 
-2004-01-28  Till Kamppeter <till.kamppeter@gmx.net>
+2005-01-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* makeDefaults.in, foomatic-cleanupdrivers.in: Allow use of an
 	  alternative Foomatic database location specifying it with the
@@ -20,7 +26,7 @@
 	* foomatic-cleanupdrivers.in: Use default database location from
 	  Defaults.pm.
 
-2004-01-22  Till Kamppeter <till.kamppeter@gmx.net>
+2005-01-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed Tim Waugh's fix. It made an
 	  "@@IEEE1284@@" appear in the PPD file when for a printer
