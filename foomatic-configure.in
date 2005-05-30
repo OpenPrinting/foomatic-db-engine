@@ -313,7 +313,7 @@ sub getoldqueuedata {
 	}
     } elsif ($config->{'ppdfile'}) {
 	if (! -r $config->{'ppdfile'}) {
-	    die "The PPD file $config->{'ppdfile'} does not exist or is " .
+	    die "The PPD file \'$config->{'ppdfile'}\' does not exist or is " .
 		"readable.\n";
 	}
 	# Load the data from the PPD file
@@ -386,7 +386,7 @@ sub writeppdfile {
     my ($config, $ppdfile, $rawqueue, $newfoomaticdata) = @_;
 
     # Save old $ppdfile, if any
-    system("cp -f $ppdfile $ppdfile.old") 
+    system("cp -f \'$ppdfile\' \'$ppdfile.old\'") 
 	if (-f $ppdfile);
     if ($rawqueue) {
 	# Raw queue with $postpipe, use a "PPD" only containing the
@@ -395,7 +395,7 @@ sub writeppdfile {
 	     (($config->{'spooler'} eq 'lprng') ||
 	      ($config->{'spooler'} eq 'lpd'))) ||
 	    ($config->{'spooler'} eq 'direct')) {
-	    open PPDFILE, "> $ppdfile" or die "Cannot write $ppdfile!\n";
+	    open PPDFILE, "> $ppdfile" or die "Cannot write \'$ppdfile\'!\n";
 	    print PPDFILE "*PPD-Adobe: \"4.3\"\n*%\n";
 	    print PPDFILE "*% This is a raw (driverless/unfiltered) " .
 		"queue, this PPD file only carries\n" .
@@ -405,7 +405,7 @@ sub writeppdfile {
 	    chmod 0644, $ppdfile;
 	} else {
 	    if (-f $ppdfile) {
-		unlink "$ppdfile" or die "Cannot delete $ppdfile!\n";
+		unlink "$ppdfile" or die "Cannot delete \'$ppdfile\'!\n";
 	    }
 	}
     } else {
@@ -413,19 +413,20 @@ sub writeppdfile {
 	    # Copy in the PPD file specified on the command line
 	    if ($config->{'ppdfile'} !~ /\.gz$/i) {
 		# Uncompressed PPD file
-		system("cp -f $config->{'ppdfile'} $ppdfile") and
-		    die "Cannot copy $config->{'ppdfile'} to $ppdfile!\n";
+		system("cp -f \'$config->{'ppdfile'}\' \'$ppdfile\'") and
+		    die "Cannot copy \'$config->{'ppdfile'}\' to \'$ppdfile\'!\n";
 	    } else {
 		# Compressed PPD file
-		system("$sysdeps->{'gzip'} -dc $config->{'ppdfile'} > " .
-		       "$ppdfile") and
-		    die "Cannot copy $config->{'ppdfile'} to $ppdfile!\n";
+		system("$sysdeps->{'gzip'} -dc " .
+		       "\'$config->{'ppdfile'}\' > " .
+		       "\'$ppdfile\'") and
+		    die "Cannot copy \'$config->{'ppdfile'}\' to \'$ppdfile\'!\n";
 	    }
 	    # Set default option settings and $postpipe
 	    $db->ppdsetdefaults($ppdfile);
 	} elsif ($newfoomaticdata) {
 	    # Generate the PPD file from the Foomatic database
-	    open PPDFILE, "> $ppdfile" or die "Cannot write $ppdfile!\n";
+	    open PPDFILE, "> $ppdfile" or die "Cannot write \'$ppdfile\'!\n";
 	    print PPDFILE $db->getppd($config->{'shortgui'});
 	    close PPDFILE;
 	} else {
@@ -1158,7 +1159,7 @@ sub setup_cups {
 
     # PPD file argument for the printer
     if (!$rawqueue) {
-	$lpadminline .= " -P \"$ppdfile\"";
+	$lpadminline .= " -P \'$ppdfile\'";
     }
 
     # All URIs ("-c" option) have the same syntax as URIs in CUPS
@@ -1459,7 +1460,7 @@ sub setup_pdq {
 	system("$sysdeps->{'foomatic-rip'} --genrawpdq $driverfile") and
 	    die "Cannot create $driverfile!\n";
     } else {
-	system("$sysdeps->{'foomatic-rip'} --ppd $ppdfile --genpdq " .
+	system("$sysdeps->{'foomatic-rip'} --ppd \'$ppdfile\' --genpdq " .
 	       "$driverfile") and
 	    die "Cannot create $driverfile!\n";
     }
@@ -4146,7 +4147,7 @@ sub print_perl_combo_data {
 	# From PPD file
 	my $dat = ppdtoperl($config->{'ppdfile'});
 	if (!defined($dat)) {
-	    die ("Unable to open PPD file $config->{'ppdfile'}\n");
+	    die ("Unable to open PPD file \'$config->{'ppdfile'}\'\n");
 	}
 	$db->{'dat'} = $dat;
     } else {

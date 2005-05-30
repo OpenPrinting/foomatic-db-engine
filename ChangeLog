@@ -1,3 +1,8 @@
+2005-05-29  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in, lib/Foomatic/DB.pm: Added support for
+	  PPD file names with spaces (Mandriva bug #16172).
+
 2005-05-11  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* README: Corrected character list in "<arg_allowedchars>" in the

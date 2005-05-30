@@ -551,7 +551,7 @@ sub getdatfromppd ($ $) {
     my $dat = ppdtoperl($ppdfile);
     
     if (!defined($dat)) {
-	die ("Unable to open PPD file $ppdfile\n");
+	die ("Unable to open PPD file \'$ppdfile\'\n");
     }
 
     $this->{'dat'} = $dat;
@@ -570,7 +570,7 @@ sub ppdtoperl($) {
 
     # Load the PPD file and send it to the parser
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
-	       "$sysdeps->{'gzip'} -cd $ppdfile |") or return undef;
+	       "$sysdeps->{'gzip'} -cd \'$ppdfile\' |") or return undef;
     my @ppd = <PPD>;
     close PPD;
     return ppdfromvartoperl(\@ppd);
@@ -1237,8 +1237,8 @@ sub ppdgetdefaults {
 
     # Open the PPD file
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
-	       "$sysdeps->{'gzip'} -cd $ppdfile |") or 
-	       die ("Unable to open PPD file $ppdfile\n");
+	       "$sysdeps->{'gzip'} -cd \'$ppdfile\' |") or 
+	       die ("Unable to open PPD file \'$ppdfile\'\n");
 
     # We don't read the "COMDATA" lines of old Foomatic 2.0.x PPD files
     # here, because the defaults in the main PPD structure have priority.
@@ -1308,8 +1308,8 @@ sub ppdsetdefaults {
 
     # Load the complete PPD file into memory but remove the postpipe
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
-	       "$sysdeps->{'gzip'} -cd $ppdfile |") or
-	       die ("Unable to open PPD file $ppdfile\n");
+	       "$sysdeps->{'gzip'} -cd \'$ppdfile\' |") or
+	       die ("Unable to open PPD file \'$ppdfile\'\n");
     while (my $line = <PPD>) {
 	if ($line =~ m!^\*FoomaticRIPPostPipe:\s*\"(.*)$!) {
 	    # "*FoomaticRIPPostPipe: <code>"
@@ -1459,8 +1459,8 @@ sub ppdsetdefaults {
     
     # Write back the modified PPD file
     open PPD, ($ppdfile !~ /\.gz$/i ? "> $ppdfile" : 
-	       "| $sysdeps->{'gzip'} > $ppdfile") or
-	die ("Unable to open PPD file $ppdfile for writing\n");
+	       "| $sysdeps->{'gzip'} > \'$ppdfile\'") or
+	die ("Unable to open PPD file \'$ppdfile\' for writing\n");
     print PPD $ppd;
     close PPD;
     
