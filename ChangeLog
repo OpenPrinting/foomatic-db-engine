@@ -1,3 +1,7 @@
+2005-07-12  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* READNE: Updated links to Adobe PostScript specifications.
+
 2005-05-29  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in, lib/Foomatic/DB.pm: Added support for
