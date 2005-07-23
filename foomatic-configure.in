@@ -1,5 +1,5 @@
 #!@PERL@ -w
-use strict;
+use strict; # -*- perl -*-
 
 # This is foomatic-configure, a program to establish and configure
 # print queues, drivers, spoolers, etc using the foomatic database and
