@@ -2714,8 +2714,14 @@ sub dump_lpd_printcap {
 	    push (@retval, (join('|', @{$item->{'names'}}) . ":${backslash}\n"));
 	}
 	for (keys(%{$item->{'str'}})) {
-	    push (@retval, 
-		  sprintf("    :$_=%s:${backslash}\n", $item->{'str'}{$_}));
+	    # special case of 'tc' items, as there can be more than one
+	    if ($_ =~ /^tc\d+$/) {
+		push (@retval, 
+		      sprintf("    :tc=%s:${backslash}\n", $item->{'str'}{$_}));
+	    } else {
+		push (@retval, 
+		      sprintf("    :$_=%s:${backslash}\n", $item->{'str'}{$_}));
+	    }
 	}
 	for (keys(%{$item->{'bool'}})) {
 	    if ($item->{'bool'}{$_}) {
@@ -2805,6 +2811,7 @@ sub load_lpd_printcap {
     for $p (@items) {
 	my $item;
 	my $first = 1;
+	my $tci = 0;
 	for $item (split(/:\s*/, $p->{'itemstr'})) {
 	    next if $item =~ m!^\s*$!;
 	    if ($first) {
@@ -2816,7 +2823,10 @@ sub load_lpd_printcap {
 		$first = 0;
 	    } else {
 		if ($item =~ m!^([^=]*)=(.+)!) {
-		    $p->{'str'}{$1} = $2;
+		    # special case of 'tc' items, as there can be more 
+		    # than one
+		    if ($1 eq 'tc') { $p->{'str'}{"tc$tci"} = $2; $tci++; }
+		    else { $p->{'str'}{$1} = $2; }
 		} elsif ($item =~ m!^([^\#]*)\#(.+)!) {
 		    $p->{'num'}{$1} = $2;
 		} elsif ($item =~ m!^([^\@]*)\@?!) {

@@ -1,3 +1,8 @@
+2005-08-04  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Fixed bug of multiple "tc=..." items in
+	  an /etc/printcap entry of LPRng not being supported.
+
 2005-07-12  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* READNE: Updated links to Adobe PostScript specifications.
