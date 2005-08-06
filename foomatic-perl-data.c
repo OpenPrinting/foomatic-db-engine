@@ -238,6 +238,7 @@ typedef struct printerLanguage {
 typedef struct printerDrvEntry {
   xmlChar *name;
   xmlChar *comment;
+  xmlChar *ppd;
 } printerDrvEntry, *printerDrvEntryPtr;
 
 typedef struct printerEntry {
@@ -283,10 +284,11 @@ typedef struct printerEntry {
   xmlChar *contriburl;
   xmlChar *ppdurl;
   xmlChar *comment;
-  /* Pgae Description Languages */
+  /* Page Description Languages */
   int     num_languages;
   printerLanguagePtr  *languages;
-  /* Drivers (for user-contributed printer entries) */
+  /* Drivers (for user-contributed printer entries and for ready-made PPD
+     links) */
   int     num_drivers;
   printerDrvEntryPtr  *drivers;
 } printerEntry, *printerEntryPtr;
@@ -1526,6 +1528,7 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full printer ID, with "printer/" */
   xmlChar        *dname;  /* Name of a driver supporting this printer */
+  xmlChar        *dppd;  /* Ready-made PPD supporting this printer */
   printerLanguagePtr lentry; /* An entry for a language used by this
 				printer */
   printerDrvEntryPtr dentry; /* An entry for a driver supporting this
@@ -1959,15 +1962,22 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	  memset(dentry, 0, sizeof(printerDrvEntry));
 	  dentry->name = NULL;
 	  dentry->comment = NULL;
-	  if (debug) fprintf(stderr, "  Printer supported by driver:\n");
+	  dentry->ppd = NULL;
+	  if (debug) fprintf(stderr, "  Printer supported by drivers:\n");
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "name"))) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "id"))) {
 	      dname =
 		xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1);
 	      dentry->name = perlquote(dname);
 	      if (debug) fprintf(stderr, "    Name: %s\n",
 				 dentry->name);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ppd"))) {
+	      dppd =
+		xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1);
+	      dentry->ppd = perlquote(dppd);
+	      if (debug) fprintf(stderr, "    Ready-made PPD: %s\n",
+				 dentry->ppd);
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
 	      cur4 = cur3->xmlChildrenNode;
 	      while (cur4 != NULL) {
@@ -2963,6 +2973,8 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
 			int debug) { /* Debug flag */
 
   int i; /* loop variable */
+  int haspsdriver = 0; /* Is the "Postscript" driver in the printer's
+			  driver list? */
 
   printf("$VAR1 = {\n");
   printf("  'id' => '%s',\n", printer->id);
@@ -3080,14 +3092,36 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   if (printer->driver) {
     printf("  'driver' => '%s',\n", printer->driver);
   }
-  if (printer->num_drivers > 0) {
+  if ((printer->num_drivers > 0) || (printer->ppdurl)) {
     printf("  'drivers' => [\n");
     for (i = 0; i < printer->num_drivers; i ++) {
       printf("                 {\n");
+      if (printer->drivers[i]->name) {
+	if (strncmp(printer->drivers[i]->name, "Postscript", 10))
+	  haspsdriver = 1;
+	printf("                   'name' => '%s',\n",
+	       printer->drivers[i]->name);
+	printf("                   'id' => '%s',\n",
+	       printer->drivers[i]->name);
+      }
+      if (printer->drivers[i]->ppd) {
+	printf("                   'ppd' => '%s',\n",
+	       printer->drivers[i]->ppd);
+      }
+      if (printer->drivers[i]->comment) {
+	printf("                   'comment' => '%s',\n",
+	       printer->drivers[i]->comment);
+      }
+      printf("                 },\n");
+    }
+    if ((printer->ppdurl) && !haspsdriver) {
+      printf("                 {\n");
       printf("                   'name' => '%s',\n",
-	     printer->drivers[i]->name);
-      printf("                   'comment' => '%s',\n",
-	     printer->drivers[i]->comment);
+	     "Postscript");
+      printf("                   'id' => '%s',\n",
+	     "Postscript");
+      printf("                   'ppd' => '%s',\n",
+	     printer->ppdurl);
       printf("                 },\n");
     }
     printf("               ],\n");

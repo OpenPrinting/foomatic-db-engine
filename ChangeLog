@@ -1,3 +1,10 @@
+2005-08-05  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c: Added support for "<ppd>" tags in the
+	  "<drivers>" list of the printer XML files. This is needed
+	  to provide ready-made PPDs for arbitrary drivers on the
+	  linuxprinting.org site.
+
 2005-08-04  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Fixed bug of multiple "tc=..." items in
