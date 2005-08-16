@@ -1,3 +1,9 @@
+2005-08-15  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Added support for the new "beh"
+	  (Backend Error Handler for CUPS) backend (included
+	  in foomatic-filters now).
+
 2005-08-05  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-perl-data.c: Added support for "<ppd>" tags in the

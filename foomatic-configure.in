@@ -5,7 +5,7 @@ use strict; # -*- perl -*-
 # print queues, drivers, spoolers, etc using the foomatic database and
 # companion filters.
 
-# It also comprises half of a programattic API for user tools: you can
+# It also comprises half of a programatic API for user tools: you can
 # learn and control everything about the static properties of print
 # queues here. With the sister program foomatic-printjob, you can do
 # everything related to print queue dynamic state: submit jobs, and
@@ -52,9 +52,10 @@ my $debug = 0;
 # We use the library Getopt::Long here, so that we can have more than
 # one "-o" option on one command line.
 
-my( $opt_q, $opt_f, $opt_w, $opt_n, $opt_N, $opt_L, $opt_ppd,
-$opt_d, $opt_p, $opt_s, $opt_C, $opt_R, $opt_D, $opt_Q, $opt_P,
-$opt_O, $opt_X, $opt_c, @opt_o, $opt_r, $opt_h );
+my($opt_q, $opt_f, $opt_w, $opt_n, $opt_N, $opt_L, $opt_ppd,
+   $opt_d, $opt_p, $opt_s, $opt_C, $opt_R, $opt_D, $opt_Q, $opt_P,
+   $opt_O, $opt_X, $opt_c, @opt_o, $opt_r, $opt_dd, $opt_nodd, 
+   $opt_att, $opt_delay, $opt_h);
 use Getopt::Long;
 Getopt::Long::Configure("no_ignore_case");
 GetOptions("q"   => \$opt_q,         # Quiet, non-interactive operation
@@ -75,10 +76,16 @@ GetOptions("q"   => \$opt_q,         # Quiet, non-interactive operation
 	   "Q"   => \$opt_Q,         # Query queue info
 	   "P"   => \$opt_P,         # Perl queue/printer/driver info output
 	   "O"   => \$opt_O,         # get printer support Overview
-	   "X"   => \$opt_X,         # query Xml printer/driver/combo info
+	   "X"   => \$opt_X,         # query XML printer/driver/combo info
 	   "c=s" => \$opt_c,         # printer Connection type
 	   "o=s" => \@opt_o,         # default printing Options
 	   "r"   => \$opt_r,         # list Remote queues
+	   "backend-dont-disable=s" => \$opt_dd, # Do not disable CUPS 
+	                             # backends
+	   "backend-attempts=s" => \$opt_att, # Try that often when backend
+	                             # fails
+	   "backend-delay=s" => \$opt_delay, # Delay in seconds between
+	                             # retries of failed backend
 	   "h"   => \$opt_h,         # Help!
 	   "help"=> \$opt_h) || help();
 
@@ -105,6 +112,9 @@ my $in_config = {'queue'    => $opt_n,
 		 'options'  => \@opt_o,
 		 'force'    => $force,
 		 'shortgui' => $shortgui,
+		 'dd'       => $opt_dd,
+		 'att'      => $opt_att,
+		 'delay'    => $opt_delay,
 	         'foomatic' => 1};
 
 # If description and location contain only whitespace, use an empty string
@@ -205,7 +215,7 @@ exit(0);
 sub getoldqueuedata {
 
     my ($config, $reconf) = @_;
-	my( $sourcespooler, $sourcequeue, $olddatablob );
+    my ($sourcespooler, $sourcequeue, $olddatablob, $beh);
 
     # Copy a queue
     if ($opt_C) {
@@ -236,10 +246,16 @@ sub getoldqueuedata {
 	if ($olddatablob->{'queuedata'}) {
  	    my $i;
 	    for $i (('desc', 'loc', 'printer', 'driver', 'connect',
-		     'ppdfile')) {
+		     'ppdfile', 'dd', 'att', 'delay')) {
 		if (!defined($config->{$i})) {
 		    if ($olddatablob->{'queuedata'}{$i}){
 			$config->{$i} = $olddatablob->{'queuedata'}{$i};
+		    } elsif ($i eq 'dd') {
+			$config->{$i} = 0;
+		    } elsif ($i eq 'att') {
+			$config->{$i} = 1;
+		    } elsif ($i eq 'delay') {
+			$config->{$i} = 30;
 		    } else {
 			$config->{$i} = "";
 		    }
@@ -255,13 +271,13 @@ sub getoldqueuedata {
 		$config->{'driver'} = "raw";
 		$config->{'printer'} = undef;
 	    }
-		# We do not need the queue data block any more
-		delete($olddatablob->{'queuedata'});
-	    } else {
-		# No Foomatic/PPD data
-		$olddatablob = undef;
-	    }
+	    # We do not need the queue data block any more
+	    delete($olddatablob->{'queuedata'});
 	} else {
+	    # No Foomatic/PPD data
+	    $olddatablob = undef;
+	}
+    } else {
 	# Load the datablob of the former configuration
 	if ($reconf) {
 	    if ($olddatablob = load_datablob($config->{'spooler'}, 
@@ -277,6 +293,13 @@ sub getoldqueuedata {
 			$config->{'printer'} = $olddatablob->{'id'};
 		    }
 		}
+		# Extract URI and backend error handling data
+		if ($config->{'spooler'} eq "cups") {
+		    $beh->{'uri'} = $olddatablob->{'queuedata'}{'connect'};
+		    $beh->{'dd'} = $olddatablob->{'queuedata'}{'dd'};
+		    $beh->{'att'} = $olddatablob->{'queuedata'}{'att'};
+		    $beh->{'delay'} = $olddatablob->{'queuedata'}{'delay'};
+		}
 		# We do not need the queue data block here
 		delete($olddatablob->{'queuedata'});
 	    } else {
@@ -284,7 +307,7 @@ sub getoldqueuedata {
 	    }
 	}
     }
-
+    
     # If the user does not supply info about his printer and/or driver
     # and the queue did not exist before we assume that he wants to set up a
     # raw queue. To make a raw queue out of a formerly filtered one, one
@@ -378,7 +401,8 @@ sub getoldqueuedata {
 	}
     }
  
-    return ($rawqueue, $newfoomaticdata, $makemodel);
+    return ($rawqueue, $newfoomaticdata, $makemodel,
+	    ($config->{'spooler'} eq "cups" ? $beh : ()));
 }
 
 sub writeppdfile {
@@ -617,7 +641,7 @@ sub setup_lpd {
 		# be SUID "root".
 		$postpipe = "$sysdeps->{'rlpr'} -q -h -P " .
 		    "$remqueue\@$remhost";
-	    $entry->{'str'}{'lp'} = "/dev/null";
+		$entry->{'str'}{'lp'} = "/dev/null";
 	    }
 	} elsif ($config->{'connect'} =~
 		 m!^socket://([^/:]+):([0-9]+)/?$!) {
@@ -1121,7 +1145,7 @@ sub setup_cups {
 
     # Get the data from the former queue if we reconfigure or copy a queue
     # do also some checking of the user-supplied parameters
-    my ($rawqueue, $newfoomaticdata, $makemodel) =
+    my ($rawqueue, $newfoomaticdata, $makemodel, $beh) =
 	getoldqueuedata($config, 1);
 
     # Here we set up the command line for the "lpadmin" command
@@ -1167,8 +1191,8 @@ sub setup_cups {
     # translated to the form which CUPS needs. All other URIs are
     # simply passed to lpadmin.
 
+    my $cupsuri = "";
     if (defined($config->{'connect'})) {
-	my $cupsuri = "";
 	if ($config->{'connect'} =~ m!^(file|usb|parallel|serial):(.*)$!) {
 	    # Translate "file:/" into the prefix needed by CUPS, if
 	    # necessary
@@ -1223,6 +1247,46 @@ sub setup_cups {
 	if ($cupsuri =~ m!^ptal:/!) {
 	    $cupsuri = cups_correct_ptal_uri($cupsuri);
 	}
+    }
+
+    # Are there changes in the error handling of the backend?
+    if (((defined($config->{'dd'})) && 
+	 (((defined($beh->{'dd'})) && 
+	   ($config->{'dd'} ne $beh->{'dd'})) ||
+	  ($config->{'dd'} != 0))) ||
+	((defined($config->{'att'})) && 
+	 (((defined($beh->{'att'})) && 
+	   ($config->{'att'} ne $beh->{'att'})) ||
+	  ($config->{'att'} != 1))) ||
+	((defined($config->{'delay'})) && 
+	 (((defined($beh->{'delay'})) &&
+	   ($config->{'delay'} ne $beh->{'delay'})) ||
+	  ($config->{'delay'} != 30)))) {
+	if (!defined($config->{'dd'})) {
+	    $config->{'dd'} = (defined($beh->{'dd'}) ? $beh->{'dd'} : 0);
+	}
+	if (!defined($config->{'att'})) {
+	    $config->{'att'} = (defined($beh->{'att'}) ? $beh->{'att'} : 1);
+	}
+	if (!defined($config->{'delay'})) {
+	    $config->{'delay'} = (defined($beh->{'delay'}) ? 
+				  $beh->{'delay'} : 30);
+	}
+	$cupsuri = $beh->{'uri'} if !$cupsuri;
+	# Do only add the "beh" wrapper backend when it is really needed
+	# (More than one retry and/or no disabling) and if the queue is not
+	# using the HPLIP ("hp") backend, as otherwise the "hp-toolbox"
+	# will not list the printer any more. HPLIP does infinite retries
+	# in 30-sec intervals anyway.
+	if (($cupsuri) && ($cupsuri !~ m!^hp:/!) &&
+	    (($config->{'dd'} != 0) || ($config->{'att'} != 1))) {
+	    $cupsuri = sprintf("beh:/%d/%d/%d/%s",
+			       $config->{'dd'}, $config->{'att'},
+			       $config->{'delay'}, $cupsuri);
+	}
+    }
+
+    if ($cupsuri) {
 	$lpadminline .= " -v \"$cupsuri\"";
     }
 
@@ -2680,6 +2744,10 @@ sub dump_config {
 	_tag('connect',$c->{'connect'}),
 	_tag('location',$c->{'loc'}),
 	_tag('description',$c->{'desc'}),
+	($c->{'spooler'} eq "cups" ?
+	 (_tag('dontdisable',$c->{'dd'}),
+	  _tag('attempts',$c->{'att'}),
+	  _tag('delay',$c->{'delay'})) : ()),
 
 	"</queue>\n";
     
@@ -3636,6 +3704,18 @@ sub load_cups_datablob {
 	$c->{'desc'} = $p->{'Info'};
 	$c->{'loc'} = $p->{'Location'};
 	my $uri = $p->{'DeviceURI'};
+	# Is the beh (Backend Error Handler) wrapper backend in use?
+	# If yes, read out its parameters and isolate the original URI.
+	if ($uri =~ m!^beh:/(\d+)/(\d+)/(\d+)/(\S+)$!) {
+	    $c->{'dd'} = $1;
+	    $c->{'att'} = $2;
+	    $c->{'delay'} = $3;
+	    $uri = $4;
+	} else {
+	    $c->{'dd'} = 0;
+	    $c->{'att'} = 1;
+	    $c->{'delay'} = 30;
+	}
 	if (($uri =~ m!^file:$sysdeps->{'ptal-pipes'}/(.+)$!) ||
 	    ($uri =~ m!^file:/dev/ptal-printd/(.+)$!) ||
 	    ($uri =~ m!^file:/var/run/ptal-printd/(.+)$!)) {
@@ -4270,25 +4350,33 @@ sub get_xml {
 
 sub help {
     print STDERR <<EOH;
-Usage: $progname [ -s spooler ] -n queuename \
-			  [ -N 'Name/Descr.' ] [ -L 'Location Info' ] \
-			  [ -c connect ] \
-			  [ -d driver ] [ -p printer ] [ -f ] [ -w ] \
-			  [ --ppd ppdfile ] \
-			  [ -o option1=value1 -o option2 ... ] [ -q ]
-    or $progname -C [ -s spooler ] -n queuename \
-	                  [ sourcespooler ] sourcequeue \
-	                  [ -N 'Name/Descr.' ] [ -L 'Location Info' ] \
-			  [ -c connect ] \
-			  [ -d driver ] [ -p printer ] [ -f ] [ -w ] \
-			  [ --ppd ppdfile ] \
-			  [ -o option1=value1 -o option2 ... ] [ -q ]
+Usage: $progname [ -s spooler ] -n queuename \\
+			  [ -N 'Name/Descr.' ] [ -L 'Location Info' ] \\
+			  [ -c connect ] \\
+			  [ -d driver ] [ -p printer ] [ -f ] [ -w ] \\
+			  [ --ppd ppdfile ] \\
+			  [ -o option1=value1 -o option2 ... ] \\
+			  [ --backend-dont-disable=value ] \\
+			  [ --backend-attempts=value ] \\
+			  [ --backend-delay=value ] \\
+			  [ -q ]
+    or $progname -C [ -s spooler ] -n queuename \\
+	                  [ sourcespooler ] sourcequeue \\
+	                  [ -N 'Name/Descr.' ] [ -L 'Location Info' ] \\
+			  [ -c connect ] \\
+			  [ -d driver ] [ -p printer ] [ -f ] [ -w ] \\
+			  [ --ppd ppdfile ] \\
+			  [ -o option1=value1 -o option2 ... ] \\
+			  [ --backend-dont-disable=value ] \\
+			  [ --backend-attempts=value ] \\
+			  [ --backend-delay=value ] \\
+			  [ -q ]
     or $progname -D [ -s spooler ] -n queuename [ -q ]
     or $progname -R [ -s spooler ] -n queuename [ -q ]
     or $progname -Q [ -s spooler ] [ -n queuename ] [ -q ] [ -r ]
     or $progname -P [ -s spooler ] [ -n queuename ] [ -q ] [ N ]
-    or $progname -P [ -s spooler ] [ -n queuename ] \
-	                  [ --ppd ppdfile ] [ -d driver -p printer ] \
+    or $progname -P [ -s spooler ] [ -n queuename ] \\
+	                  [ --ppd ppdfile ] [ -d driver -p printer ] \\
 	                  [ -o option1=value1 -o option2 ... ] [ -q ]
     or $progname -O
     or $progname -X [ -p printer ] [ -d driver ]
@@ -4312,6 +4400,14 @@ Usage: $progname [ -s spooler ] -n queuename \
  -s spooler      Explicit spooler type (cups, lpd, lprng, pdq, ppr, direct)
  -o option=value Use value as the default for option in this queue
  -o option       Set the switch option by default in this queue
+ --backend-dont-disable=value  1: Do not disable CUPS queue when backend
+                 fails, 0: Original CUPS behaviour, queue gets disabled
+                 when backend fails. Default: 0 (CUPS only)
+ --backend-attempts=value  Try that often when backend fails, for infinite
+                 retries set the value to zero, for standard CUPS
+                 behaviour to 1. Default: 1 (CUPS only)
+ --backend-delay=value  Delay in seconds between retries of failed backend.
+                 Default: 30 (CUPS only)
  -C [sourcespooler] sourcequeue  Create a copy of a queue. All 
                  characteristics including default option settings are 
                  overtaken. Additional arguments modify the copy. This
