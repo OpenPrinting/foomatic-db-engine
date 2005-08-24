@@ -41,17 +41,23 @@
  * overview ("-O" option)
  */
 
-typedef struct { /* structure for a driver entries (linear list) */
+typedef struct { /* structure for a driver entry (linear list) */
   char                  name[128]; /* Name of driver */
   struct driverlist_t   *next;     /* pointer to next driver */
 } driverlist_t;
 
-typedef struct { /* structure for a driver entries (linear list) */
+typedef struct { /* structure for a printer entry (linear list) */
   char                  id[128];   /* ID of printer */
   driverlist_t          *drivers;  /* pointer to the list of the drivers
 				      with which this printer works */
   struct printerlist_t  *next;     /* pointer to next printer */
 } printerlist_t;
+
+typedef struct { /* structure for a ready-made PPD entry (linear list) */
+  char                  driver[128]; /* ID of driver */
+  char                  ppd[1024];   /* ID of PPD URL */
+  struct ppdlist_t  *next;           /* pointer to next PPD */
+} ppdlist_t;
 
 typedef struct { /* structure for printer ID translations (linear list) */
   char                  *oldid,    /* old ID of printer */
@@ -150,7 +156,7 @@ idlist_t /* O - pointer to the printer ID translation table */
 	  newitem->newid = newid;
 	  newitem->next = NULL;
 	  if (currentitem) {
-	    currentitem->next = newitem;
+	    currentitem->next = (struct idlist_t *)newitem;
 	  } else {
 	    idlist = newitem;
 	  }
@@ -239,10 +245,14 @@ parse(const char **data, /* I/O - Data to process */
   int           inmodel = 0;
   int           inautodetect = 0;
   int           indriver = 0;
+  int           indrivers = 0;
   int           inexecution = 0;
   int           innopjl = 0;
   int           inprinters = 0;
   int           inid = 0;
+  int           inppd = 0;
+  int           inlang = 0;
+  int           inpostscript = 0;
   int           inoption = 0;
   int           inargshortname = 0;
   int           inargexecution = 0;
@@ -291,6 +301,8 @@ parse(const char **data, /* I/O - Data to process */
   char          cmake[256];
   char          cmodel[256];
   char          cdriver[256];
+  char          cid[256];
+  char          cppd[1024];
   char          cfunctionality[256];
   int           cunverified = 0;
   char          cautodetectentry[4096];
@@ -317,8 +329,11 @@ parse(const char **data, /* I/O - Data to process */
   int           k;
   printerlist_t *plistpointer;   /* pointers to navigate through the printer */
   driverlist_t  *dlistpointer;   /* list for the overview */
+  ppdlist_t     *ppdlistpointer;
   printerlist_t *plistpreventry;
   driverlist_t  *dlistpreventry;
+  ppdlist_t     *ppdlistpreventry;
+  ppdlist_t     *ppdlist = NULL;
 
   /* Translate printer ID */
   if (pid) trpid = translateid(pid, idlist);
@@ -528,12 +543,49 @@ parse(const char **data, /* I/O - Data to process */
 		    cunverified = 1;
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
+		    if (indrivers) {
+		      if (tagtype == 1) {
+			if (debug)
+			  fprintf(stderr, 
+				  "    Resetting Driver/PPD.\n");
+			cid[0] = '\0';
+			cppd[0] = '\0';
+		      }
+		    }
+		  } else if (strcmp(currtagname, "drivers") == 0) {
+		    indrivers = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "id") == 0) {
+		    inid = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "ppd") == 0) {
+		    inppd = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "lang") == 0) {
+		    inlang = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "postscript") == 0) {
+		    inpostscript = nestinglevel + 1;
+		    if (inlang) {
+		      if (tagtype == 1) {
+			if (debug)
+			  fprintf(stderr, 
+				  "    Resetting Driver/PPD.\n");
+			strcpy(cid, "Postscript");
+			cppd[0] = '\0';
+		      }
+		    }
 		  } else if (strcmp(currtagname, "autodetect") == 0) {
 		    inautodetect = nestinglevel + 1;
 		    if (tagtype == 1) lastautodetect = (char*)lasttag;
 		  } else if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
 		    if (tagtype == 1) {
+		      if (debug) fprintf(stderr, 
+					 "    Initializing PPD list.\n");
+		      while(ppdlist != NULL) {
+			ppdlistpointer = ppdlist;
+			ppdlist = (ppdlist_t *)ppdlist->next;
+			free(ppdlistpointer);
+		      }
+		      if (debug) fprintf(stderr, 
+					 "    Initializing fields.\n");
 		      cprinter[0] = '\0';
 		      cmake[0] = '\0';
 		      cmodel[0] = '\0';
@@ -618,7 +670,7 @@ parse(const char **data, /* I/O - Data to process */
 	      if (tagnamefound) { /* '/' after tag name, this tag has no 
 				     body */
 		tagtype = 0;
-	      } else { /* we a closing a tag */
+	      } else { /* we are closing a tag */
 		tagtype = -1;
 	      }
 	      if (debug)
@@ -1169,7 +1221,8 @@ parse(const char **data, /* I/O - Data to process */
 		    plistpointer->drivers = NULL;
 		    plistpointer->next = NULL;
 		    if (plistpreventry != NULL)
-		      plistpreventry->next = plistpointer;
+		      plistpreventry->next = 
+			(struct printerlist_t *)plistpointer;
 		    else 
 		      *printerlist = plistpointer;
 		  }
@@ -1185,7 +1238,8 @@ parse(const char **data, /* I/O - Data to process */
 		  strcpy(dlistpointer->name, cdriver);
 		  dlistpointer->next = NULL;
 		  if (dlistpreventry != NULL)
-		    dlistpreventry->next = dlistpointer;
+		    dlistpreventry->next =
+		      (struct driverlist_t *)dlistpointer;
 		  else 
 		    plistpointer->drivers = dlistpointer;
 		}
@@ -1210,9 +1264,61 @@ parse(const char **data, /* I/O - Data to process */
 		  strcpy(cfunctionality, currtagbody);
 		}
 		if (nestinglevel < inunverified) inunverified = 0;
-		if (nestinglevel < indriver) {
-		  indriver = 0;
-		  strcpy(cdriver, currtagbody);
+		if (nestinglevel < indrivers) indrivers = 0;
+		if (nestinglevel < inlang) inlang = 0;
+		if ((nestinglevel < indriver) ||
+		    (nestinglevel < inpostscript)) {
+		  if (nestinglevel < indriver) indriver = 0;
+		  if (nestinglevel < inpostscript) inpostscript = 0;
+		  if (indrivers || inlang) {
+		    if (debug) fprintf(stderr, 
+				       "    Driver/PPD: %s %s\n",
+				       cid, cppd);
+		    if ((cid[0] != '\0') && (cppd[0] != '\0')) {
+		      if (debug)
+			fprintf(stderr, 
+				"    Adding Driver/PPD to list.\n");
+		      ppdlistpointer = ppdlist;
+		      ppdlistpreventry = NULL;
+		      if (debug)
+			fprintf(stderr,
+				"    Going through list: ");
+		      while (ppdlistpointer != NULL) {
+			ppdlistpreventry = ppdlistpointer;
+			ppdlistpointer = (ppdlist_t *)ppdlistpointer->next;
+			if (debug)
+			  fprintf(stderr,
+				  ".");
+		      }
+		      ppdlistpointer = 
+			(ppdlist_t *)malloc(sizeof(ppdlist_t));
+		      strcpy(ppdlistpointer->driver, cid);
+		      strcpy(ppdlistpointer->ppd, cppd);
+		      ppdlistpointer->next = NULL;
+		      if (ppdlistpreventry != NULL)
+			ppdlistpreventry->next =
+			  (struct ppdlist_t *)ppdlistpointer;
+		      else 
+			ppdlist = ppdlistpointer;
+		      if (debug)
+			fprintf(stderr,
+				" Driver/PPD in list: %s %s\n",
+				ppdlistpointer->driver,
+				ppdlistpointer->ppd);
+		    }
+		  } else strcpy(cdriver, currtagbody);
+		}
+		if (nestinglevel < inid) {
+		  inid = 0;
+		  strcpy(cid, currtagbody);
+		  if (debug) fprintf(stderr, 
+				     "    Driver ID for PPD: %s\n", cid);
+		}
+		if (nestinglevel < inppd) {
+		  inppd = 0;
+		  strcpy(cppd, currtagbody);
+		  if (debug) fprintf(stderr, 
+				     "    PPD URL: %s\n", cppd);
 		}
 		if (nestinglevel < inautodetect) {
 		  inautodetect = 0;
@@ -1329,7 +1435,29 @@ parse(const char **data, /* I/O - Data to process */
 	  dlistpointer = (driverlist_t *)(dlistpointer->next);
 	}
       }
-      strcat((char *)(*data), "    </drivers>\n  </printer>\n");
+      strcat((char *)(*data), "    </drivers>\n");
+      if (ppdlist != NULL) {
+	strcat((char *)(*data), "    <ppds>\n");
+	ppdlistpointer = ppdlist;
+	if (debug)
+	  fprintf(stderr,
+		  "    Going through list: ");
+	while (ppdlistpointer) {
+	if (debug)
+	  fprintf(stderr,
+		  ".");
+	  strcat((char *)(*data), "      <ppd>\n");
+	  strcat((char *)(*data), "        <driver>");
+	  strcat((char *)(*data), ppdlistpointer->driver);
+	  strcat((char *)(*data), "</driver>\n        <ppdfile>");
+	  strcat((char *)(*data), ppdlistpointer->ppd);
+	  strcat((char *)(*data), "</ppdfile>\n");
+	  strcat((char *)(*data), "      </ppd>\n");
+	  ppdlistpointer = (ppdlist_t *)(ppdlistpointer->next);
+	}
+	strcat((char *)(*data), "    </ppds>\n");
+      }
+      strcat((char *)(*data), "  </printer>\n");
     }
   } else if (operation == 2) { /* Option XML file */
     if (debug) fprintf(stderr, "    Resulting option XML:\n%s\n", *data); 

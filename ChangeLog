@@ -1,3 +1,11 @@
+2005-08-23  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-combo-xml.c: Added the links to the ready-made PPD
+	  files for all drivers to the overview output. Eliminated
+	  compiler warnings.
+
+	* foomatic-perl-data.c: Eliminated compiler warnings.
+
 2005-08-15  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Added support for the new "beh"
