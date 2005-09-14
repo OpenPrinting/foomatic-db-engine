@@ -1,3 +1,8 @@
+2005-09-13  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Made "translate_printer_id()" not crashing
+	  when it is called with a weird printer ID.
+
 2005-08-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-combo-xml.c: Added the links to the ready-made PPD

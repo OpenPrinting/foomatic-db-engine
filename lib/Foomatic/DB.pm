@@ -38,7 +38,8 @@ sub translate_printer_id {
     open TRTAB, "< $translation_table" or return $oldid;
     while (<TRTAB>) {
 	chomp;
-	if (/^\s*$oldid\s+(\S+)\s*$/) {
+	my $searcholdid = quotemeta($oldid);
+	if (/^\s*$searcholdid\s+(\S+)\s*$/) {
 	    # ID found, return new ID
 	    my $newid = $1;
 	    close TRTAB;
