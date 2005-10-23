@@ -1,3 +1,10 @@
+2005-10-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-perl-data.c, foomatic-configure.in,
+	  foomatic-ppdfile.in, foomatic-compiledb.in: Let the Foomatic
+	  tools use custom-made PPD files if they are linked in the
+	  printer XML file and available in the local Foomatic database.
+
 2005-09-13  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Made "translate_printer_id()" not crashing
