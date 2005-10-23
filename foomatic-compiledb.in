@@ -1,4 +1,5 @@
 #!@PERL@
+# -*- perl -*-
 
 use Foomatic::Defaults;
 use Foomatic::DB;
@@ -187,8 +188,10 @@ sub spawn_child {
 		my $possible = $db->getdat($driver, $printer);
 		# Do not create a PPD file if the printer/driver combo
 		# is not possible or if the renderer command line is
-		# empty
-		next if (!$possible) or (!$db->{'dat'}{'cmd'});
+		# empty and no custom PPD file is available
+		next if ((!$possible) or 
+			 ((!$db->{'dat'}{'cmd'}) and 
+			  (!$db->{'dat'}{'ppdfile'})));
 		@data = $db->getppd();
 	    }
 	    open OUTPUT, "> $filename" ||
