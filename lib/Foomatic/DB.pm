@@ -522,9 +522,42 @@ sub sortvals {
 sub getdat ($ $ $) {
     my ($this, $drv, $poid) = @_;
 
-    my %dat;			# Our purpose in life...
+    my $ppdfile;
+
+    # Do we have a link to a custom PPD file for this driver in the
+    # printer XML file? Then return the custom PPD
+
+    my $p = $this->get_printer($poid);
+    if (defined($p->{'drivers'})) {
+	for my $d (@{$p->{'drivers'}}) {
+	    next if ($d->{'id'} ne $drv);
+	    $ppdfile = $d->{'ppd'} if defined($d->{'ppd'});
+	    last;
+	}
+    }
+
+    # Do we have a PostScript printer and a link to a manufacturer-
+    # supplied PPD file? Then return the manufacturer-supplied PPD
+
+    if ($drv =~ /^Postscript$/i) {
+	$ppdfile = $p->{'ppdurl'} if defined($p->{'ppdurl'});
+    }
+
+    # There is a link to a custom PPD, if it is installed on the local
+    # machine, use the custom PPD instead of generating one from the
+    # Foomatic data
+    if ($ppdfile) {
+	$ppdfile =~ s,^http://.*/(PPD/.*)$,$1,;
+	$ppdfile = $libdir . "/db/source/" . $ppdfile;
+	if (-r $ppdfile) {
+	    $this->getdatfromppd($ppdfile);
+	    $this->{'dat'}{'ppdfile'} = $ppdfile;
+	    return $this->{'dat'};
+	}
+    }
 
     # Generate Perl data structure from database
+    my %dat;			# Our purpose in life...
     my $VAR1;
     eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C`) ||
 	die ("Could not run \"foomatic-combo-xml\"/" .
@@ -1300,28 +1333,28 @@ sub ppdgetdefaults {
 
 }
 
-sub ppdsetdefaults {
+sub ppdvarsetdefaults {
 
-    my ($this, $ppdfile) = @_;
-    
+    my ($this, @ppdlinesin) = @_;
+
     my @ppdlines;
     my $ppd;
 
-    # Load the complete PPD file into memory but remove the postpipe
-    open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
-	       "$sysdeps->{'gzip'} -cd \'$ppdfile\' |") or
-	       die ("Unable to open PPD file \'$ppdfile\'\n");
-    while (my $line = <PPD>) {
+    for (my $i = 0; $i < @ppdlinesin; $i ++) {
+	my $line = $ppdlinesin[$i];
+	# Remove a postpipe definition if one is there
 	if ($line =~ m!^\*FoomaticRIPPostPipe:\s*\"(.*)$!) {
 	    # "*FoomaticRIPPostPipe: <code>"
 	    # Code string can have multiple lines, read all of them
-	    my $line = $1;
+	    $line = $1;
 	    while ($line !~ m!\"!) {
 		# Read next line
-		$line = <PPD>;
+		$i++;
+		$line = $ppdlinesin[$i];
 	    }
 	    # We also have to remove the "*End" line
-	    $line = <PPD>;
+	    $i++;
+	    $line = $ppdlinesin[$i];
 	    if ($line !~ /^\*End/) {
 		push(@ppdlines, $line);
 	    }
@@ -1329,8 +1362,9 @@ sub ppdsetdefaults {
 	    push(@ppdlines, $line);
 	}
     }
-    close PPD;
     $ppd = join('', @ppdlines);
+    # No option info read yet? Do not try to set deafaults
+    return $ppd if !$this->{'dat'}{'args'};
 
     # If the settings for "PageSize" and "PageRegion" are different,
     # set the one for "PageRegion" to the one for "PageSize".
@@ -1441,8 +1475,11 @@ sub ppdsetdefaults {
 			}
 		    }
 		}
+	    } else {
+		$def = checkoptionvalue($this->{'dat'}, $name, $def, 0);
 	    }
-	    $ppd =~ s!^(\*Default$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$def$3!m;
+	    $ppd =~ s!^(\*Default$name:\s*)([^/:\s\r]*)(\s*\r?)$!$1$def$3!m
+		if defined($def);
 	}
     }
 
@@ -1457,6 +1494,23 @@ sub ppdsetdefaults {
 	#$ppd =~ s/(\*PPD[^a-zA-Z0-9].*\n)/$1$postpipestr/s;
 	$ppd =~ s/((\r\n|\n\r|\r|\n))/$1$postpipestr/s;
     }
+    
+    return $ppd;
+}
+
+sub ppdsetdefaults {
+
+    my ($this, $ppdfile) = @_;
+    
+    # Load the complete PPD file into memory
+    open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
+	       "$sysdeps->{'gzip'} -cd \'$ppdfile\' |") or
+	       die ("Unable to open PPD file \'$ppdfile\'\n");
+    my @ppdlines = <PPD>;
+    close PPD;
+
+    # Set the defaults
+    my $ppd = $this->ppdvarsetdefaults(@ppdlines);
     
     # Write back the modified PPD file
     open PPD, ($ppdfile !~ /\.gz$/i ? "> $ppdfile" : 
@@ -1645,7 +1699,7 @@ sub checkoptionvalue {
 	    return 0;
 	}
     } elsif ($arg->{'type'} eq 'enum') {
-	if (defined($arg->{'vals_byname'}{$value})) {
+	if ($arg->{'vals_byname'}{$value}) {
 	    return $value;
 	} elsif ((($arg->{'name'} eq "PageSize") ||
 		  ($arg->{'name'} eq "PageRegion")) &&
@@ -1966,7 +2020,7 @@ sub cutguiname {
     }
 }
 
-#####################
+#
 # PPD generation
 #
 
@@ -2072,6 +2126,22 @@ sub getppd (  $ $ $ ) {
 
     # The Perl data structure of the current printer/driver combo.
     my $dat = $db->{'dat'};
+
+    # Do we have a custom pre-made PPD? If so, return this one
+    if (defined($dat->{'ppdfile'})) {
+	my $ppdfile = $dat->{'ppdfile'};
+	if (-r $ppdfile) {
+	    # Load the complete PPD file into memory
+	    if (open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
+			   "$sysdeps->{'gzip'} -cd \'$ppdfile\' |")) {
+		my @ppdlines = <PPD>;
+		close PPD;
+		# Set the default values
+		my $ppd = $db->ppdvarsetdefaults(@ppdlines);
+		return $ppd;
+	    }
+	}
+    }
 
     my @optionblob; # Lines for command line and options in the PPD file
 
@@ -4630,8 +4700,7 @@ sub get_javascript2 {
     return $javascript;
 }
 
-#################################
-#################################
+
 
 
 # Modify comments text to contain only what it should:

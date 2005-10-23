@@ -93,6 +93,14 @@ typedef struct margins {
   marginRecordPtr *marginRecords;
 } margins, *marginsPtr;
 
+/* For driver list in printer XML, for ready-made PPDs or user-contributed
+   printer entry */
+typedef struct printerDrvEntry {
+  xmlChar *name;
+  xmlChar *comment;
+  xmlChar *ppd;
+} printerDrvEntry, *printerDrvEntryPtr;
+
 /*
  * Records for the data of the overview
  */
@@ -207,6 +215,10 @@ typedef struct comboData {
   xmlChar *snmp_des;
   xmlChar *snmp_cmd;
   xmlChar *recdriver;
+  /* Driver list in printer XML file (for ready-made PPD
+     links) */
+  int     num_drivers;
+  printerDrvEntryPtr  *drivers;
   /* Driver */
   xmlChar *driver;
   xmlChar *pcdriver;
@@ -233,13 +245,6 @@ typedef struct printerLanguage {
   xmlChar *name;
   xmlChar *level;
 } printerLanguage, *printerLanguagePtr;
-
-/* Only for XML files in queue of user-contributed printers */
-typedef struct printerDrvEntry {
-  xmlChar *name;
-  xmlChar *comment;
-  xmlChar *ppd;
-} printerDrvEntry, *printerDrvEntryPtr;
 
 typedef struct printerEntry {
   xmlChar *id;
@@ -748,8 +753,13 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
   xmlNodePtr     cur3;  /* Another XML node pointer */
+  xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full printer ID, with "printer/" */
   xmlChar        *charset;
+  xmlChar        *dname;  /* Name of a driver supporting this printer */
+  xmlChar        *dppd;  /* Ready-made PPD supporting this printer */
+  printerDrvEntryPtr dentry; /* An entry for a driver supporting this
+				printer */
 
   /* Initialization of entries */
   ret->id = NULL;
@@ -783,6 +793,8 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->snmp_des = NULL;
   ret->snmp_cmd = NULL;
   ret->recdriver = NULL;
+  ret->num_drivers = 0;
+  ret->drivers = NULL;
 
   /* Get printer ID */
   id = xmlGetProp(node, (const xmlChar *) "id");
@@ -809,6 +821,70 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Recommended driver: %s\n", 
 			 ret->recdriver);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "drivers"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "driver"))) {
+	  ret->num_drivers ++;
+	  ret->drivers =
+	    (printerDrvEntryPtr *)
+	    realloc((printerDrvEntryPtr *)ret->drivers, 
+		    sizeof(printerDrvEntryPtr) * 
+		    ret->num_drivers);
+	  dentry = (printerDrvEntryPtr) malloc(sizeof(printerDrvEntry));
+	  if (dentry == NULL) {
+	    fprintf(stderr,"Out of memory!\n");
+	    xmlFreeDoc(doc);
+	    exit(1);
+	  }
+	  ret->drivers[ret->num_drivers-1] = dentry;
+	  memset(dentry, 0, sizeof(printerDrvEntry));
+	  dentry->name = NULL;
+	  dentry->comment = NULL;
+	  dentry->ppd = NULL;
+	  if (debug) fprintf(stderr, "  Printer supported by drivers:\n");
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "id"))) {
+	      dname =
+		xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1);
+	      dentry->name = perlquote(dname);
+	      if (debug) fprintf(stderr, "    Name: %s\n",
+				 dentry->name);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ppd"))) {
+	      dppd =
+		xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1);
+	      dentry->ppd = perlquote(dppd);
+	      if (debug) fprintf(stderr, "    Ready-made PPD: %s\n",
+				 dentry->ppd);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
+	      cur4 = cur3->xmlChildrenNode;
+	      while (cur4 != NULL) {
+		if ((!xmlStrcmp(cur4->name, (const xmlChar *) language))) {
+		  dentry->comment =
+		    perlquote(xmlNodeListGetString(doc, 
+						   cur4->xmlChildrenNode,
+						   1));
+		  if (debug) fprintf(stderr, "    Comment (%s): \n%s\n\n",
+				     language, dentry->comment);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "en"))) {
+		  if (!dentry->comment) {
+		    dentry->comment =
+		      perlquote(xmlNodeListGetString(doc, 
+						     cur4->xmlChildrenNode,
+						     1));
+		    if (debug) fprintf(stderr, "    Comment (en): \n%s\n\n",
+				       dentry->comment);
+		  }
+		}
+		cur4 = cur4->next;
+	      }
+	    }
+	    cur3 = cur3->next;
+	  }
+	}
+	cur2 = cur2->next;
+      }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "ppdentry"))) {
       ret->printerppdentry = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -2674,6 +2750,8 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
 		      int debug) { /* Debug flag */
 
   int i, j; /* loop variables */
+  int haspsdriver = 0; /* Is the "Postscript" driver in the printer's
+			  driver list? */
   
   printf("$VAR1 = {\n");
   printf("  'id' => '%s',\n", combo->id);
@@ -2683,6 +2761,40 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'recdriver' => '%s',\n", combo->recdriver);
   } else {
     printf("  'recdriver' => undef,\n");
+  }
+  if ((combo->num_drivers > 0) || (combo->ppdurl)) {
+    printf("  'drivers' => [\n");
+    for (i = 0; i < combo->num_drivers; i ++) {
+      printf("                 {\n");
+      if (combo->drivers[i]->name) {
+	if (strncmp(combo->drivers[i]->name, "Postscript", 10))
+	  haspsdriver = 1;
+	printf("                   'name' => '%s',\n",
+	       combo->drivers[i]->name);
+	printf("                   'id' => '%s',\n",
+	       combo->drivers[i]->name);
+      }
+      if (combo->drivers[i]->ppd) {
+	printf("                   'ppd' => '%s',\n",
+	       combo->drivers[i]->ppd);
+      }
+      if (combo->drivers[i]->comment) {
+	printf("                   'comment' => '%s',\n",
+	       combo->drivers[i]->comment);
+      }
+      printf("                 },\n");
+    }
+    if ((combo->ppdurl) && !haspsdriver) {
+      printf("                 {\n");
+      printf("                   'name' => '%s',\n",
+	     "Postscript");
+      printf("                   'id' => '%s',\n",
+	     "Postscript");
+      printf("                   'ppd' => '%s',\n",
+	     combo->ppdurl);
+      printf("                 },\n");
+    }
+    printf("               ],\n");
   }
   if (combo->pcmodel) {
     printf("  'pcmodel' => '%s',\n", combo->pcmodel);

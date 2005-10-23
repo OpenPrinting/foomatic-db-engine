@@ -45,6 +45,10 @@ if( $showall or $showmatch ){
 
 help() if( not defined( $poid ) );
 
+# If the user supplies an old numerical printer ID, translate it to
+# a new clear-text ID
+$poid = Foomatic::DB::translate_printer_id($poid);
+
 my $lcname = lc( $poid );
 my $pentry;
 for $printer (@{$db->{'overview'}}) {
@@ -57,12 +61,12 @@ for $printer (@{$db->{'overview'}}) {
 }
 
 print "found " . Dumper($pentry) if $debug;
-die "printer '$poid' not found" if( not defined $pentry );
+die "printer '$poid' not found!\n" if( not defined $pentry );
 
 if (not defined($driver) ) {
     $driver = $pentry->{'driver'};
     if( not defined( $driver ) ){
-	die "printer '$poid' does not have default driver";
+	die "printer '$poid' does not have default driver!\n";
     }
 }
 
@@ -78,27 +82,23 @@ for my $d (@drivers) {
     last if ($found = ($driver eq $d));
 }
 if( not $found ){
-    die "ERROR: driver '$driver' not in database\n";
+    die "ERROR: driver '$driver' not in database!\n";
 }
 
-# If the user supplies an old numerical printer ID, translate it to
-# a new clear-text ID
-$poid = Foomatic::DB::translate_printer_id($poid);
-
-my $db = Foomatic::DB->new();
 # Get all the data about this driver/printer pair
 my $possible = $db->getdat($driver, $poid);
 # Stop if the printer is not supported by the given driver
 die "That printer and driver combination is not possible.\n"
     if (!$possible);
-# Stop if the driver entry has an empty command line prototype
-die "The driver database entry does not contain sufficient data to build a PPD file.\n"
-    if (!$db->{'dat'}{'cmd'});
+# Stop if the driver entry has an empty command line prototype or if there 
+# is no custom PPD file
+die "There is neither a custom PPD file nor the driver database entry contains sufficient data to build a PPD file.\n"
+    if (!$db->{'dat'}{'cmd'}) && (!$db->{'dat'}{'ppdfile'});
 
 my @data;
 
 @data = $db->getppd($opt_w);
-die "ERROR: no PPD file for printer '$poid' and driver '$driver'\n"
+die "ERROR: no PPD file for printer '$poid' and driver '$driver'!\n"
     if not @data;
 
 print @data;
