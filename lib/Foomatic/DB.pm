@@ -549,7 +549,7 @@ sub getdat ($ $ $) {
     if ($ppdfile) {
 	$ppdfile =~ s,^http://.*/(PPD/.*)$,$1,;
 	$ppdfile = $libdir . "/db/source/" . $ppdfile;
-	if (-r $ppdfile) {
+	if ((-r $ppdfile) || (-r "${ppdfile}.gz")) {
 	    $this->getdatfromppd($ppdfile);
 	    $this->{'dat'}{'ppdfile'} = $ppdfile;
 	    return $this->{'dat'};
@@ -2110,10 +2110,10 @@ sub setgroupandorder {
 # first.
 sub getppd (  $ $ $ ) {
 
-    # If $shortgui is set, all GUI strings ("translations" in PPD files) will
-    # be cut to a maximum length of 39 characters. This is needed by the
-    # current (as of July 2003) version of the CUPS PostScript driver for
-    # Windows.
+    # If $shortgui is set, all GUI strings ("translations" in PPD
+    # files) will be cut to a maximum length of 39 characters. This is
+    # needed by the current (as of July 2003) version of the CUPS
+    # PostScript driver for Windows.
 
     # If $members_in_subgroup is set, the member options of a composite
     # option go into a subgroup of the group where the composite option
@@ -2130,7 +2130,7 @@ sub getppd (  $ $ $ ) {
     # Do we have a custom pre-made PPD? If so, return this one
     if (defined($dat->{'ppdfile'})) {
 	my $ppdfile = $dat->{'ppdfile'};
-	if (-r $ppdfile) {
+	if ((-r $ppdfile) || (-r "${ppdfile}.gz")) {
 	    # Load the complete PPD file into memory
 	    if (open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
 			   "$sysdeps->{'gzip'} -cd \'$ppdfile\' |")) {
