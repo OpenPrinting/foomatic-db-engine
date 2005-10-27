@@ -1,3 +1,7 @@
+2005-10-26  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fix on support for gzipped PPDs.
+
 2005-10-25  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Added support for gzipping the custom

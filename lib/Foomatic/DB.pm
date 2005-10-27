@@ -549,7 +549,8 @@ sub getdat ($ $ $) {
     if ($ppdfile) {
 	$ppdfile =~ s,^http://.*/(PPD/.*)$,$1,;
 	$ppdfile = $libdir . "/db/source/" . $ppdfile;
-	if ((-r $ppdfile) || (-r "${ppdfile}.gz")) {
+	$ppdfile = "${ppdfile}.gz" if (! -r $ppdfile);
+	if (-r $ppdfile) {
 	    $this->getdatfromppd($ppdfile);
 	    $this->{'dat'}{'ppdfile'} = $ppdfile;
 	    return $this->{'dat'};
@@ -2130,7 +2131,8 @@ sub getppd (  $ $ $ ) {
     # Do we have a custom pre-made PPD? If so, return this one
     if (defined($dat->{'ppdfile'})) {
 	my $ppdfile = $dat->{'ppdfile'};
-	if ((-r $ppdfile) || (-r "${ppdfile}.gz")) {
+	$ppdfile = "${ppdfile}.gz" if (! -r $ppdfile);
+	if (-r $ppdfile) {
 	    # Load the complete PPD file into memory
 	    if (open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
 			   "$sysdeps->{'gzip'} -cd \'$ppdfile\' |")) {
