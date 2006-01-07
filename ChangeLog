@@ -1,3 +1,13 @@
+2006-01-06  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* configure.in, configure.ac: Renamed configure.in to
+	  configure.ac, to make the package working with the current
+	  versions of aclocal and autoconf.
+
+	* foomatic-cleanupdrivers.in: Delete also driver XML files
+	  without "<prototype>" tags at all, as they also do not
+	  contain a driver command line prototype.
+
 2005-10-26  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fix on support for gzipped PPDs.

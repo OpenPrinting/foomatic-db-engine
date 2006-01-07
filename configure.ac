@@ -1,5 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(foomatic-perl-data.c)
+AC_INIT([footmatic-db-engine], 3.0.2)
+AC_CONFIG_SRCDIR(foomatic-perl-data.c)
 
 dnl If the user didn't specify the $sysconfdir on the command line, let it
 dnl be /etc, not /usr/local/etc or /usr/etc

@@ -669,6 +669,30 @@ sub ppdfromvartoperl ($) {
 		$dat->{'model'} = $2;
 		$dat->{'model'} =~ s/\s+Foomatic.*$//i;
 	    }
+	} elsif (m!^\*1284DeviceI[Dd]:\s*\"(.*)$!) {
+	    # "*1284DeviceID: <code>"
+	    my $line = $1;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		if ($line =~ m!&&$!) {
+		    # line continues in next line
+		    $cmd .= substr($line, 0, -2);
+		} else {
+		    # line ends here
+		    $cmd .= "$line\n";
+		}
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ m!^([^\"]*)\"!;
+	    $cmd .= $1;
+	    $dat->{'pnp_ieee'} = unhtmlify($cmd);
+	    $dat->{'pnp_ieee'} =~ s/\n\s*//sg;
+	    $dat->{'general_ieee'} = $dat->{'pnp_ieee'};
 	} elsif (m!^\*FoomaticIDs:\s*(\S+)\s+(\S+)\s*$!) {
 	    # "*FoomaticIDs: <printer ID> <driver ID>"
 	    my $id = $1;
@@ -1185,8 +1209,104 @@ sub ppdfromvartoperl ($) {
 	sortoptions($dat, 1);
     }
 
+    # If the PPD file does not contain any info about for which driver it
+    # is, we can assume that it is for a PostScript printer
+    $dat->{'driver'} = "Postscript" if !$dat->{'driver'};
+
     return $dat;
 }
+
+# Generate a set of XML files to represent the current printer/driver
+# combo. This is pimarily intended to generate XML data from a PPD file.
+# getdatfromppd() or getdat() needs to be called first.
+sub getprinterxml {
+
+    my ($db, $destdir) = @_;
+
+    die "you need to call getdat/getdatfromppd() first!\n" 
+	if (!defined($db->{'dat'}));
+
+    # The Perl data structure of the current printer/driver combo.
+    my $dat = $db->{'dat'};
+
+    # We must have a driver to link the PPD file
+    #$dat->{'driver'} = "Postscript" 
+	#if $dat->{'ppdfile'} && !$dat->{'driver'};
+
+    # Where to put the XML files
+    $destdir = $libdir if (!$destdir);
+
+    my $pfile = "$destdir/db/source/printer/$printer.xml";
+
+    if (! -f $pfile) {
+	#print STDERR "Printer $printer does not seem to exist in the database\n";
+	open TMP, ">$pfile" or die "Cannot write $pfile!\n";
+	print STDERR "Writing $pfile\n";
+	print TMP
+	    "<printer id=\"printer/$dat->{'id'}\">\n" .
+	    "  <make>$dat->{'make'}</make>\n" .
+	    "  <model>$dat->{'model'}</model>\n" .
+	    "  <mechanism>" . 
+	    ($dat->{'color'} != 0 ?
+	     "    <color/>\n" : "").
+	    ($dat->{'maxxres'} || $dat->{'maxyres'} ?
+	     "    <resolution>\n" .
+	     "      <dpi>\n" .
+	     "        <x>" .
+	     ($dat->{'maxxres'} ? $dat->{'maxxres'} : $dat->{'maxyres'}) .
+	     "</x>\n" .
+	     "        <y>" .
+	     ($dat->{'maxyres'} ? $dat->{'maxyres'} : $dat->{'maxxres'}) .
+	     "</y>\n" .
+	     "      </dpi>\n" .
+	     "    </resolution>\n" : "") .
+	    ($dat->{'refill'} ?
+	     "    <consumables>\n" .
+	     "      <comments>\n" .
+	     "        <en>\n" .
+	     "          $dat->{'refill'}\n" .
+	     "        </en>" .
+	     "      </comments>\n" .
+	     "    </consumables>\n" : "") .
+	    "  </mechanism>" . 
+	    "  <functionality>" . 
+	    ($dat->{'functionality'} ?  $dat->{'functionality'} : "A") . 
+	    "</functionality>\n" .
+	    ($dat->{'recdriver'} ?
+	     "  <driver>$dat->{'recdriver'}</driver>\n" :
+	     ($dat->{'driver'} ?
+	      "  <driver>$dat->{'driver'}</driver>\n" : "")) .
+	    ($dat->{'drivers'} ?
+	     "  <drivers>\n" .
+	     "    <driver>\n" .
+	     "      <id>$dat->{'driver'}</id>\n" .
+	     ($dat->{'ppdfile'} ?
+	      "      <ppd>$dat->{'ppdfile'}</ppd>\n" : "").
+	     "    </driver>\n" .
+	     "  </drivers>\n" : "") .
+	    "</printer>\n";
+	close TMP;
+    }
+
+
+}
+
+sub getdriverxml {
+
+    my ($db, $destdir) = @_;
+
+    die "you need to call getdat/getdatfromppd() first!\n" 
+	if (!defined($db->{'dat'}));
+
+    # The Perl data structure of the current printer/driver combo.
+    my $dat = $db->{'dat'};
+
+    # Where to put the XML files
+    $destdir = $libdir if (!$destdir);
+
+}
+
+
 
 sub perltoxml ($) {
     my ($this, $dat) = @_;
@@ -3509,6 +3629,7 @@ EOFPGSZ
     
     return ($tmpl);
 }
+
 
 
 # Utility function; returns content of a URL
