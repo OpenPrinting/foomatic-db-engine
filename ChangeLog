@@ -1,3 +1,10 @@
+2006-01-09  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Let PPD files with "*CloseGroup" without
+	  group name being parsed correctly, eliminate warning about
+	  uninitialized variable when a PPD file is built out of Foomatic
+	  data.
+
 2006-01-06  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* configure.in, configure.ac: Renamed configure.in to

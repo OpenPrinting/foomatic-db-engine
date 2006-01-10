@@ -778,6 +778,12 @@ sub ppdfromvartoperl ($) {
 	    $currentgroup =~ s!$group$!!;
 	    $currentgroup =~ s!/$!!;
 	    pop(@currentgrouptrans);
+	} elsif (m!^\*Close(Sub|)Group\s*$!) {
+	    # "*Close[Sub]Group"
+	    # NOTE: This expression is not Adobe-conforming
+	    $currentgroup =~ s![^/]+$!!;
+	    $currentgroup =~ s!/$!!;
+	    pop(@currentgrouptrans);
 	} elsif (m!^\*(JCL|)OpenUI\s+\*([^:]+):\s*(\S+)\s*$!) {
 	    # "*[JCL]OpenUI *<option>[/<translation>]: <type>"
 	    my $argnametrans = $2;
@@ -3345,10 +3351,10 @@ EOFPGSZ
     $pcfilename = 'FOOMATIC' if !defined($pcfilename);
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
-    my $ieee1284 = "";
+    my $ieee1284;
     $ieee1284 = $dat->{'general_ieee'} or $ieee1284 = $dat->{'pnp_ieee'} or
 	$ieee1284 = $dat->{'par_ieee'} or $ieee1284 = $dat->{'usb_ieee'} or 
-	$ieee1284 = $dat->{'snmp_ieee'};
+	$ieee1284 = $dat->{'snmp_ieee'} or $ieee1284 = "";
     my $ieeemodel;
     my $ieeemake;
     if ($ieee1284) {
