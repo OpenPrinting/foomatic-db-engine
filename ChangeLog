@@ -1,5 +1,15 @@
 2006-01-09  Till Kamppeter <till.kamppeter@gmx.net>
 
+	* lib/Foomatic/DB.pm: Generate PPD files correctly where an
+	  enumerated-choice option has "0" as default (thanks to Tim
+	  Waugh from Red Hat for the patch).
+
+	* foomatic-cleanupdrivers.in: Do not try to delete the "." file in
+	  the driver-XML-file directory (thanks to Tim Waugh from Red Hat
+	  for the patch).
+
+2006-01-09  Till Kamppeter <till.kamppeter@gmx.net>
+
 	* lib/Foomatic/DB.pm: Let PPD files with "*CloseGroup" without
 	  group name being parsed correctly, eliminate warning about
 	  uninitialized variable when a PPD file is built out of Foomatic

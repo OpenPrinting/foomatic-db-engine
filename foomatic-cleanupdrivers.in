@@ -28,6 +28,7 @@ while ($driver = readdir(DRIVERDIR)) {
     my @driverentryfield = <DRIVERENTRY>;
     close DRIVERENTRY;
     my $driverentry = join ('', @driverentryfield);
+    next unless $driverentry;
     if (($driverentry =~ m!<prototype>\s*</prototype>!sg) ||
 	($driverentry =~ m!<prototype\s*/\s*>!sg) ||
 	($driverentry !~ m!<prototype[>/\s]!sg)) {

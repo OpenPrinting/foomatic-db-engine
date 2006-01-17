@@ -1031,7 +1031,7 @@ sub ppdfromvartoperl ($) {
 		$dat->{'args_byname'}{$currentargument}{'vals_byname'}{$setting}{'comment'} = $translation;
 		# Make sure that this argument has a default setting, even
 		# if none is defined in this PPD file
-		if (!$dat->{'args_byname'}{$currentargument}{'default'}) {
+		if ($dat->{'args_byname'}{$currentargument}{'default'} eq "") {
 		    $dat->{'args_byname'}{$currentargument}{'default'} = $setting;
 		}
 	    }
