@@ -2921,10 +2921,11 @@ sub load_cups_printersconf {
     if ($< == 0) {
 	# Get info from /etc/cups/printers.conf, works only as "root" and
 	# with locally defined printers
-	open PCONF, $sysdeps->{'cups-pconf'} or
-	    die "Cannot read printers.conf file!\n";
-	my @pconf = <PCONF>;
+	my @pconf = ();
+	if (open PCONF, $sysdeps->{'cups-pconf'}) {
+	    @pconf = <PCONF>;
 	close PCONF;
+	}
 	
 	my $line;
 	my $p = {};
@@ -2963,7 +2964,7 @@ sub load_cups_printersconf {
 	
 	my $line;
 	my $linecount = 0;
-	my $defaultprinter;
+	my $defaultprinter = '';
 	my $currentitem = -1;
 	for $line (@lpstat) {
 	    chomp ($line);

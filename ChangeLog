@@ -1,3 +1,10 @@
+2006-02-28  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Treat a missing /etc/cups/printers.conf
+	  as an empty file (CUPS 1.2 allows printers.conf missing for no
+	  local printers). Suppress warnings if the list of available CUPS
+	  queues is requested but no default printer set.
+
 2006-01-17  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Generate PPD files correctly where an
