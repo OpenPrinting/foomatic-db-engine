@@ -1,25 +1,136 @@
 #!@PERL@
 # -*- perl -*-
+
+# Foomatic PPD file generator for manual PPD generation (via "-p",
+# "-d", "-A", and "-P" command line options) or for automatic
+# on-the-fly PPD generation by CUPS 1.2 or newer (via "cat" and "list"
+# command line options).
+
 use Foomatic::Defaults;
 use Foomatic::DB;
 use Getopt::Std;
 use Data::Dumper;
 
-help if !@ARGV ;
-getopts("AP:d:p:hwt:") || help();
+my $debug = 0;
+
+# Use program name as the first part of the PPD URI for CUPS (should be 
+# "foomatic").
+$0 =~ m!/([^/]+)\s*$!;
+my $progname = ($1 || $0);
+
+# Default settings for listing PPDs by cups-driverd
+
+# List only the PPD file with the reconmmended driver for each printer
+# and do not show "(recommended)" in the CUPS web interface. This mode
+# makes CUPS setup with the web interface very easy for beginners.
+# This can be set by "OnlyRecommended Yes" or "OnlyRecommended No" in
+# /etc/cups/foomatic.conf
+my $onlyrecommended = 0;
+
+help() if !@ARGV;
+getopts("AP:d:p:hwt:");
 help() if $opt_h;
-my $driver = $opt_d;
+my $drv = $opt_d;
 my $poid   = $opt_p;
 my $showall   = $opt_A;
 my $showmatch   = $opt_P;
-my $debug = 0;
+help() if ($#ARGV > 1) && !($poid);
 
-my $db = Foomatic::DB->new();
-$db->get_overview();
-my $printer;
-my @drivers = $db->get_driverlist();
-if( $showall or $showmatch ){
+if ($ARGV[0] =~ /^list$/i) {
+    # List all available PPD files (format for cups-driverd)
+    cupslistppds();
+} elsif ($ARGV[0] =~ /^cat$/i) {
+    # Generate and return the selected PPD file (cups-driverd command line)
+    generateppd($ARGV[1]);
+} elsif ($showall or $showmatch) {
+    # List all PPD files or files matching regexp (manual operation)
+    foomaticlistppds($showmatch);
+} elsif ($poid) {
+    # Generate and return the selected PPD file (manual operation)
+    generateppd($poid, $drv);
+} else {
+    help();
+}
+
+exit(0);
+
+sub cupslistppds {
+    my $db = Foomatic::DB->new();
+    $db->get_overview();
+
+    # Read configuration in /etc/cups/foomatic.conf
+    my $conffilename;
+    if (my $cupsserverroot = $ENV{CUPS_SERVERROOT}) {
+        $conffilename = "$cupsserverroot/foomatic.conf";
+    } else {
+        $conffilename = "/etc/cups/foomatic.conf";
+    }
+    if (-r $conffilename and
+	open CONF, "< $conffilename") {
+	while (my $line = <CONF>) {
+	    chomp $line;
+	    if ($line =~
+		/^\s*OnlyRecommended\s+(Yes|On|True|1)\s*$/i) {
+		$onlyrecommended = 1;
+	    } elsif ($line =~
+		     /^\s*OnlyRecommended\s+(No|Off|False|0)\s*$/i) {
+		$onlyrecommended = 0;
+	    }
+	}
+	close CONF;
+    }
+
     for $printer (@{$db->{'overview'}}) {
+	my $poid = $printer->{'id'};
+	my $make = $printer->{'make'};
+	my $model = $printer->{'model'};
+	my $recdriver = $printer->{'driver'};
+	my @drivers = @{$printer->{'drivers'}};
+	my $id = $printer->{'ieee'};
+
+	# No drivers => No PPDs
+	next if $#drivers < 0;
+
+	# Put the reconmmended driver to the beginning of list, as CUPS
+	# probably will take the first PPD which matches the printer model
+	my @sorteddrivers;
+	if (Foomatic::DB::member($recdriver, @drivers)) {
+	    # Valid entry for the recommended driver
+	    push(@sorteddrivers, $recdriver);
+	    if (!$onlyrecommended) {
+		foreach my $driver (@drivers) {
+		    push(@sorteddrivers, $driver) if $driver ne $recdriver;
+		}
+	    }
+	} else {
+	    # Invalid entry for the recommended driver
+	    next if $onlyrecommended;
+	    undef $recdriver;
+	    @sorteddrivers = @drivers;
+	}
+
+	# Go through all the drivers and list the PPD entries
+	foreach my $driver (@sorteddrivers) {
+	    # Get PPD header data from the PPD file generator
+	    my ($ieee1284,$pnpmake,$pnpmodel,$filename,$longname,
+		$drivername,$nickname,$modelname) =
+		    Foomatic::DB::getppdheaderdata($printer, $driver, 
+						   ($onlyrecommended ? '' :
+						    $printer->{'driver'}));
+	    print "\"$progname:$longname\" en \"$make\" \"$nickname\" \"$ieee1284\"\n";
+	}
+    }
+}
+
+sub foomaticlistppds {
+
+    my ($match) = @_;
+
+    my $db = Foomatic::DB->new();
+    $db->get_overview();
+    my @drivers = $db->get_driverlist();
+
+    for my $printer (@{$db->{'overview'}}) {
 	my $pr = $printer->{'make'};
 	my $model = $printer->{'model'};
 	my $name = "$pr $model";
@@ -32,7 +143,7 @@ if( $showall or $showmatch ){
 		$dlist .= "$d ";
 	    }
 	}
-	if( not defined($showmatch) or "$name" =~ m{$showmatch}o ){
+	if (not $match or "$name" =~ m{$match}o) {
 	    print "$name Id='$printer->{'id'}' Driver='$driver'";
 	    if ($dcount > 1){
 		print " CompatibleDrivers='$dlist'";
@@ -40,88 +151,115 @@ if( $showall or $showmatch ){
 	    print "\n";
 	}
     }
-    exit 0;
 }
 
-help() if( not defined( $poid ) );
+sub generateppd {
 
-# If the user supplies an old numerical printer ID, translate it to
-# a new clear-text ID
-$poid = Foomatic::DB::translate_printer_id($poid);
+    my ($ppduri, $driver) = @_;
+    my $poid;
 
-my $lcname = lc( $poid );
-my $pentry;
-for $printer (@{$db->{'overview'}}) {
-    my $name = lc( $printer->{'id'} );
-    print "compare '$lcname' to '$name'\n" if $debug;
-    if( $name eq $lcname ){
-	$pentry = $printer;
-	last;
+    if ($ppduri =~ /^$progname:([^-]+-.+)-([^-]+)\.ppd/) {
+	# cups-driverd operation
+	$poid   = $1;
+	$driver = $2;
+    } else {
+	# manual operation
+	$poid = $ppduri;
     }
-}
 
-print "found " . Dumper($pentry) if $debug;
-die "printer '$poid' not found!\n" if( not defined $pentry );
+    my $db = Foomatic::DB->new();
+    $db->get_overview();
+    my $printer;
+    my @drivers = $db->get_driverlist();
 
-if (not defined($driver) ) {
-    $driver = $pentry->{'driver'};
-    if( not defined( $driver ) ){
-	die "printer '$poid' does not have default driver!\n";
+    # If the user supplies an old numerical printer ID, translate it to
+    # a new clear-text ID
+    $poid = Foomatic::DB::translate_printer_id($poid);
+
+    my $lcname = lc( $poid );
+    my $pentry;
+    for $printer (@{$db->{'overview'}}) {
+	my $name = lc( $printer->{'id'} );
+	print STDERR "DEBUG: compare '$lcname' to '$name'\n" if $debug;
+	if( $name eq $lcname ){
+	    $pentry = $printer;
+	    last;
+	}
     }
+
+    print STDERR "DEBUG: Found " . Dumper($pentry) if $debug;
+    die "ERROR: Printer '$poid' not found!\n" if( not defined $pentry );
+    
+    if (!$driver || ($driver =~ /(default|recommended)/i)) {
+	$driver = $pentry->{'driver'};
+	if( not defined( $driver ) ){
+	    die "ERROR: Printer '$poid' does not have default driver!\n";
+	}
+    }
+    
+    my $found = 0;
+    for my $d (@{$pentry->{'drivers'}}) {
+	last if ($found = ($driver eq $d));
+    }
+    if ( not $found ) {
+	warn "ERROR: Printer '$poid' and driver '$driver' are not compatible\n";
+    }
+    $found = 0;
+    for my $d (@drivers) {
+	last if ($found = ($driver eq $d));
+    }
+    if ( not $found ) {
+	die "ERROR: Driver '$driver' not in database!\n";
+    }
+
+    # Get all the data about this driver/printer pair
+    my $possible = $db->getdat($driver, $poid);
+    # Stop if the printer is not supported by the given driver
+    die "ERROR: That printer and driver combination is not possible.\n"
+	if (!$possible);
+    # Stop if the driver entry has an empty command line prototype or if there 
+    # is no custom PPD file
+    die "ERROR: There is neither a custom PPD file nor the driver database entry contains sufficient data to build a PPD file.\n"
+	if (!$db->{'dat'}{'cmd'}) && (!$db->{'dat'}{'ppdfile'});
+    
+    my @data;
+
+    @data = $db->getppd($opt_w);
+    die "ERROR: No PPD file for printer '$poid' and driver '$driver'!\n"
+	if not @data;
+
+    print @data;
+
 }
-
-my $found = 0;
-for my $d (@{$pentry->{'drivers'}}) {
-    last if ($found = ($driver eq $d));
-}
-if( not $found ){
-    warn "WARNING: printer '$poid' and driver '$driver' are not compatible\n";
-}
-$found = 0;
-for my $d (@drivers) {
-    last if ($found = ($driver eq $d));
-}
-if( not $found ){
-    die "ERROR: driver '$driver' not in database!\n";
-}
-
-# Get all the data about this driver/printer pair
-my $possible = $db->getdat($driver, $poid);
-# Stop if the printer is not supported by the given driver
-die "That printer and driver combination is not possible.\n"
-    if (!$possible);
-# Stop if the driver entry has an empty command line prototype or if there 
-# is no custom PPD file
-die "There is neither a custom PPD file nor the driver database entry contains sufficient data to build a PPD file.\n"
-    if (!$db->{'dat'}{'cmd'}) && (!$db->{'dat'}{'ppdfile'});
-
-my @data;
-
-@data = $db->getppd($opt_w);
-die "ERROR: no PPD file for printer '$poid' and driver '$driver'!\n"
-    if not @data;
-
-print @data;
-
-exit 0;
 
 sub help {
     print <<HELP;
-$0 [-h][-A][-w][-P regexp]
-$0 [-h][-A][-d <driver>] [-p <printerid>]
- -d <driver>    : Driver name
- -p <printerid> : Printer ID
+
+$progname -A
+$progname -P <regexpr>
+$progname -p <printerid> [-d <driver>] [-w]
+$progname list
+$progname cat <CUPS PPD URI> [-w]
+$progname -h
+
  -A             : show all Printer ID's and compatible drivers
  -P <regexpr>   : show all Printer ID's whose names and model
                   matched by the RE.  For example:
                    -P HP will match all names with HP in them
+ -p <printerid> : Printer ID
+ -d <driver>    : Driver name
+                  If the driver is not specified then the default driver 
+                  for the <printerid> is used.
+ list           : List all possible PPDs in the format needed by the
+                  cups-driverd
+ cat <CUPS PPD URI> : Generate PPD file appropriate to the <CUPS PPD URI>.
+                  Available CUPS PPD URIs are listed by 
+                  "$progname list".
  -w             : Generate PPD which is compatible with the CUPS PostScript
                   driver for Windows (GUI strings are limited to 39 
                   characters).
  -h             : show help information
 
-  If the driver is not specified then the default driver for the
-  printerid is used.
 
 HELP
 	exit 1;

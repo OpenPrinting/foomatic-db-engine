@@ -1,3 +1,11 @@
+2006-04-19  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-ppdfile.in, lib/Foomatic/DB.pm, configure.ac,
+	  Makefile.in, makeDefaults.in, USAGE, README: Added support for
+	  on-the-fly PPD file generation by the CUPS 1.2 cups-driverd.
+
+	* USAGE: Update HPOJ -> HPLIP.
+
 2006-02-28  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Treat a missing /etc/cups/printers.conf

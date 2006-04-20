@@ -86,6 +86,8 @@ CUPS_LPSTAT=@CUPS_LPSTAT@
 CUPS_PPDS=@CUPS_PPDS@
 CUPS_FILTERS=@CUPS_FILTERS@
 CUPS_BACKENDS=@CUPS_BACKENDS@
+LIB_CUPS=@LIB_CUPS@
+CUPS_DRIVER=@LIB_CUPS@/driver
 CUPS_PCONF=@CUPS_PCONF@
 CUPS_LPR=@CUPS_LPR@
 CUPS_LPQ=@CUPS_LPQ@
@@ -200,6 +202,13 @@ install-bin: check-config lib/Makefile
 #	Link to allow foomatic-ppdfile be called under the old name
 #	foomatic-datafile
 	ln -sf foomatic-ppdfile $(DESTDIR)$(BINDIR)/foomatic-datafile
+#	Link foomatic-ppdfile to the CUPS 1.2 PPD generator directory,
+#	so that the cups-driverd automatically generates Foomatic PPDs
+#	on demand (/usr/lib/cups/driver).
+	if [ -d $(LIB_CUPS) ]; then \
+	  ${SRC}/mkinstalldirs $(DESTDIR)$(CUPS_DRIVER); \
+	  ln -sf $(BINDIR)/foomatic-ppdfile $(DESTDIR)$(CUPS_DRIVER)/foomatic; \
+	fi
 
 install-man: check-config
 	${SRC}/mkinstalldirs $(DESTDIR)$(MANDIR)

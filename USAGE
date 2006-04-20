@@ -223,22 +223,16 @@ can use all tools.
 A default spooler can be set by putting its name into an
 /etc/foomatic/defaultspooler file or into ~/.defaultspooler
 
-If you have a multi-function device from HP, install HPOJ from
+If you have a printer or multi-function device from HP, install HPLIP from
 
-   http://hpoj.sourceforge.net/
+   http://hpinkjet.sourceforge.net/
 
-before starting to set up printer queues with Foomatic. This is needed
-for printing on USB devices and for scanning and photo memory card
-access on all devices. If you use CUPS 1.1.12 or newer together with
-the old HPOJ 0.8, you need also the latest "ptal" backend script from
-
-   http://www.hornclan.com/~mark/cups/
-
-License information and installation instructions for this script you
-find in the beginning of the script itself. See also the end of the
-"Adding a queue" section in this file to see how to use this script.
-
-The "ptal" backend script is already included in HPOJ 0.9.
+before starting to set up printer queues with Foomatic. This gives you
+the possibility to access all extra functions of your HP device,
+independent whether it is connected via parallel port, USB, or
+ethernet. This gives you, depending on the device, functionality, as
+ink/toner level check, nozzle check and cleaning, color adjustment,
+head alignement, scanning, memory card access, and even sending faxes.
 
 Printing through the MTink daemon from the MTink package
 (http://xwtools.automatix.de/) is also supported. When CUPS is the
@@ -246,6 +240,35 @@ spooler the special "mtink" backend (included in the MTink package)
 will be used. Using the MTink daemon it is possible to check the ink
 levels while printing. The MTink daemon supports only Epson inkjets
 from the Epson Stylus Color 740 on to the current models.
+
+
+Easy printer setup with CUPS 1.2
+--------------------------------
+
+If you have CUPS 1.2 or newer, you do not need the command line to
+set up printers with Foomatic. Simply fire up the web interface entering
+
+http://localhost:631/
+
+and click the "Administration" tab. Then click the "Add this printer" at
+the entry of an auto-detected printer (parallel, USB, ethernet) or click
+"Add printer" at the top. Follow the instructions on the following pages.
+
+If the printers of the Foomatic database do not appear, check whether the
+link to foomatic-ppdfile is in /usr/lib/cups/driver:
+
+lrwxrwxrwx  1 root root 25 Apr 19 18:13 foomatic -> /usr/bin/foomatic-ppdfile
+
+If not, create it manually.
+
+If you want the web interface only list entries for the recommended
+driver for each printer, create a file /etc/cups/foomatic.conf
+containing the line
+
+OnlyRecommended Yes
+
+Note: CUPS paths may be different on your system.
+
 
 
 Adding a queue
@@ -306,12 +329,20 @@ Options in [...] can be left out. The options mean:
 				      /dev/usb/lp1, ..., so we are 
 				      compatible to older versions of
 				      Foomatic.
+		   hp:/<device name> : HP printer used with the low-level 
+				      driver HPLIP (see
+				      http://hpinkjet.sourceforge.net/). The
+				      device name is name assigned to the
+				      device by the HPLIP system, Run
+				      "lpinfo -v" to see valid URIs (works
+				      only with CUPS).
 		   ptal:/<device name> : HP multi-function device used with
 				      the low-level driver HPOJ (see
 				      http://hpoj.sourceforge.net/). The
 				      device name is name assigned to the
 				      device by the ptal-mlcd daemon, for
-				      example "mlc:usb:PSC_950".
+				      example "mlc:usb:PSC_950" (Obsolete,
+				      but still working).
 		   mtink:/<device name> : Epson Stylus Color, Photo, Pro,
 				      or Scan inkjet printer used through
 				      the mtink daemon. <device name>
@@ -457,36 +488,6 @@ port: 9100) is made this way:
 
    foomatic-configure -s lpd -n remoteraw -c socket://192.168.1.234:9100/
 
-If you want to print on a multi-function device from HP you should use
-the low-level driver HPOJ (http://hpoj.sourceforge.net/) so that you
-are also able to scan or to access memory cards. For many USB devices
-you need HPOJ even when you only want to print. To set up a queue, set
-up HPOJ first and then look for the HPOJ device for your printer. You
-get a list of all configured (with "ptal-init setup") devices with "ls
-/etc/ptal" (users of HPOJ 0.8 find the device name in /etc/ptal-start.conf
-in the line starting with "ptal-printd").
-
-The device name is for example "mlc:usb:PSC_950" for an HP PSC 950
-connected via USB. To set up a queue for this printer under CUPS you
-have to enter:
-
-   foomatic-configure -s cups -n PSC950 -c ptal:/mlc:usb:PSC_950
-		      -p HP-PSC_950 -d hpijs -o PageSize=A4
-
-If you use CUPS 1.1.12 and newer, you need the most recent "ptal"
-backend script, which is either part of HPOJ (0.9 or newer) or
-separately downloadable from
-
-   http://www.hornclan.com/~mark/cups/
-
-(use the "File"/"Save as ..." function of your browser to get it onto
-your hard disk). Foolow the instructions in the beginning of the file
-to install it.
-
-After installing HPOJ and/or "ptal" and configuring your printer with
-"ptal-init setup" restart the CUPS daemon and ONLY NOW set up your
-printer queue, foomatic-configure will then auto-detect the "ptal"
-script and make use of it.
 
 
 Modifying a queue

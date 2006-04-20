@@ -2027,6 +2027,121 @@ sub cutguiname {
     }
 }
 
+sub ppd1284DeviceID {
+
+    # Clean up IEEE-1284 device ID to only contain the fields relevant
+    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU), this
+    # the line length limit of PPDs does not get exceeded on very long
+    # ID strings.
+
+    my ($id) = @_;
+    my $ppdid = "";
+    
+    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND\s+SET)", "(DES|DESCRIPTION)", "SKU") {
+	$id =~ m/(\b$field:[^:;]+;)/is;
+	$ppdid .= $1;
+    }
+
+    return $ppdid;
+}
+
+sub getppdheaderdata {
+    
+    my ($dat, $driver, $recdriver) = @_;
+
+    # Complete IEEE 1284 ID string?
+    my $ieee1284;
+    $ieee1284 = $dat->{'general_ieee'} or $ieee1284 = $dat->{'pnp_ieee'} or
+	$ieee1284 = $dat->{'par_ieee'} or $ieee1284 = $dat->{'usb_ieee'} or 
+	$ieee1284 = $dat->{'snmp_ieee'} or $ieee1284 = "";
+    # Extract data fields from the ID string
+    my $ieeemake;
+    my $ieeemodel;
+    my $ieeecmd;
+    my $ieeedes;
+    if ($ieee1284) {
+	$ieee1284 =~ /(MFG|MANUFACTURER):([^:;]+);/;
+	$ieeemake = $2;
+	$ieee1284 =~ /(MDL|MODEL):([^:;]+);/;
+	$ieeemodel = $2;
+	$ieee1284 =~ /(CMD|COMMANDS\s+SET):([^:;]+);/;
+	$ieeecmd = $2;
+	$ieee1284 =~ /(DES|DESCRIPTION):([^:;]+);/;
+	$ieeedes = $2;
+    }
+    # Auto-detection data listed field by field in the printer XML file?
+    my $pnpmake;
+    $pnpmake = $ieeemake or $pnpmake = $dat->{'general_mfg'} or 
+	$pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
+	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = "";
+    my $pnpmodel;
+    $pnpmodel = $ieeemodel or $pnpmodel = $dat->{'general_mdl'} or
+	$pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
+	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = "";
+    my $pnpcmd;
+    $pnpcmd = $ieeecmd or $pnpcmd = $dat->{'general_cmd'} or 
+	$pnpcmd = $dat->{'pnp_cmd'} or $pnpcmd = $dat->{'par_cmd'} or
+	$pnpcmd = $dat->{'usb_cmd'} or $pnpcmd = "";
+    my $pnpdescription;
+    $pnpdescription = $ieeedes or
+	$pnpdescription = $dat->{'general_des'} or
+	$pnpdescription = $dat->{'pnp_des'} or 
+	$pnpdescription = $dat->{'par_des'} or
+	$pnpdescription = $dat->{'usb_des'} or
+	$pnpdescription = "";
+    if ((!$ieee1284) && ((($pnpmake) && ($pnpmodel)) || ($pnpdescription))){
+	$ieee1284 .= "MFG:$pnpmake;" if $pnpmake;
+	$ieee1284 .= "MDL:$pnpmodel;" if $pnpmodel;
+	$ieee1284 .= "CMD:$pnpcmd;" if $pnpcmd;
+	$ieee1284 .= "DES:$pnpdescription;" if $pnpdescription;
+    }
+
+    # Remove everything from the device ID which is not relevant to
+    # auto-detection of the printer model.
+    $ieee1284 = ppd1284DeviceID($ieee1284) if $ieee1284;
+
+    my $make = $dat->{'make'};
+    my $model = $dat->{'model'};
+
+    $pnpmake = $make if !$pnpmake;
+    $pnpmodel = $model if !$pnpmodel;
+
+    # File name for the PPD file
+    my $filename = join('-',($dat->{'make'},
+			     $dat->{'model'},
+			     $driver));;
+    $filename =~ s![ /\(\)]!_!g;
+    $filename =~ s![\+]!plus!g;
+    $filename =~ s!__+!_!g;
+    $filename =~ s!_$!!;
+    $filename =~ s!^_!!;
+    $filename =~ s!_-!-!;
+    $filename =~ s!-_!-!;
+    my $longname = "$filename.ppd";
+
+    # Driver name
+    my $drivername = $driver;
+
+    # Do we use the recommended driver?
+    my $driverrecommended = "";
+    if ($driver eq $recdriver) {
+	$driverrecommended = " (recommended)";
+    }
+    
+    # evil special case.
+    $drivername = "stp-4.0" if $drivername eq 'stp';
+
+    # Nickname for the PPPD file
+    my $nickname =
+	"$make $model Foomatic/$drivername$driverrecommended";
+    my $modelname = "$make $model";
+    # Remove forbidden characters (Adobe PPD spec 4.3 section 5.3)
+    $modelname =~ s/[^A-Za-z0-9 \.\/\-\+]//gs;
+
+    return ($ieee1284,$pnpmake,$pnpmodel,$filename,$longname,
+	    $drivername,$nickname,$modelname);
+}
+
 #
 # PPD generation
 #
@@ -3351,59 +3466,15 @@ EOFPGSZ
     $pcfilename = 'FOOMATIC' if !defined($pcfilename);
     my $model = $dat->{'model'};
     my $make = $dat->{'make'};
-    my $ieee1284;
-    $ieee1284 = $dat->{'general_ieee'} or $ieee1284 = $dat->{'pnp_ieee'} or
-	$ieee1284 = $dat->{'par_ieee'} or $ieee1284 = $dat->{'usb_ieee'} or 
-	$ieee1284 = $dat->{'snmp_ieee'} or $ieee1284 = "";
-    my $ieeemodel;
-    my $ieeemake;
+    my ($ieee1284,$pnpmake,$pnpmodel,$filename,$longname,
+	$drivername,$nickname,$modelname) =
+	    getppdheaderdata($dat, $dat->{'driver'}, $dat->{'recdriver'});
     if ($ieee1284) {
-	$ieee1284 =~ /(MDL|MODEL):([^:;]+);/;
-	$ieeemodel = $2;
-	$ieee1284 =~ /(MFG|MANUFACTURER):([^:;]+);/;
-	$ieeemake = $2;
+	#$ieee1284 =~ s/;(.)/;\n  $1/gs;
+	#$ieee1284 = "*1284DeviceID: \"\n  " . $ieee1284 . "\n\"\n*End";
+	#$ieee1284 =~ s/;(.)/;\n  $1/gs;
+	$ieee1284 = "*1284DeviceID: \"" . $ieee1284 . "\"";
     }
-    my $pnpmodel;
-    $pnpmodel = $dat->{'general_mdl'} or $dat->{'pnp_mdl'} or 
-	$pnpmodel = $dat->{'par_mdl'} or $pnpmodel = $dat->{'usb_mdl'} or
-	$pnpmodel = $ieeemodel or $pnpmodel = $model;
-    my $pnpmake;
-    $pnpmake = $dat->{'general_mfg'} or $dat->{'pnp_mfg'} or 
-	$pnpmake = $dat->{'par_mfg'} or $pnpmake = $dat->{'usb_mfg'} or
-	$pnpmake = $ieeemake or $pnpmake = $make;
-    if ($ieee1284) {
-	$ieee1284 =~ s/;(.)/;\n  $1/gs;
-	$ieee1284 = "*1284DeviceID: \"\n  " . $ieee1284 . "\n\"\n*End";
-    }
-    my $filename = join('-',($dat->{'make'},
-			     $dat->{'model'},
-			     $dat->{'driver'}));;
-    $filename =~ s![ /\(\)]!_!g;
-    $filename =~ s![\+]!plus!g;
-    $filename =~ s!__+!_!g;
-    $filename =~ s!_$!!;
-    $filename =~ s!_-!-!;
-    $filename =~ s!^_!!;
-    my $longname = "$filename.ppd";
-
-    my $drivername = $dat->{'driver'};
-
-    # Do we use the recommended driver?
-    my $driverrecommended = "";
-    if ($dat->{'driver'} eq $dat->{'recdriver'}) {
-	$driverrecommended = " (recommended)";
-    }
-    
-    # evil special case.
-    $drivername = "stp-4.0" if $drivername eq 'stp';
-
-    # Do not use "," or "+" in the *ShortNickName to make the Windows
-    # PostScript drivers happy
-    my $nickname =
-	"$make $model Foomatic/$drivername$driverrecommended";
-    my $modelname = "$make $model";
-    # Remove forbidden characters (Adobe PPD spec 4.3 section 5.3)
-    $modelname =~ s/[^A-Za-z0-9 \.\/\-\+]//gs;
     # Do not use "," or "+" in the *ShortNickName to make the Windows
     # PostScript drivers happy
     my $shortnickname = "$make $model $drivername";

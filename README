@@ -388,7 +388,14 @@ Implemented in 3.0.2:
    Foomatic database and not the one from the IEEE-1284 auto-detection
    ID string for the "*Manufacturer: ..." tag of the PPD files, as in
    the IDs the manufacturer names often do not comply with the Adobe
-   specs (as "Hewlett-Packard", "HP" has to be used.
+   specs (as "Hewlett-Packard", "HP" has to be used).
+
+Implemented after 3.0.2:
+
+ - Support for on-the-fly PPD generation by CUPS 1.2. Now all Foomatic PPDs
+   appear in the model lists of the CUPS web interface without needing to
+   pre-compile the PPDs. The PPDs get actually generated if one selects
+   them for the new print queue to be set up.
 
 Planned/Roadmap for future releases:
 
