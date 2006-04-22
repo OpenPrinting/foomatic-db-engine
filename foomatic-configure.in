@@ -30,12 +30,16 @@ use Data::Dumper;
 # parallel:/path/device           # Local parallel printer
 # serial:/path/device             # Local serial printer
 # file:/path/file                 # includes usb, lp, named pipes, other
-# ptal:/provider:bus:name         # HPOJ MLC protocol (hpoj.sourceforge.net)
+# hp:/bus/model?serial=xxx        # HPLIP print queue (hpinkjet.sf.net)
+# hpfax:/bus/model?serial=xxx     # HPLIP fax queue (hpinkjet.sf.net)
+# ptal:/provider:bus:name         # HPOJ MLC protocol (hpoj.sf.net,obsolete)
 # mtink:/path/device              # Epson inkjet through mtink daemon
 #                                 # (for ink level monitoring when printing,
 #                                 #  http://xwtools.automatix.de/)
 # lpd://host/queue                # LPD protocol
+# lpd://host                      # LPD protocol (default queue, CUPS only)
 # socket://host:port              # TCP aka appsocket
+# socket://host                   # TCP aka appsocket (port 9100)
 # ncp://user:pass@host/queue      # Netware (LPD, LPRng, direct)
 # smb://user:pass@wgrp/host/queue # Windows (CUPS, PPR, LPD, LPRng, direct)
 # stdout                          # Standard output (direct)
@@ -1278,7 +1282,7 @@ sub setup_cups {
 	# using the HPLIP ("hp") backend, as otherwise the "hp-toolbox"
 	# will not list the printer any more. HPLIP does infinite retries
 	# in 30-sec intervals anyway.
-	if (($cupsuri) && ($cupsuri !~ m!^hp:/!) &&
+	if (($cupsuri) && ($cupsuri !~ m!^hp(fax|):/!) &&
 	    (($config->{'dd'} != 0) || ($config->{'att'} != 1))) {
 	    $cupsuri = sprintf("beh:/%d/%d/%d/%s",
 			       $config->{'dd'}, $config->{'att'},

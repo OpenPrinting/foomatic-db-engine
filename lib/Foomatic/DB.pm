@@ -2037,9 +2037,10 @@ sub ppd1284DeviceID {
     my ($id) = @_;
     my $ppdid = "";
     
-    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND\s+SET)", "(DES|DESCRIPTION)", "SKU") {
-	$id =~ m/(\b$field:[^:;]+;)/is;
-	$ppdid .= $1;
+    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND SET)", "(DES|DESCRIPTION)", "SKU") {
+	if ($id =~ m/(\b$field:[^:;]+;)/is) {
+	    $ppdid .= $1;
+	}
     }
 
     return $ppdid;

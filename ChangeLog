@@ -1,3 +1,11 @@
+2006-04-21  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Eliminated some warnings
+
+	* foomatic-configure.in: Added new URIs to URI overview in
+	  header comments, let beh wrapper backend also not be
+	  applied to HPLIP fax queues (URI: "hpfax:/...").
+
 2006-04-19  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-ppdfile.in, lib/Foomatic/DB.pm, configure.ac,
