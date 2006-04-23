@@ -2751,8 +2751,21 @@ sub dump_config {
 	($c->{'spooler'} eq "cups" ?
 	 (_tag('dontdisable',$c->{'dd'}),
 	  _tag('attempts',$c->{'att'}),
-	  _tag('delay',$c->{'delay'})) : ()),
-
+	  _tag('delay',$c->{'delay'}),
+	  (defined($c->{'quotaperiod'}) ?
+	   _tag('quotaperiod',$c->{'quotaperiod'}) : ()),
+	  (defined($c->{'pagelimit'}) ?
+	   _tag('pagelimit',$c->{'pagelimit'}) : ()),
+	  (defined($c->{'klimit'}) ?
+	   _tag('klimit',$c->{'klimit'}) : ()),
+	  (defined($c->{'laststatechange'}) ?
+	   _tag('laststatechange',$c->{'laststatechange'}) : ()),
+	  (defined($c->{'shared'}) ?
+	   _tag('shared',$c->{'shared'}) : ()),
+	  (defined($c->{'operationpolicy'}) ?
+	   _tag('operationpolicy',$c->{'operationpolicy'}) : ()),
+	  (defined($c->{'errorpolicy'}) ?
+	   _tag('errorpolicy',$c->{'errorpolicy'}) : ())) : ()),
 	"</queue>\n";
     
     return;
@@ -3735,6 +3748,22 @@ sub load_cups_datablob {
 	    $uri = "mtink:/$1";
 	}
 	$c->{'connect'} = $uri;
+	# CUPS-specific extra info
+	$c->{'quotaperiod'} = $p->{'QuotaPeriod'}
+	    if defined($p->{'QuotaPeriod'});
+	$c->{'pagelimit'} = $p->{'PageLimit'}
+	    if defined($p->{'PageLimit'});
+	$c->{'klimit'} = $p->{'KLimit'}
+	    if defined($p->{'KLimit'});
+	# CUPS 1.2-specific settings
+	$c->{'laststatechange'} = $p->{'StateTime'}
+	    if defined($p->{'StateTime'});
+	$c->{'shared'} = $p->{'Shared'}
+	    if defined($p->{'Shared'});
+	$c->{'operationpolicy'} = $p->{'OpPolicy'}
+	    if defined($p->{'OpPolicy'});
+	$c->{'errorpolicy'} = $p->{'ErrorPolicy'}
+	    if defined($p->{'ErrorPolicy'});
 	$dat->{'queuedata'} = $c;
     }
     if (!defined($dat->{'queuedata'})) {$dat = undef};

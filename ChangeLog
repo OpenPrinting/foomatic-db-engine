@@ -1,3 +1,9 @@
+2006-04-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-configure.in: Added support for reading additional items
+	  from the /etc/cups/printers.conf file: Print quotas, individual,
+	  printer sharing, error and operation policies.
+
 2006-04-21  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Eliminated some warnings
