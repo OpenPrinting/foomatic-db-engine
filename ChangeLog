@@ -1,3 +1,10 @@
+2006-05-19  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-ppdfile.in: Let PPD file generation with cups-driverd
+	  also work if the driver name contains dashes (as in Gutenprint),
+	  added "use strict;", let debug output and error messages have
+	  prefixes to be correctly categorized in the CUPS error_log.
+
 2006-04-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-configure.in: Added support for reading additional items

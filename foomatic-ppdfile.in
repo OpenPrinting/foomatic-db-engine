@@ -10,6 +10,7 @@ use Foomatic::Defaults;
 use Foomatic::DB;
 use Getopt::Std;
 use Data::Dumper;
+use strict;
 
 my $debug = 0;
 
@@ -28,6 +29,7 @@ my $progname = ($1 || $0);
 my $onlyrecommended = 0;
 
 help() if !@ARGV;
+my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
 getopts("AP:d:p:hwt:");
 help() if $opt_h;
 my $drv = $opt_d;
@@ -80,7 +82,7 @@ sub cupslistppds {
 	close CONF;
     }
 
-    for $printer (@{$db->{'overview'}}) {
+    for my $printer (@{$db->{'overview'}}) {
 	my $poid = $printer->{'id'};
 	my $make = $printer->{'make'};
 	my $model = $printer->{'model'};
@@ -158,19 +160,32 @@ sub generateppd {
     my ($ppduri, $driver) = @_;
     my $poid;
 
-    if ($ppduri =~ /^$progname:([^-]+-.+)-([^-]+)\.ppd/) {
-	# cups-driverd operation
-	$poid   = $1;
-	$driver = $2;
-    } else {
-	# manual operation
-	$poid = $ppduri;
-    }
-
     my $db = Foomatic::DB->new();
     $db->get_overview();
     my $printer;
     my @drivers = $db->get_driverlist();
+
+    if ($ppduri =~ /^$progname:(.*)\.ppd$/) {
+	# cups-driverd operation
+	# We try to split between printer name and driver name at all
+	# dashes in the PPD file name, as some drivers (ex. Gutenprint)
+	# have dashes in their names.
+	my $ppdname = $1;
+	my @poidcomponents = split(/-/, $ppdname);
+	my @drivercomponents = ();
+	while ($#poidcomponents > 1) {
+	    unshift(@drivercomponents, pop(@poidcomponents));
+	    $driver = join('-', @drivercomponents);
+	    next if !Foomatic::DB::member($driver, @drivers);
+	    $poid = join('-', @poidcomponents);
+	    last;
+	}
+	die "ERROR: Could not determine driver name for $ppdname.ppd!\n"
+	    if( !$poid );
+    } else {
+	# manual operation
+	$poid = $ppduri;
+    }
 
     # If the user supplies an old numerical printer ID, translate it to
     # a new clear-text ID
@@ -180,20 +195,22 @@ sub generateppd {
     my $pentry;
     for $printer (@{$db->{'overview'}}) {
 	my $name = lc( $printer->{'id'} );
-	print STDERR "DEBUG: compare '$lcname' to '$name'\n" if $debug;
+	print STDERR "DEBUG2: $progname: compare '$lcname' to '$name'\n" if $debug;
 	if( $name eq $lcname ){
 	    $pentry = $printer;
 	    last;
 	}
     }
 
-    print STDERR "DEBUG: Found " . Dumper($pentry) if $debug;
     die "ERROR: Printer '$poid' not found!\n" if( not defined $pentry );
+    print STDERR "DEBUG: $progname: Found $pentry->{id}\nDEBUG2: $progname: " .
+	join ("\nDEBUG2: $progname: ", split(/\n/, Dumper($pentry))) .
+	"\n" if $debug;
     
     if (!$driver || ($driver =~ /(default|recommended)/i)) {
 	$driver = $pentry->{'driver'};
 	if( not defined( $driver ) ){
-	    die "ERROR: Printer '$poid' does not have default driver!\n";
+	    die "ERROR: $progname: Printer '$poid' does not have default driver!\n";
 	}
     }
     
@@ -202,30 +219,30 @@ sub generateppd {
 	last if ($found = ($driver eq $d));
     }
     if ( not $found ) {
-	warn "ERROR: Printer '$poid' and driver '$driver' are not compatible\n";
+	warn "ERROR: $progname: Printer '$poid' and driver '$driver' are not compatible\n";
     }
     $found = 0;
     for my $d (@drivers) {
 	last if ($found = ($driver eq $d));
     }
     if ( not $found ) {
-	die "ERROR: Driver '$driver' not in database!\n";
+	die "ERROR: $progname: Driver '$driver' not in database!\n";
     }
 
     # Get all the data about this driver/printer pair
     my $possible = $db->getdat($driver, $poid);
     # Stop if the printer is not supported by the given driver
-    die "ERROR: That printer and driver combination is not possible.\n"
+    die "ERROR: $progname: That printer and driver combination is not possible.\n"
 	if (!$possible);
     # Stop if the driver entry has an empty command line prototype or if there 
     # is no custom PPD file
-    die "ERROR: There is neither a custom PPD file nor the driver database entry contains sufficient data to build a PPD file.\n"
+    die "ERROR: $progname: There is neither a custom PPD file nor the driver database entry contains sufficient data to build a PPD file.\n"
 	if (!$db->{'dat'}{'cmd'}) && (!$db->{'dat'}{'ppdfile'});
     
     my @data;
 
     @data = $db->getppd($opt_w);
-    die "ERROR: No PPD file for printer '$poid' and driver '$driver'!\n"
+    die "ERROR: $progname: No PPD file for printer '$poid' and driver '$driver'!\n"
 	if not @data;
 
     print @data;
