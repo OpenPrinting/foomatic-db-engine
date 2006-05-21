@@ -760,10 +760,12 @@ sub ppdfromvartoperl ($) {
 		$dat->{'args_byname'}{'PageSize'}{'vals_byname'}{$setting}{'driverval'} = $code;
 		$dat->{'args_byname'}{'PageRegion'}{'vals_byname'}{$setting}{'driverval'} = $code;
 	    }
-	} elsif (m!^\*Open(Sub|)Group:\s*([^\s/]+)(/(.*)|)$!) {
+	} elsif (m!^\*Open(Sub|)Group:\s*([^/]+)(/(.*)|)$!) {
 	    # "*Open[Sub]Group: <group>[/<translation>]
 	    my $group = $2;
+	    chomp($group) if $group;
 	    my $grouptrans = $4;
+	    chomp($grouptrans) if $grouptrans;
 	    if (!$grouptrans) {
 		$grouptrans = longname($group);
 	    }
@@ -772,9 +774,10 @@ sub ppdfromvartoperl ($) {
 	    }
 	    $currentgroup .= $group;
 	    push(@currentgrouptrans, $grouptrans);
-	} elsif (m!^\*Close(Sub|)Group:\s*([^\s/]+)$!) {
+	} elsif (m!^\*Close(Sub|)Group:\s*([^/]+)$!) {
 	    # "*Close[Sub]Group: <group>"
 	    my $group = $2;
+	    chomp($group) if $group;
 	    $currentgroup =~ s!$group$!!;
 	    $currentgroup =~ s!/$!!;
 	    pop(@currentgrouptrans);
@@ -1188,7 +1191,7 @@ sub ppdfromvartoperl ($) {
     if (!$isfoomatic) {
 	$dat->{'make'} = undef;
 	$dat->{'model'} = undef;
-	sortoptions($dat, 1);
+	#sortoptions($dat, 1);
     }
 
     return $dat;

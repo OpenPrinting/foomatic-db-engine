@@ -1,3 +1,10 @@
+2006-05-20  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Improved group name parsing in the PPD
+	  files, no the group names of the Gutenprint CUPS raster
+	  PPDs are read out correctly. Do not sort the options any more
+	  when reading PPD files.
+
 2006-05-19  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-ppdfile.in: Let PPD file generation with cups-driverd
