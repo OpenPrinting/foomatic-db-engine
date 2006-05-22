@@ -1,5 +1,12 @@
 2006-05-22  Till Kamppeter <till.kamppeter@gmx.net>
 
+	* configure.ac: Do never use CUPS commands "enable-cups",
+	  "disable-cups", "accept-cups", "reject-cups", even if
+	  executable files with these names are available. CUPS has only
+	  one executable for these tasks and recognizes by the
+	  executable/link name what to do. So it only accepts execution
+	  with one of the names "enable", "disable", "accept", "reject".
+
 	* lib/Foomatic/DB.pm: When generating PPD files from Foomatic
 	  XML data and the option XML files contain "<arg_order>" tags
 	  with different values, the options get ordered by the 
