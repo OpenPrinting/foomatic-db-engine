@@ -404,7 +404,13 @@ sub sortargs {
     if ($firstgroup[$i]) {return 1};
     if ($secondgroup[$i]) {return -1};
 
-    # Check whether they argument names are in the @standardopts list
+    # Sort by order parameter if the order parameters are different
+    if (defined($firstarg->{'order'}) && defined($secondarg->{'order'}) &&
+	$firstarg->{'order'} != $secondarg->{'order'}) {
+	return $firstarg->{'order'} cmp $secondarg->{'order'};
+    }
+
+    # Check whether the argument names are in the @standardopts list
     for ($i = 0; $i <= $#standardopts; $i++) {
 	my $firstinlist = ($first =~ /^$standardopts[$i]/);
 	my $secondinlist = ($second =~ /^$standardopts[$i]/);
@@ -1961,7 +1967,7 @@ sub setnumericaldefaults {
 		if ($arg->{'default'} < $arg->{'min'}) {
 		    $arg->{'default'} = $arg->{'min'};
 		    $arg->{'cdefault'} = $arg->{'default'};
-		} elsif ($arg->{'cdefault'} > $arg->{'max'}) {
+		} elsif ($arg->{'default'} > $arg->{'max'}) {
 		    $arg->{'default'} = $arg->{'max'};
 		    $arg->{'cdefault'} = $arg->{'default'};
 		} elsif (defined($arg->{'vals_byname'}{$arg->{'default'}})) {

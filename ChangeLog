@@ -1,7 +1,20 @@
+2006-05-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: When generating PPD files from Foomatic
+	  XML data and the option XML files contain "<arg_order>" tags
+	  with different values, the options get ordered by the 
+	  "<arg_order>" values (within their group). This way manually
+	  defining the presentation order of the options gets possible.
+	  Fixed also a buglet in the setting of the default of numerical
+	  options.
+
+	* foomatic-ppdfile.in: Removed "use strict;" due to an
+	  incompatibility with the "getopts()" Perl function.
+
 2006-05-20  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Improved group name parsing in the PPD
-	  files, no the group names of the Gutenprint CUPS raster
+	  files, now the group names of the Gutenprint CUPS raster
 	  PPDs are read out correctly. Do not sort the options any more
 	  when reading PPD files.
 

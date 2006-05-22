@@ -10,7 +10,7 @@ use Foomatic::Defaults;
 use Foomatic::DB;
 use Getopt::Std;
 use Data::Dumper;
-use strict;
+#use strict;
 
 my $debug = 0;
 
@@ -29,7 +29,7 @@ my $progname = ($1 || $0);
 my $onlyrecommended = 0;
 
 help() if !@ARGV;
-my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
+#my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
 getopts("AP:d:p:hwt:");
 help() if $opt_h;
 my $drv = $opt_d;
