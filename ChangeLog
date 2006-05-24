@@ -1,3 +1,7 @@
+2006-05-23  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Eliminated a warning.
+
 2006-05-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* configure.ac: Do never use CUPS commands "enable-cups",
