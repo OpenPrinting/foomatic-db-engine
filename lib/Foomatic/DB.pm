@@ -4724,25 +4724,49 @@ sub get_printer_from_make_model {
 
 sub get_javascript2 {
 
-    my ($this) = @_;
+    my ($this, $models) = @_;
 
     my @swit;
     my $mak;
     my $else = "";
-    for $mak ($this->get_makes()) {
+    my @makes;
+    my %modelhash;
+    if ($models) {
+	%modelhash = %{$models};
+	@makes = keys %modelhash;
+    } else {
+	@makes = ($this->get_makes());
+    }
+    for $mak (@makes) {
 	push (@swit,
 	      " $else if (make == \"$mak\") {\n");
 
 	my $ct = 0;
+
+	my @makemodels;
+	if ($models) {
+	    @makemodels = @{$modelhash{$mak}};
+	} else {
+	    @makemodels = ($this->get_models_by_make($mak));
+	}
 	my $mod;
 	for $mod (sort {normalizename($a) cmp normalizename($b) } 
-		  $this->get_models_by_make($mak)) {
+		  @makemodels) {
 	    
 	    my $p;
 	    $p = $this->get_printer_from_make_model($mak, $mod);
 	    if (defined($p)) {
 		push (@swit,
 		      "      o[i++]=new Option(\"$mod\", \"$p\");\n");
+		$ct++;
+	    } else {
+		my $oid = "$mak-$mod";
+		$oid =~ s/ /_/g;
+		$oid =~ s/\+/plus/g;
+		$oid =~ s/__+/_/g;
+		$oid =~ s/_$//;
+		push (@swit,
+		      "      o[i++]=new Option(\"$mod\", \"$oid\");\n");
 		$ct++;
 	    }
 	}

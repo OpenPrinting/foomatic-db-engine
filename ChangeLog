@@ -1,3 +1,11 @@
+2006-06-27  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: get_javascript2() can now also build the
+	  script based on pre-read printer data. This avoids duplicate
+	  reading of the Foomatic database and allows adding of extra
+	  printers which are not in the Foomatic XML database (for example
+	  new user-supplied entries).
+
 2006-05-23  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Eliminated a warning.
