@@ -1,6 +1,7 @@
 
 package Foomatic::DB;
 use Exporter;
+use Encode;
 @ISA = qw(Exporter);
 
 @EXPORT_OK = qw(normalizename comment_filter
@@ -637,6 +638,8 @@ sub ppdfromvartoperl ($) {
     # the main PPD structure
     my @datablob;
     
+    $dat->{"encoding"} = "ascii";
+
     # Parse the PPD file
     for (my $i = 0; $i < @{$ppd}; $i ++) {
 	$_ = $ppd->[$i];
@@ -675,6 +678,17 @@ sub ppdfromvartoperl ($) {
 		$dat->{'model'} = $2;
 		$dat->{'model'} =~ s/\s+Foomatic.*$//i;
 	    }
+	} elsif (m!^\*LanguageEncoding:\s*(\S+)\s*$!) {
+	    # "*LanguageEncoding: <encoding>"	    
+	    $dat->{'encoding'} = $1;
+	    if ($dat->{'encoding'} eq 'MacStandard') {
+		$dat->{'encoding'} = 'MacRoman'; 
+	    } elsif ($dat->{'encoding'} eq 'JIS83-RKSJ') {
+		$dat->{'encoding'} = 'shiftjis';
+	    }
+	} elsif (m!^\*LanguageVersion:\s*(\S+)\s*$!) {
+	    # "*LanguageVersion: <language>"
+	    $dat->{'language'} = $1;
 	} elsif (m!^\*FoomaticIDs:\s*(\S+)\s+(\S+)\s*$!) {
 	    # "*FoomaticIDs: <printer ID> <driver ID>"
 	    my $id = $1;
@@ -779,7 +793,8 @@ sub ppdfromvartoperl ($) {
 		$currentgroup .= "/";
 	    }
 	    $currentgroup .= $group;
-	    push(@currentgrouptrans, $grouptrans);
+	    push(@currentgrouptrans, 
+		 unhexify($grouptrans, $dat->{"encoding"}));
 	} elsif (m!^\*Close(Sub|)Group:\s*([^/]+)$!) {
 	    # "*Close[Sub]Group: <group>"
 	    my $group = $2;
@@ -811,7 +826,8 @@ sub ppdfromvartoperl ($) {
 	    # a hidden option
 	    undef $dat->{'args_byname'}{$argname}{'hidden'};
 	    # Store the values
-	    $dat->{'args_byname'}{$argname}{'comment'} = $translation;
+	    $dat->{'args_byname'}{$argname}{'comment'} = 
+		unhexify($translation, $dat->{"encoding"});
 	    $dat->{'args_byname'}{$argname}{'group'} = $currentgroup;
 	    @{$dat->{'args_byname'}{$argname}{'grouptrans'}} =
 		@currentgrouptrans;
@@ -1014,6 +1030,7 @@ sub ppdfromvartoperl ($) {
 	    } else {
 		$setting = $settingtrans;
 	    }
+	    $translation = unhexify($translation, $dat->{"encoding"});
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, $currentargument);
 	    # This option has a non-Foomatic keyword, so this is not
@@ -1148,12 +1165,13 @@ sub ppdfromvartoperl ($) {
 	    }
 	    $line =~ m!^([^\"]*)\"!;
 	    $code .= $1;
+	    $code = unhexify($code, $dat->{"encoding"});
 	    if ($item eq 'Begin') {
-		$dat->{'jclbegin'} = unhexify($code);
+		$dat->{'jclbegin'} = $code;
 	    } elsif ($item eq 'ToPSInterpreter') {
-		$dat->{'jcltointerpreter'} = unhexify($code);
+		$dat->{'jcltointerpreter'} = $code;
 	    } elsif ($item eq 'End') {
-		$dat->{'jclend'} = unhexify($code);
+		$dat->{'jclend'} = $code;
 	    }
 	} elsif (m!^\*\% COMDATA \#(.*)$!) {
 	    # If we have an old Foomatic 2.0.x PPD file, collect its Perl 
@@ -1554,29 +1572,29 @@ sub unhtmlify {
 sub unhexify {
     # Replace hex notation for unprintable characters in PPD files
     # by the actual characters ex: "<0A>" --> chr(hex("0A"))
-    my ($input) = @_;
+    my ($input, $encoding) = @_;
     my $output = "";
     my $hexmode = 0;
-    my $firstdigit = "";
+    my $hexstring = "";
     for (my $i = 0; $i < length($input); $i ++) {
 	my $c = substr($input, $i, 1);
 	if ($hexmode) {
 	    if ($c eq ">") {
 		# End of hex string
+		for (my $i=0; $i < length($hexstring); $i+=2) {
+		    $output .= decode($encoding,
+				      chr(hex(substr($hexstring, $i, 2))));
+		}
 		$hexmode = 0;
 	    } elsif ($c =~ /^[0-9a-fA-F]$/) {
 		# Hexadecimal digit, two of them give a character
-		if ($firstdigit ne "") {
-		    $output .= chr(hex("$firstdigit$c"));
-		    $firstdigit = "";
-		} else {
-		    $firstdigit = $c;
-		}
+		$hexstring .= $c; 
 	    }
 	} else {
 	    if ($c eq "<") {
 		# Beginning of hex string
 		$hexmode = 1;
+		$hexstring = "";
 	    } else {
 		# Normal character
 		$output .= $c;

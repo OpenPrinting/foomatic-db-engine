@@ -1,3 +1,15 @@
+2006-07-10  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-extract-text.in: Generate .po files from the UI strings
+	  in the currently installed Foomatic database (Thanks to Florian
+	  Festi from Red Hat for this script).
+
+	* lib/Foomatic/DB.pm: When reading PPD files extract the UI strings
+	  always in UTF-8, taking into account the encoding of the PPD file
+	  (Thanks to Florian Festi from Red Hat for this patch).
+
+	* *: Way to many files were marked executable. Fixed.
+
 2006-06-27  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: get_javascript2() can now also build the

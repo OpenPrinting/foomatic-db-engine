@@ -298,6 +298,7 @@ foomatic-getpjloptions foomatic-addpjloptions
 foomatic-compiledb foomatic-fix-xml
 foomatic-nonumericalids foomatic-replaceoldprinterids
 foomatic-ppd-options foomatic-printermap-to-gimp-print-xml
+foomatic-extract-text
 )
 
 dnl Finished
