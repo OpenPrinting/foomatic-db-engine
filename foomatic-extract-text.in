@@ -1,0 +1,189 @@
+#!@PERL@ -w   # -*- perl -*-
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+use strict;
+
+sub write_po{
+    my ($out, $messages) = @_;
+    foreach (sort(keys %$messages)) {
+	if ($_ eq '') {
+	    next;
+	}
+	my $translation = $messages->{$_};
+	print $out "msgid \"$_\"\nmsgstr \"$translation\"\n\n";
+    }
+}
+
+sub write_message_files {
+    my ($messages) = @_;
+
+    foreach (keys %$messages) {
+	print "LANGUAGE: $_\n";
+	open my $out, ">:encoding(utf-8)", "$_.po" or die;
+	write_po($out, $messages->{$_});
+    }
+}
+
+sub extract_ppd_old{
+    my $file = $_[0];
+    my %messages;
+
+
+    if ($file =~ /ppd\.gz$/) {
+	open(FILE, "zcat $file |") or die "Can't open file: $file";
+    } else {
+	open(FILE, $file);
+    } 
+
+    while (<FILE>){
+	if ( /\*(\w+) (\w+)\/([^:]+): \"([^\"]*)\"/ ) {
+	    print $_, "'$1' '$2' '$3' '$4'\n\n"
+	}
+	#print
+    }
+    close FILE;
+}
+
+
+sub extract_from_db{
+    my $messages = $_[0];
+
+    my $db = Foomatic::DB->new();
+
+    my @files = $db->_get_xml_filelist("source/opt");
+    foreach my $file (@files){
+	if ( $file =~ /[Mm]odel|^18$|^57$/ ) { 
+	    next; 
+	}
+	my $xml = $db->_get_object_xml("source/opt/$file");
+	while ($xml =~ /\<[^\<\/]*longname\>.*?\<en\>(.*?)\<\/en\>/sg) {
+	    my $message = Foomatic::DB::unhtmlify($1); # xml unquoting
+	    $messages->{$message} = '';
+	}
+    }
+}
+
+sub extract_ppd{
+    my ($db, $messages) = @_;
+    my $args = $db->{"dat"}{"args_byname"};
+
+    for my $option (keys %$args){
+	$messages->{$args->{$option}{"comment"}} = "";
+	#foreach (keys %{$args->{$option}}) {
+	#    print $_, "\n";
+	#}
+	if ($args->{$option}{"type"} eq "bool"){
+	    $messages->{$args->{$option}{"comment_true"}} = '';
+	    $messages->{$args->{$option}{"comment_false"}} = '';
+	} elsif ($args->{$option}{"type"} eq "enum") {
+	    for my $val (@{$args->{$option}{"vals"}}){
+		$messages->{$val->{"comment"}} = '';
+	    }
+	}
+    }
+    return;
+    # old code:
+    $a = $db->{"dat"}{"args_byname"}{"MediaType"}{"vals"}[0];
+    print "$a\n\n";
+    if (0){
+    	foreach my $val (@$a){
+    	    print "$val\n";
+    	}
+    	return;
+    }
+    foreach my $name (keys %$a) {
+	print "$name:\n";
+	print $a->{$name}, "\n\n";
+	if ($name != "compiled-at"){
+	    foreach (keys %{$db->{"dat"}{$name}}) {
+		print $_, "\n";
+	    }
+	    print "\n";
+	}
+    }
+}
+
+sub get_translated_messages{
+    my ($ppd_en, $ppd_lang, $translation) = @_;
+
+    my $args_en = $ppd_en->{"dat"}{"args_byname"};
+    my $args_lang = $ppd_lang->{"dat"}{"args_byname"};
+
+    for my $option (keys %$args_en){
+	$translation->{$args_en->{$option}{"comment"}} = 
+	    $args_lang->{$option}{"comment"};
+
+	if ($args_en->{$option}{"type"} eq "bool"){
+	    $translation->{$args_en->{$option}{"comment_true"}} = 
+		$args_lang->{$option}{"comment_true"}; 
+	    $translation->{$args_en->{$option}{"comment_false"}} =  
+		$args_lang->{$option}{"comment_false"};
+	} elsif ($args_en->{$option}{"type"} eq "enum") {
+	    for my $val (@{$args_en->{$option}{"vals"}}){
+		my $value = $val->{"value"};
+		for my $val_lang (@{$args_lang->{$option}{"vals"}}){
+		    if ($val_lang->{"value"} eq $value) {
+			$translation->{$val->{"comment"}} = 
+			    $val_lang->{"comment"};
+		    };
+		}
+	    }
+	}
+    }
+}
+
+sub extract_ppds{
+    my ($path, $messages) = @_;
+    my $ppds = { };
+    my %language_names = ('English' => 'en',
+			  'French' => 'fr',
+			  'German' => 'de',
+			  'Italian' => 'it',
+			  'Japanese' => 'jp',
+			  'Portugse' => 'pt',
+			  'Portuguese' => 'pt',
+			  'Spanish' => 'es');
+
+    # read ppds
+    open(PPDS, "find $path -name \*.ppd\*|");
+    while (<PPDS>){
+	print substr($_, 0, -1), "\n";
+	my $db = Foomatic::DB->new();
+	$db->getdatfromppd(substr($_, 0, -1));
+	my $makemodel = $db->{'dat'}{'makemodel'};
+	$ppds->{$makemodel} = [] unless exists $ppds->{$makemodel};
+	push @{$ppds->{$makemodel}}, $db;
+    }
+    foreach my $makemodel (keys %$ppds) {
+	my $en_ppd;
+	foreach my $ppd (@{$ppds->{$makemodel}}) {
+	    if ($ppd->{'dat'}{'language'} eq 'English') {
+		$en_ppd = $ppd;
+		last;
+	    }
+	}
+	foreach my $ppd (@{$ppds->{$makemodel}}) {
+	    my $lang = $ppd->{'dat'}{'language'};
+	    if (exists $language_names{$lang}) {
+		$lang = $language_names{$lang};
+	    }
+	    $messages->{$lang} = {} unless exists $messages->{$lang};
+	    if ($lang ne 'en') {
+		get_translated_messages($en_ppd, $ppd, $messages->{$lang});
+	    } else {
+		extract_ppd($ppd, $messages->{$lang});
+	    }
+	}
+    }
+}
+
+sub main{
+    my $messages = { };
+    $messages->{'en'} = { }; 
+    extract_from_db($messages->{'en'});
+    extract_ppds("$libdir/db/source/PPD/", $messages);
+    write_message_files($messages);
+}
+
+main();
