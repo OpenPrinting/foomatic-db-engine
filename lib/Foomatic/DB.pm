@@ -640,6 +640,26 @@ sub ppdfromvartoperl ($) {
     
     $dat->{"encoding"} = "ascii";
 
+    # search for LanguageEncoding
+    for (my $i = 0; $i < @{$ppd}; $i ++) {
+	$_ = $ppd->[$i];
+	if (m!^\*LanguageEncoding:\s*(\S+)\s*$!) {
+	    # "*LanguageEncoding: <encoding>"	    
+	    $dat->{'encoding'} = $1;
+	    if ($dat->{'encoding'} eq 'MacStandard') {
+		$dat->{'encoding'} = 'MacCentralEurRoman'; 
+	    } elsif ($dat->{'encoding'} eq 'JIS83-RKSJ') {
+		$dat->{'encoding'} = 'shiftjis';
+	    }
+	    last;
+	}
+    }
+    # decode PPD
+    my $encoding = $dat->{"encoding"};
+    for (my $i = 0; $i < @{$ppd}; $i ++) {
+	$ppd->[$i] = decode($encoding, $ppd->[$i]);
+    }
+
     # Parse the PPD file
     for (my $i = 0; $i < @{$ppd}; $i ++) {
 	$_ = $ppd->[$i];
@@ -677,14 +697,6 @@ sub ppdfromvartoperl ($) {
 		$dat->{'make'} = $1;
 		$dat->{'model'} = $2;
 		$dat->{'model'} =~ s/\s+Foomatic.*$//i;
-	    }
-	} elsif (m!^\*LanguageEncoding:\s*(\S+)\s*$!) {
-	    # "*LanguageEncoding: <encoding>"	    
-	    $dat->{'encoding'} = $1;
-	    if ($dat->{'encoding'} eq 'MacStandard') {
-		$dat->{'encoding'} = 'MacRoman'; 
-	    } elsif ($dat->{'encoding'} eq 'JIS83-RKSJ') {
-		$dat->{'encoding'} = 'shiftjis';
 	    }
 	} elsif (m!^\*LanguageVersion:\s*(\S+)\s*$!) {
 	    # "*LanguageVersion: <language>"
@@ -1576,15 +1588,17 @@ sub unhexify {
     my $output = "";
     my $hexmode = 0;
     my $hexstring = "";
+    my $encoded = "";
     for (my $i = 0; $i < length($input); $i ++) {
 	my $c = substr($input, $i, 1);
 	if ($hexmode) {
 	    if ($c eq ">") {
 		# End of hex string
+		$encoded = '';
 		for (my $i=0; $i < length($hexstring); $i+=2) {
-		    $output .= decode($encoding,
-				      chr(hex(substr($hexstring, $i, 2))));
+		    $encoded .= chr(hex(substr($hexstring, $i, 2)));
 		}
+		$output .= decode($encoding, $encoded);
 		$hexmode = 0;
 	    } elsif ($c =~ /^[0-9a-fA-F]$/) {
 		# Hexadecimal digit, two of them give a character
