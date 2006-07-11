@@ -1,3 +1,9 @@
+2006-07-11  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: Fixed bug in the decoding of UI strings in
+	  the PPDs, only hex-encoded characters were decoded correctly
+	  (Thanks to Florian Festi from Red Hat for this patch).
+	
 2006-07-10  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-extract-text.in: Generate .po files from the UI strings
