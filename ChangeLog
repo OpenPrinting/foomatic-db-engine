@@ -1,3 +1,8 @@
+2006-07-16  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* Makefile.in: Fixed missing dependency at "man:" target in
+	  the Makefile (Gentoo bug #138635)
+
 2006-07-11  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: Fixed bug in the decoding of UI strings in
