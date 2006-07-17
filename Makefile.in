@@ -235,7 +235,7 @@ foomatic-combo-xml: foomatic-combo-xml.c
 foomatic-perl-data: foomatic-perl-data.c
 	$(CC) $(CFLAGS) $(XML_CFLAGS) $(XML_LIBS) -o foomatic-perl-data foomatic-perl-data.c
 
-man:
+man: lib/Foomatic/Defaults.pm
 	chmod a+rx ./makeMan
 	./makeMan
 
