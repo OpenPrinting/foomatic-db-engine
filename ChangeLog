@@ -1,3 +1,9 @@
+2006-07-20  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* lib/Foomatic/DB.pm: For get_javascript2() building the printer
+	  menu based on pre-read data now also printer IDs can be supplied
+	  instead of deriving the IDs from the model names.
+
 2006-07-16  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* Makefile.in: Fixed missing dependency at "man:" target in
