@@ -4756,18 +4756,22 @@ sub get_printer_from_make_model {
 
 sub get_javascript2 {
 
-    my ($this, $models) = @_;
+    my ($this, $models, $oids) = @_;
 
     my @swit;
     my $mak;
     my $else = "";
     my @makes;
     my %modelhash;
+    my %oidhash;
     if ($models) {
 	%modelhash = %{$models};
-	@makes = keys %modelhash;
+	@makes = sort(keys %modelhash);
     } else {
 	@makes = ($this->get_makes());
+    }
+    if ($oids) {
+	%oidhash = %{$oids};
     }
     for $mak (@makes) {
 	push (@swit,
@@ -4792,11 +4796,17 @@ sub get_javascript2 {
 		      "      o[i++]=new Option(\"$mod\", \"$p\");\n");
 		$ct++;
 	    } else {
-		my $oid = "$mak-$mod";
-		$oid =~ s/ /_/g;
-		$oid =~ s/\+/plus/g;
-		$oid =~ s/__+/_/g;
-		$oid =~ s/_$//;
+		my $oid;
+		if ($oids) {
+		    $oid = $oidhash{$mak}{$mod};
+		} else {
+		    $oid = "$mak-$mod";
+		    $oid =~ s/ /_/g;
+		    $oid =~ s/\+/plus/g;
+		    $oid =~ s/[^A-Za-z0-9_\-]//g;
+		    $oid =~ s/__+/_/g;
+		    $oid =~ s/_$//;
+		}
 		push (@swit,
 		      "      o[i++]=new Option(\"$mod\", \"$oid\");\n");
 		$ct++;
