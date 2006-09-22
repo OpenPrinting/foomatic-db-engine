@@ -58,7 +58,7 @@ exit(0);
 
 sub cupslistppds {
     my $db = Foomatic::DB->new();
-    $db->get_overview();
+    $db->get_overview(1, 1);
 
     # Read configuration in /etc/cups/foomatic.conf
     my $conffilename;

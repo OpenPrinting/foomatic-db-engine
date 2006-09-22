@@ -1,3 +1,17 @@
+2006-09-22  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-combo-xml.c, foomatic-ppdfile.in, lib/Foomatic/DB.pm:
+	  Let the listing of auto-generatable PPD files for CUPS 1.2
+	  ("foomatic-ppdfile list") not contain entries for combos of
+	  printers with driver entries which do not have a command line
+	  prototype (these indicate only that the printer/driver combo
+	  works, but do not produce PPD files). Allow defining valid
+	  printer/driver combos also by only defining the driver in the
+	  "<drivers>" section of the printer entry. So for a printer with
+	  ready-made PPD it is enough to add a driver entry with link to
+	  the PPD in its "<drivers>" section so that "foomatic-ppdfile"
+	  lists and returns the PPD.
+
 2006-07-20  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* lib/Foomatic/DB.pm: For get_javascript2() building the printer

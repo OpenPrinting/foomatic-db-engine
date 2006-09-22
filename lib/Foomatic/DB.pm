@@ -65,14 +65,15 @@ sub get_printerlist {
 }
 
 sub get_overview {
-    my ($this, $rebuild) = @_;
+    my ($this, $rebuild, $cupsppds) = @_;
 
     # "$this->{'overview'}" is a memory cache only for the current process
     if ((!defined($this->{'overview'}))
 	or (defined($rebuild) and $rebuild)) {
+	my $otype = ($cupsppds ? '-C' : '-O');
 	# Generate overview Perl data structure from database
 	my $VAR1;
-	eval (`$bindir/foomatic-combo-xml -O -l '$libdir' | $bindir/foomatic-perl-data -O`) ||
+	eval (`$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O`) ||
 	    die ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!");
 	$this->{'overview'} = $VAR1;
     }
