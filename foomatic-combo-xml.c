@@ -207,7 +207,8 @@ char  /* O - new ID */
  * function to parse an XML file and do a task on it
  */
 
-void /* No return value */
+int /* O - Is the requested printer driver combo already confirmed by the
+           <drivers> section in the printer XML file (operation = 0 only) */
 parse(const char **data, /* I/O - Data to process */
       const char *pid,   /* I - Foomatic printer ID */
       const char *driver,/* I - driver name */
@@ -247,6 +248,7 @@ parse(const char **data, /* I/O - Data to process */
   int           indriver = 0;
   int           indrivers = 0;
   int           inexecution = 0;
+  int           inprototype = 0;
   int           innopjl = 0;
   int           inprinters = 0;
   int           inid = 0;
@@ -323,6 +325,8 @@ parse(const char **data, /* I/O - Data to process */
   static char   make[256];           /* Printer make/model read from printer */
   static char   model[256];          /* XML file needed by constraints in */
                                      /* option XML files */
+  int           comboconfirmed = 0;
+
   char          *s;
   int           l;
   int           j;
@@ -336,7 +340,7 @@ parse(const char **data, /* I/O - Data to process */
   ppdlist_t     *ppdlist = NULL;
 
   /* Translate printer ID */
-  if (pid) trpid = translateid(pid, idlist);
+  if ((pid) && (operation < 3)) trpid = translateid(pid, idlist);
 
   j = 0;
   datalength = strlen(*data); /* Compute the length of the file once,
@@ -404,6 +408,20 @@ parse(const char **data, /* I/O - Data to process */
 		    inmodel = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "autodetect") == 0) {
 		    inautodetect = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "driver") == 0) {
+		    indriver = nestinglevel + 1;
+		    if (indrivers) {
+		      if (tagtype == 1) {
+			if (debug)
+			  fprintf(stderr, 
+				  "    Resetting Driver.\n");
+			cid[0] = '\0';
+		      }
+		    }
+		  } else if (strcmp(currtagname, "drivers") == 0) {
+		    indrivers = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "id") == 0) {
+		    inid = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
 		  }
@@ -522,6 +540,10 @@ parse(const char **data, /* I/O - Data to process */
 		    cprinter[0] = '\0';
 		  } else if (strcmp(currtagname, "id") == 0) {
 		    inid = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "execution") == 0) {
+		    inexecution = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "prototype") == 0) {
+		    inprototype = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "printers") == 0) {
 		    inprinters = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "driver") == 0) {
@@ -716,6 +738,35 @@ parse(const char **data, /* I/O - Data to process */
 		  if (!inautodetect) strcat(model, currtagbody);
 		}
 		if (nestinglevel < inautodetect) inautodetect = 0;
+		if (nestinglevel < indrivers) indrivers = 0;
+		if (nestinglevel < indriver) {
+		  indriver = 0;
+		  if (indrivers) {
+		    if (debug) fprintf(stderr, 
+				       "    Printer/Driver: %s %s\n",
+				       pid, cid);
+		    if (cid[0] != '\0') {
+		      if (debug)
+			fprintf(stderr,
+				"      Printer XML: Printer: %s Driver: %s\n",
+				pid, cid);
+		      if (!strcmp(cid, driver)) {
+			/* Printer/driver combo already confirmed by
+			   <drivers> section of printer XML file */
+			if (debug)
+			  fprintf(stderr,
+				  "      Printer XML: Printer/Driver combo confirmed!\n");
+			comboconfirmed = 1;
+		      }
+		    }
+		  }
+		}
+		if (nestinglevel < inid) {
+		  inid = 0;
+		  strcpy(cid, currtagbody);
+		  if (debug) fprintf(stderr, 
+				     "    Printer XML: Driver ID: %s\n", cid);
+		}
 	      } else if (operation == 1) { /* Driver XML file */
 		if (nestinglevel < inexecution) inexecution = 0;
 		if (nestinglevel < innopjl) innopjl = 0;
@@ -1194,6 +1245,7 @@ parse(const char **data, /* I/O - Data to process */
 		if (nestinglevel < indriver) indriver = 0;
 		if (nestinglevel < inprinters) inprinters = 0;
 		if (nestinglevel < inprinter) inprinter = 0;
+		if (nestinglevel < inexecution) inexecution = 0;
 		if (nestinglevel < inid) {
 		  inid = 0;
 		  /* Get the short printer ID (w/o "printer/") */
@@ -1243,6 +1295,34 @@ parse(const char **data, /* I/O - Data to process */
 		  else 
 		    plistpointer->drivers = dlistpointer;
 		}
+		if (nestinglevel < inprototype) {
+		  inprototype = 0;
+		  if (pid) { /* We abuse pid here to tell that we want
+				to have an overview of available PPDs and
+				not of all possible printer/driver combos.
+			        pid is never used for a printer ID when 
+			        building the overview XML file. */
+		    /* Get the command line prototype without leading 
+                       white space, is empty on empty command line*/
+		    for (s = currtagbody;
+			 (*s != '\0') && (strchr(" \n\r\t", *s) != NULL);
+			 s ++);
+		    if (debug)
+		      fprintf(stderr,
+			      "    Overview: Driver: %s Command line: |%s|\n",
+			      cdriver, s);
+		    if (*s == '\0') {
+		      /* We have found an empty command line prototype, so]
+			 this driver does not produce any PPD file, so
+			 remove this file from memory and return. */
+		      free((void *)(*data));
+		      *data = NULL;
+		      if (debug)
+			fprintf(stderr, "    Driver entry does not produce PPDs!\n");
+		      return;
+		    }
+		  }
+		}
 	      } else if (operation == 4) { /* Printer XML file (Overview) */
 		if (debug)
 		  fprintf(stderr,
@@ -1272,8 +1352,57 @@ parse(const char **data, /* I/O - Data to process */
 		  if (nestinglevel < inpostscript) inpostscript = 0;
 		  if (indrivers || inlang) {
 		    if (debug) fprintf(stderr, 
-				       "    Driver/PPD: %s %s\n",
-				       cid, cppd);
+				       "    Printer/Driver/PPD: %s %s %s\n",
+				       cprinter, cid, cppd);
+		    if (cid[0] != '\0') {
+		      if (debug)
+			fprintf(stderr,
+				"    Overview: Printer: %s Driver: %s\n",
+				cprinter, cid);
+		      /* Add this driver to the current printer's entry in 
+			 the printer list, create the printer entry if
+			 necessary */
+		      plistpointer = *printerlist;
+		      plistpreventry = NULL;
+		      /* Search printer in list */
+		      while ((plistpointer != NULL) &&
+			     (strcmp(plistpointer->id, cprinter) != 0)) {
+			plistpreventry = plistpointer;
+			plistpointer = (printerlist_t *)(plistpointer->next);
+		      }
+		      if (plistpointer == NULL) {
+			/* printer not found, create new entry */
+			plistpointer = 
+			  (printerlist_t *)malloc(sizeof(printerlist_t));
+			strcpy(plistpointer->id, cprinter);
+			plistpointer->drivers = NULL;
+			plistpointer->next = NULL;
+			if (plistpreventry != NULL)
+			  plistpreventry->next = 
+			    (struct printerlist_t *)plistpointer;
+			else 
+			  *printerlist = plistpointer;
+		      }
+		      /* Add driver entry */
+		      dlistpointer = plistpointer->drivers;
+		      dlistpreventry = NULL;
+		      while ((dlistpointer != 0) &&
+			     (strcasecmp(dlistpointer->name, cid))) {
+			dlistpreventry = dlistpointer;
+			dlistpointer = (driverlist_t *)(dlistpointer->next);
+		      }
+		      if (dlistpointer == 0) {
+			dlistpointer = 
+			  (driverlist_t *)malloc(sizeof(driverlist_t));
+			strcpy(dlistpointer->name, cid);
+			dlistpointer->next = NULL;
+			if (dlistpreventry != NULL)
+			  dlistpreventry->next =
+			    (struct driverlist_t *)dlistpointer;
+			else 
+			  plistpointer->drivers = dlistpointer;
+		      }
+		    }
 		    if ((cid[0] != '\0') && (cppd[0] != '\0')) {
 		      if (debug)
 			fprintf(stderr, 
@@ -1382,11 +1511,9 @@ parse(const char **data, /* I/O - Data to process */
       fprintf(stderr,
 	      "    nopjl: %d (1: driver does not allow PJL options)\n",
 	      *nopjl);
-    if (printerentryfound == 0) { /* the printer is not in the listing of the 
+    if (printerentryfound != 0) { /* the printer is in the listing of the 
 				     driver */
-      fprintf(stderr, "The printer %s %s (ID: %s) is not supported by the driver %s!\n",
-	      make, model, pid, driver);
-      exit(1);
+      comboconfirmed = 1;
     }
   } else if (operation == 4) { /* Printer XML file (Overview) */
     /* Remove the printer input data */
@@ -1462,6 +1589,7 @@ parse(const char **data, /* I/O - Data to process */
   } else if (operation == 2) { /* Option XML file */
     if (debug) fprintf(stderr, "    Resulting option XML:\n%s\n", *data); 
   }
+  return(comboconfirmed);
 }
 
 /*
@@ -1502,6 +1630,8 @@ main(int  argc,     /* I - Number of command-line arguments */
   int           nopjl = 0;
   int           debug = 0;
   int           debug2 = 0;
+  int           comboconfirmed = 0;
+  int           comboconfirmed2 = 0;
   DIR           *optiondir;
   DIR           *driverdir;
   DIR           *printerdir;
@@ -1523,6 +1653,9 @@ main(int  argc,     /* I - Number of command-line arguments */
     fprintf(stderr, "   -o option2   Default option settings for the\n");
     fprintf(stderr, "                generated file\n");
     fprintf(stderr, "   -O           Generate overview XML file\n");
+    fprintf(stderr, "   -C           Generate overview XML file only\n");
+    fprintf(stderr, "                containing combos leading to a valid\n");
+    fprintf(stderr, "                PPD file (for CUPS PPD list)\n");
     fprintf(stderr, "   -l dir       Directory where the Foomatic database is located\n");
     fprintf(stderr, "   -v           Verbose (debug) mode\n");
     fprintf(stderr, "   -vv          Very Verbose (debug) mode\n");
@@ -1565,6 +1698,9 @@ main(int  argc,     /* I - Number of command-line arguments */
 	    break;
 	case 'O' : /* Overview */
 	    overview = 1;
+	    break;
+	case 'C' : /* Overview for CUPS PPD list */
+	    overview = 2;
 	    break;
         case 'l' : /* libdir */
 	    if (argv[i][2] != '\0')
@@ -1657,78 +1793,91 @@ main(int  argc,     /* I - Number of command-line arguments */
       }
     }
     if (debug) fprintf(stderr, "  Printer file loaded!\n");
-    parse(&printerbuffer, pid, driver, printerfilename, NULL, 0, 
-	  (const char **)defaultsettings, num_defaultsettings, &nopjl,
-	  idlist, debug2);
+    comboconfirmed =
+      parse(&printerbuffer, pid, driver, printerfilename, NULL, 0, 
+	    (const char **)defaultsettings, num_defaultsettings, &nopjl,
+	    idlist, debug2);
     
     /* Read the driver file and check whether the printer is present */
     
     if (debug) fprintf(stderr, "Driver file: %s\n", driverfilename);
     driverbuffer = loadfile(driverfilename);
     if (driverbuffer == NULL) {
-      fprintf(stderr, 
-	      "Driver file %s corrupted, missing, or not readable!\n",
-	      driverfilename);
-      exit(1);
-    }
-    if (debug) fprintf(stderr, "  Driver file loaded!\n");
-    parse(&driverbuffer, pid, driver, driverfilename, NULL, 1,
-	  (const char **)defaultsettings, num_defaultsettings, &nopjl,
-	  idlist, debug2);
-    if (debug) {
-      if (nopjl) {
-	fprintf(stderr, "  Driver forbids PJL options!\n");
+      if (!comboconfirmed) {
+	fprintf(stderr, 
+		"Driver file %s corrupted, missing, or not readable!\n",
+		driverfilename);
+	exit(1);
+      } else {
+	driverbuffer = malloc(1024);
+	sprintf((char *)driverbuffer, "<driver id=\"driver/%s\">\n <name>%s</name>\n <url></url>\n <execution>\n  <filter />\n  <prototype></prototype>\n </execution>\n <printers>\n  <printer>\n   <id>printer/%s</id>\n  </printer>\n </printers>\n</driver>", driver, driver, pid);
       }
-    }
+    } else {
+      if (debug) fprintf(stderr, "  Driver file loaded!\n");
+      comboconfirmed2 =
+	parse(&driverbuffer, pid, driver, driverfilename, NULL, 1,
+	      (const char **)defaultsettings, num_defaultsettings, &nopjl,
+	      idlist, debug2);
+      if ((!comboconfirmed) && (!comboconfirmed2)) {
+	fprintf(stderr, "The printer %s %s (ID: %s) is not supported by the driver %s!\n",
+		make, model, pid, driver);
+	exit(1);
+      }
+      if (debug) {
+	if (nopjl) {
+	  fprintf(stderr, "  Driver forbids PJL options!\n");
+	}
+      }
     
-    /* Search the Foomatic option directory and read all xml files found
-       there. Check whether and how they apply to the given printer/driver
+      /* Search the Foomatic option directory and read all xml files found
+	 there. Check whether and how they apply to the given printer/driver
        combo */
     
-    optiondir = opendir(optiondirname);
-    if (optiondir == NULL) {
-      fprintf(stderr, "Cannot read directory %s!\n", optiondirname);
-      exit(1);
-    }
+      optiondir = opendir(optiondirname);
+      if (optiondir == NULL) {
+	fprintf(stderr, "Cannot read directory %s!\n", optiondirname);
+	exit(1);
+      }
     
-    while((direntry = readdir(optiondir)) != NULL) {
-      sprintf(optionfilename, "%s/db/source/opt/%s",
-	      libdir, direntry->d_name);
-      if (debug) fprintf(stderr, "Option file: %s\n", 
-			 optionfilename);
-      if (strcmp((optionfilename + strlen(optionfilename) - 4), ".xml") == 0) {
-	/* Process only XML files */
-	/* Make space for a pointer to the data */
-	num_optbuffers ++;
-	optbuffers = (char **)realloc((char **)optbuffers, 
-				      sizeof(char *) * num_optbuffers);
-	/* load the current option's XML file */
-	optbuffers[num_optbuffers-1] = loadfile(optionfilename);
-	if (optbuffers[num_optbuffers-1] == NULL) {
-	  fprintf(stderr,
-		  "Option file %s corrupted, missing, or not readable!\n",
-		  optionfilename);
-	  exit(1);
-	}
-	if (debug) fprintf(stderr, "  Option file loaded!\n");
-	/* process it */
-	parse((const char **)(&(optbuffers[num_optbuffers-1])), pid, driver,
-	      optionfilename, NULL, 2,
-	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
-	      idlist, debug2);
-	/* If the parser discarded it (because it does not apply to our 
-	   printer/driver combo) remove the space for the pointer to it */
-	if (optbuffers[num_optbuffers-1] == NULL) {
-	  if (debug) fprintf(stderr, "  Option does not apply, removed!\n");
-	  num_optbuffers --;
+      while((direntry = readdir(optiondir)) != NULL) {
+	sprintf(optionfilename, "%s/db/source/opt/%s",
+		libdir, direntry->d_name);
+	if (debug) fprintf(stderr, "Option file: %s\n", 
+			   optionfilename);
+	if (strcmp((optionfilename + strlen(optionfilename) - 4), ".xml") == 0) {
+	  /* Process only XML files */
+	  /* Make space for a pointer to the data */
+	  num_optbuffers ++;
 	  optbuffers = (char **)realloc((char **)optbuffers, 
 					sizeof(char *) * num_optbuffers);
-	} else {
-	  if (debug) fprintf(stderr, "  Option applies!\n");
+	  /* load the current option's XML file */
+	  optbuffers[num_optbuffers-1] = loadfile(optionfilename);
+	  if (optbuffers[num_optbuffers-1] == NULL) {
+	    fprintf(stderr,
+		    "Option file %s corrupted, missing, or not readable!\n",
+		    optionfilename);
+	    exit(1);
+	  }
+	  if (debug) fprintf(stderr, "  Option file loaded!\n");
+	  /* process it */
+	  parse((const char **)(&(optbuffers[num_optbuffers-1])), pid, driver,
+		optionfilename, NULL, 2,
+		(const char **)defaultsettings, num_defaultsettings, &nopjl, 
+		idlist, debug2);
+	  /* If the parser discarded it (because it does not apply to our 
+	     printer/driver combo) remove the space for the pointer to it */
+	  if (optbuffers[num_optbuffers-1] == NULL) {
+	    if (debug) fprintf(stderr, "  Option does not apply, removed!\n");
+	    num_optbuffers --;
+	    optbuffers = (char **)realloc((char **)optbuffers, 
+					  sizeof(char *) * num_optbuffers);
+	  } else {
+	    if (debug) fprintf(stderr, "  Option applies!\n");
+	  }
 	}
       }
+      closedir(optiondir);
     }
-    closedir(optiondir);
     
     /* Output the result on STDOUT */
     if (debug) fprintf(stderr, "Putting out result!\n");
@@ -1751,6 +1900,12 @@ main(int  argc,     /* I - Number of command-line arguments */
     sprintf(printerdirname, "%s/db/source/printer",
 	    libdir);
     
+    /* Mark overview mode */
+    if (overview == 2)
+      pid = "C";
+    else
+      pid = NULL;
+
     /* Search the Foomatic driver directory and read all xml files found
        there. Read out the printers which the driver supports and add them
        to the printer's driver list */
@@ -1777,7 +1932,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 	}
 	if (debug) fprintf(stderr, "  Driver file loaded!\n");
 	/* process it */
-	parse(&driverbuffer, NULL, NULL, driverfilename, &printerlist, 3, 
+	parse(&driverbuffer, pid, NULL, driverfilename, &printerlist, 3, 
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
 	      idlist, debug2);
 	/* Delete the driver file from memory */
