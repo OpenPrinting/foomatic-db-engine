@@ -326,6 +326,7 @@ parse(const char **data, /* I/O - Data to process */
   static char   model[256];          /* XML file needed by constraints in */
                                      /* option XML files */
   int           comboconfirmed = 0;
+  int           driverhasproto = 0;
 
   char          *s;
   int           l;
@@ -1313,8 +1314,33 @@ parse(const char **data, /* I/O - Data to process */
 			      cdriver, s);
 		    if (*s == '\0') {
 		      /* We have found an empty command line prototype, so]
-			 this driver does not produce any PPD file, so
-			 remove this file from memory and return. */
+			 this driver does not produce any PPD file, 
+			 mark this driver as not having a command line
+			 prototype, remove the file from memory and
+			 return. */
+		      /* Add the driver to the first entry in the printer
+			 list, the pseudo printer "noproto" */
+		      plistpointer = *printerlist;
+		      plistpreventry = NULL;
+		      dlistpointer = plistpointer->drivers;
+		      dlistpreventry = NULL;
+		      while ((dlistpointer != 0) &&
+			     (strcasecmp(dlistpointer->name, cdriver))) {
+			dlistpreventry = dlistpointer;
+			dlistpointer = (driverlist_t *)(dlistpointer->next);
+		      }
+		      if (dlistpointer == 0) {
+			dlistpointer = 
+			  (driverlist_t *)malloc(sizeof(driverlist_t));
+			strcpy(dlistpointer->name, cdriver);
+			dlistpointer->next = NULL;
+			if (dlistpreventry != NULL)
+			  dlistpreventry->next =
+			    (struct driverlist_t *)dlistpointer;
+			else 
+			  plistpointer->drivers = dlistpointer;
+		      }
+		      /* Renove the driver XML data from memory */
 		      free((void *)(*data));
 		      *data = NULL;
 		      if (debug)
@@ -1354,7 +1380,34 @@ parse(const char **data, /* I/O - Data to process */
 		    if (debug) fprintf(stderr, 
 				       "    Printer/Driver/PPD: %s %s %s\n",
 				       cprinter, cid, cppd);
-		    if (cid[0] != '\0') {
+		    driverhasproto = 0;
+		    if ((cid[0] != '\0') && (pid)) {
+		      /* Check if our driver has a command line prototype,
+			 it should not be driver of the pseudo-printer
+			 "noproto" (first item in the printer list) then */
+		      plistpointer = *printerlist;
+		      plistpreventry = NULL;
+		      dlistpointer = plistpointer->drivers;
+		      dlistpreventry = NULL;
+		      while ((dlistpointer != 0) &&
+			     (strcasecmp(dlistpointer->name, cid))) {
+			dlistpreventry = dlistpointer;
+			dlistpointer = (driverlist_t *)(dlistpointer->next);
+		      }
+		      if (dlistpointer == 0) {
+			driverhasproto = 1;
+		      }
+		    }
+		    if ((cid[0] != '\0') && 
+			((!pid) || /* We want to see all combos, not only
+				      the ones which provide a PPD file
+				      If pid is set, we want only combos
+				      which provide PPDs and if we do
+				      not have a ready-made PPD we must */
+			 (driverhasproto) || /* have a command line
+						prototype */
+			 ((cppd[0] != '\0')))) { /* We have a ready-made
+						    PPD file */
 		      if (debug)
 			fprintf(stderr,
 				"    Overview: Printer: %s Driver: %s\n",
@@ -1906,6 +1959,18 @@ main(int  argc,     /* I - Number of command-line arguments */
     else
       pid = NULL;
 
+    /* Add a pseudo-printer to the printer list to which we assign all
+       drivers without command line prototype, so we can determine
+       which printer/driver combos do not provide a PPD file. */
+    if (pid) {
+      plistpointer = 
+	(printerlist_t *)malloc(sizeof(printerlist_t));
+      strcpy(plistpointer->id, "noproto");
+      plistpointer->drivers = NULL;
+      plistpointer->next = NULL;
+      printerlist = plistpointer;
+    }
+
     /* Search the Foomatic driver directory and read all xml files found
        there. Read out the printers which the driver supports and add them
        to the printer's driver list */
@@ -1984,7 +2049,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 	}
 	if (debug) fprintf(stderr, "  Printer file loaded!\n");
 	/* process it */
-	parse(&printerbuffer, NULL, NULL, printerfilename, &printerlist, 4,
+	parse(&printerbuffer, pid, NULL, printerfilename, &printerlist, 4,
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
 	      idlist, debug2);
 	/* put it out */
