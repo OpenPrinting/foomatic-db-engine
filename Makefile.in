@@ -188,7 +188,7 @@ install-bin: check-config lib/Makefile
 #	$(DESTDIR) properly
 	( cd lib && \
 	  $(MAKE) PREFIX=$(PERLPREFIX) && \
-	  $(MAKE) PREFIX=$(PERLPREFIX) pure_install \
+	  $(MAKE) PREFIX=$(DESTDIR)$(PERLPREFIX) pure_install \
 	)
 	${SRC}/mkinstalldirs $(DESTDIR)$(BINDIR)
 	${SRC}/mkinstalldirs $(DESTDIR)$(SBINDIR)

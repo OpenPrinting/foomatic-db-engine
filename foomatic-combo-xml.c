@@ -76,8 +76,6 @@ char  /* O - pointer to the file in memory */
   FILE *inputfile;          /* file to be read currently */
   char buffer[blocksize + 1];/* data block currently read */
   char *data = NULL;        /* the read data */
-  char *readpointer = NULL; /* pointer where next block of data should be
-			       written */
   int size = 1;             /* size of the data in memory */
   int bytesread;            /* bytes actually read */
 
@@ -91,19 +89,18 @@ char  /* O - pointer to the file in memory */
 
   /* Read the whole file into the memory */
 
-  data = (char *)malloc(1);
+  data = (char *)malloc(size);
   data[0] = '\0';
-  while(bytesread = fread(buffer,1,blocksize,inputfile)) {
+  while((bytesread = fread(buffer,1,blocksize,inputfile))) {
     data = (char *)realloc(data, size + bytesread); 
     buffer[bytesread] = '\0';
     strcat(data, buffer);
     size += bytesread;
   }
   fclose(inputfile);
-  /* Make space for an additional line, needed for the default value in an
-     option file */
-  data = (char *)realloc(data, size + 128); 
-  if (data != "") return(data); else { free((void *)data); return(NULL); }
+  /* Make space for additional data */
+  data = (char *)realloc(data, size + 4096); 
+  if (strcmp(data, "")) return(data); else { free((void *)data); return(NULL); }
 }
 
 /*
@@ -209,7 +206,7 @@ char  /* O - new ID */
 
 int /* O - Is the requested printer driver combo already confirmed by the
            <drivers> section in the printer XML file (operation = 0 only) */
-parse(const char **data, /* I/O - Data to process */
+parse(char **data, /* I/O - Data to process */
       const char *pid,   /* I - Foomatic printer ID */
       const char *driver,/* I - driver name */
       const char *filename, /* I - file name for error messages */
@@ -679,11 +676,13 @@ parse(const char **data, /* I/O - Data to process */
 			    currtagname, currtagparam);
 		  if (strcmp(currtagname, "printer") == 0) {
 		    if ((s = strstr(currtagparam, "id")) != NULL) {
-		      /* Get the short printer name (w/o "printer/") */
-		      s = strstr(s + 2, "printer/") + 8;
-		      /* Cut off trailing '"' */
-		      s[strlen(s)-1] = '\0';
-		      strcpy(cprinter, s);
+                      /* Get the short printer name (w/o "printer/") */
+                      if ((s = strstr(s + 2, "printer/")) != NULL) {
+                          s += 8;
+                          /* Cut off trailing '"' */
+                          s[strlen(s)-1] = '\0';
+                          strcpy(cprinter, s);
+                      }
 		    }
 		  }
 		}
@@ -1570,7 +1569,7 @@ parse(const char **data, /* I/O - Data to process */
     }
   } else if (operation == 4) { /* Printer XML file (Overview) */
     /* Remove the printer input data */
-    strcpy((char *)(*data), "");
+    **data = '\0';
     /* Build the printer entry for the overview in the memory which was used
        for the former input data, the overview entry is always shorter than
        the original printer XML file. */
@@ -1673,8 +1672,8 @@ main(int  argc,     /* I - Number of command-line arguments */
   char          oldidfilename[1024];  /* Name of the file with the
 					 translation table for old printer
 					 IDs */
-  const char    *printerbuffer = NULL;
-  const char    *driverbuffer = NULL;
+  char          *printerbuffer = NULL;
+  char          *driverbuffer = NULL;
   char          **optbuffers = NULL;
   int           num_optbuffers = 0;
   char          **defaultsettings = NULL; /* User-supplied option settings*/
@@ -1913,7 +1912,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 	  }
 	  if (debug) fprintf(stderr, "  Option file loaded!\n");
 	  /* process it */
-	  parse((const char **)(&(optbuffers[num_optbuffers-1])), pid, driver,
+	  parse((char **)&(optbuffers[num_optbuffers-1]), pid, driver,
 		optionfilename, NULL, 2,
 		(const char **)defaultsettings, num_defaultsettings, &nopjl, 
 		idlist, debug2);
@@ -1922,8 +1921,6 @@ main(int  argc,     /* I - Number of command-line arguments */
 	  if (optbuffers[num_optbuffers-1] == NULL) {
 	    if (debug) fprintf(stderr, "  Option does not apply, removed!\n");
 	    num_optbuffers --;
-	    optbuffers = (char **)realloc((char **)optbuffers, 
-					  sizeof(char *) * num_optbuffers);
 	  } else {
 	    if (debug) fprintf(stderr, "  Option applies!\n");
 	  }

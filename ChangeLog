@@ -1,3 +1,25 @@
+2006-09-25  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* Makefile.in: Added forgotten DESTDIR (upstream merge from Debian 
+	  patch).
+
+	* foomatic-combo-xml.c: Several small stability fixes in the C code
+	  (upstream merge from Debian patch).
+
+	* foomatic-configure.in: If there is a user named "cupsys", switch
+	  the ownership of the PPD files to "cupsys", this way Ubuntu does
+	  not break on running CUPS as non-root. This does not affect
+	  other distributions (upstream merge from Debian patch).
+
+	* foomatic-printjob.in: Added help for the printer-specific
+	  options (upstream merge from Debian patch).
+
+	* foomatic-getpjloptions.8.in: Typo fix (upstream merge from
+	  Debian patch).
+
+	* foomatic-printjob.1.in: Text fixes, new help on printer options
+	  mentioned (upstream merge from Debian patch).
+
 2006-09-22  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-combo-xml.c, foomatic-ppdfile.in, lib/Foomatic/DB.pm:

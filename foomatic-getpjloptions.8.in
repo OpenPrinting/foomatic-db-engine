@@ -50,5 +50,5 @@ support for network printers, error messages, and remove CR and FF from output.
 .SH WARNINGS
 Uni-directional protocols as remote LPD are not supported as no status is returned.
 Some network print servers which attach to a printer parallel port do not
-support birectional mode.
+support bidirectional mode.
 
