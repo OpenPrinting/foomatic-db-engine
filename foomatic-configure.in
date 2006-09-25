@@ -409,6 +409,21 @@ sub getoldqueuedata {
 	    ($config->{'spooler'} eq "cups" ? $beh : ()));
 }
 
+#fix to work on Ubuntu, where cupd runs not as root, but as cupsys user
+#like system ("chown cupsys $ppdfile"), but
+#changeowner function changes owner only if user exists on system
+sub changeowner {
+
+    my ($username, $file) = @_;
+
+    my ($uid,$gid) = (-1, -1);
+    my $l;
+    $l = getpwnam($username); $uid = $l if defined($l);
+    $l = getgrnam($username); $gid = $l if defined($l);
+    chown $uid, $gid, $file;
+
+}
+
 sub writeppdfile {
 
     my ($config, $ppdfile, $rawqueue, $newfoomaticdata) = @_;
@@ -431,6 +446,10 @@ sub writeppdfile {
 	    close PPDFILE;
 	    $db->ppdsetdefaults($ppdfile);
 	    chmod 0644, $ppdfile;
+            #fix to work on Ubuntu, where cupd runs not as root, but as cupsys user
+            #system ("chown cupsys $ppdfile");
+	    #changeowner function changes owner only if user exists on system
+	    changeowner("cupsys", $ppdfile);
 	} else {
 	    if (-f $ppdfile) {
 		unlink "$ppdfile" or die "Cannot delete \'$ppdfile\'!\n";
@@ -464,6 +483,10 @@ sub writeppdfile {
 	}
 	# Correct the permissions of the PPD file
 	chmod 0644, $ppdfile;
+	#fix to work on Ubuntu, where cupd runs not as root, but as cupsys user
+	#system ("chown cupsys $ppdfile");
+	#changeowner function changes owner only if user exists on system
+	changeowner("cupsys", $ppdfile);
     }
 }
 

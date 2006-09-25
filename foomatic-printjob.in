@@ -1,5 +1,5 @@
 #!@PERL@
-
+# -*- perl -*-
 # This is foomatic-printjob, a program to print and manage printing
 # jobs with the same commands independent whether the spooler is CUPS,
 # LPD, LPRng, or PDQ.
@@ -137,6 +137,9 @@ if (defined($opt_S)) {
 	exit 0;
     }
 }
+
+# Exception...
+help_options($in_config) if ($opt_h);
 
 # Call proper proc
 exit &{$procs->{$in_config->{'spooler'}}{$action}}($in_config);
@@ -1139,6 +1142,28 @@ EOF
  -h              Show this message
 
 EOF
+    }
+
+    exit 0;
+}
+
+# Help on printer-specific options
+sub help_options {
+    my ($config) = $_[0];
+    
+    # Is there an easier way to do this?
+    eval `foomatic-configure -P -n $config->{'queue'} -s $config->{'spooler'}`;
+    print "Available options for queue $config->{'queue'}:\n";
+    
+    foreach my $arg (@{$QUEUES[0]->{'args'}}) {
+        next if $arg->{'hidden'};
+        my @vals = ();
+
+        print "  $arg->{'name'} : < ";
+        foreach my $val (@{$arg->{'vals'}}) {
+            push @vals, $val->{'value'};
+        }
+        print join(' | ', @vals) . " >\n";
     }
 
     exit 0;
