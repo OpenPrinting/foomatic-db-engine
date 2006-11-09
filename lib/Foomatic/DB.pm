@@ -71,6 +71,7 @@ sub get_overview {
     if ((!defined($this->{'overview'}))
 	or (defined($rebuild) and $rebuild)) {
 	my $otype = ($cupsppds ? '-C' : '-O');
+	$otype .= ' -n' if ($cupsppds == 1);
 	# Generate overview Perl data structure from database
 	my $VAR1;
 	eval (`$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O`) ||
