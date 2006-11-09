@@ -27,7 +27,15 @@ my $progname = ($1 || $0);
 # This can be set by "OnlyRecommended Yes" or "OnlyRecommended No" in
 # /etc/cups/foomatic.conf
 my $onlyrecommended = 0;
-
+# The Foomatic database does not only generate PPD files from Foomatic
+# XML data but also of ready-made PPDs mainly from printer manufacturers
+# for their PostScript printers. As these PPDs are often also linked to
+# the directories in which CUPS links directly to PPD files, duplicate
+# listing of these PPDs by CUPS would result. Therefore we suppress
+# listing the ready-made PPDs. This behaviour can be changed by using
+# "ListReadyMadePPDs Yes" or "ListReadyMadePPDs No" in
+# /etc/cups/foomatic.conf
+my $listreadymadeppds = 0;
 help() if !@ARGV;
 #my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
 getopts("AP:d:p:hwt:");
@@ -57,8 +65,6 @@ if ($ARGV[0] =~ /^list$/i) {
 exit(0);
 
 sub cupslistppds {
-    my $db = Foomatic::DB->new();
-    $db->get_overview(1, 1);
 
     # Read configuration in /etc/cups/foomatic.conf
     my $conffilename;
@@ -78,9 +84,19 @@ sub cupslistppds {
 		     /^\s*OnlyRecommended\s+(No|Off|False|0)\s*$/i) {
 		$onlyrecommended = 0;
 	    }
+	    if ($line =~
+		/^\s*ListReadyMadePPDs\s+(Yes|On|True|1)\s*$/i) {
+		$listreadymadeppds = 1;
+	    } elsif ($line =~
+		     /^\s*ListReadyMadePPDs\s+(No|Off|False|0)\s*$/i) {
+		$listreadymadeppds = 0;
+	    }
 	}
 	close CONF;
     }
+
+    my $db = Foomatic::DB->new();
+    $db->get_overview(1, 1 + listreadymadeppds);
 
     for my $printer (@{$db->{'overview'}}) {
 	my $poid = $printer->{'id'};

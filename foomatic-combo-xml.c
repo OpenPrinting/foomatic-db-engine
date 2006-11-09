@@ -334,6 +334,7 @@ parse(char **data, /* I/O - Data to process */
   ppdlist_t     *ppdlistpointer;
   printerlist_t *plistpreventry;
   driverlist_t  *dlistpreventry;
+  driverlist_t  *dlistnextentry;
   ppdlist_t     *ppdlistpreventry;
   ppdlist_t     *ppdlist = NULL;
 
@@ -1405,8 +1406,8 @@ parse(char **data, /* I/O - Data to process */
 				      not have a ready-made PPD we must */
 			 (driverhasproto) || /* have a command line
 						prototype */
-			 ((cppd[0] != '\0')))) { /* We have a ready-made
-						    PPD file */
+			 ((cppd[0] != '\0')))) { /* or a ready-made
+						    PPD file. */
 		      if (debug)
 			fprintf(stderr,
 				"    Overview: Printer: %s Driver: %s\n",
@@ -1456,36 +1457,75 @@ parse(char **data, /* I/O - Data to process */
 		      }
 		    }
 		    if ((cid[0] != '\0') && (cppd[0] != '\0')) {
-		      if (debug)
-			fprintf(stderr, 
-				"    Adding Driver/PPD to list.\n");
-		      ppdlistpointer = ppdlist;
-		      ppdlistpreventry = NULL;
-		      if (debug)
-			fprintf(stderr,
-				"    Going through list: ");
-		      while (ppdlistpointer != NULL) {
-			ppdlistpreventry = ppdlistpointer;
-			ppdlistpointer = (ppdlist_t *)ppdlistpointer->next;
+		      if (pid[0] == 'C') {
+			/* CUPS should also show entries for ready-made 
+			   PPD files in the Foomatic database */
+			if (debug)
+			  fprintf(stderr, 
+				  "    Adding Driver/PPD to list.\n");
+			ppdlistpointer = ppdlist;
+			ppdlistpreventry = NULL;
 			if (debug)
 			  fprintf(stderr,
-				  ".");
+				  "    Going through list: ");
+			while (ppdlistpointer != NULL) {
+			  ppdlistpreventry = ppdlistpointer;
+			  ppdlistpointer = (ppdlist_t *)ppdlistpointer->next;
+			  if (debug)
+			    fprintf(stderr,
+				    ".");
+			}
+			ppdlistpointer = 
+			  (ppdlist_t *)malloc(sizeof(ppdlist_t));
+			strcpy(ppdlistpointer->driver, cid);
+			strcpy(ppdlistpointer->ppd, cppd);
+			ppdlistpointer->next = NULL;
+			if (ppdlistpreventry != NULL)
+			  ppdlistpreventry->next =
+			    (struct ppdlist_t *)ppdlistpointer;
+			else 
+			  ppdlist = ppdlistpointer;
+			if (debug)
+			  fprintf(stderr,
+				  " Driver/PPD in list: %s %s\n",
+				  ppdlistpointer->driver,
+				  ppdlistpointer->ppd);
+		      } else {
+			/* CUPS should not show entries for ready-made 
+			   PPD files in the Foomatic database */
+			/* To suppress the printer/driver combo from the output
+			   list we need to delete the appropriate driver 
+			   entry */
+			plistpointer = *printerlist;
+			plistpreventry = NULL;
+			/* Search printer in list */
+			while ((plistpointer != NULL) &&
+			       (strcmp(plistpointer->id, cprinter) != 0)) {
+			  plistpreventry = plistpointer;
+			  plistpointer = (printerlist_t *)(plistpointer->next);
+			}
+			/* If the printer is there, search for the driver */
+			if (plistpointer != NULL) {
+			  dlistpointer = plistpointer->drivers;
+			  dlistpreventry = NULL;
+			  while ((dlistpointer != NULL) &&
+				 (strcasecmp(dlistpointer->name, cid))) {
+			    dlistpreventry = dlistpointer;
+			    dlistpointer =
+			      (driverlist_t *)(dlistpointer->next);
+			  }
+			  if (dlistpointer != NULL) {
+			    dlistnextentry =
+			      (driverlist_t *)(dlistpointer->next);
+			    free(dlistpointer);
+			    if (dlistpreventry != NULL)
+			      dlistpreventry->next = 
+				(struct driverlist_t *)dlistnextentry;
+			    else
+			      plistpointer->drivers = dlistnextentry;
+			  }
+			}
 		      }
-		      ppdlistpointer = 
-			(ppdlist_t *)malloc(sizeof(ppdlist_t));
-		      strcpy(ppdlistpointer->driver, cid);
-		      strcpy(ppdlistpointer->ppd, cppd);
-		      ppdlistpointer->next = NULL;
-		      if (ppdlistpreventry != NULL)
-			ppdlistpreventry->next =
-			  (struct ppdlist_t *)ppdlistpointer;
-		      else 
-			ppdlist = ppdlistpointer;
-		      if (debug)
-			fprintf(stderr,
-				" Driver/PPD in list: %s %s\n",
-				ppdlistpointer->driver,
-				ppdlistpointer->ppd);
 		    }
 		  } else strcpy(cdriver, currtagbody);
 		}
@@ -1679,6 +1719,7 @@ main(int  argc,     /* I - Number of command-line arguments */
   char          **defaultsettings = NULL; /* User-supplied option settings*/
   int           num_defaultsettings = 0;
   int           overview = 0;
+  int           noreadymadeppds = 0;
   int           nopjl = 0;
   int           debug = 0;
   int           debug2 = 0;
@@ -1708,6 +1749,10 @@ main(int  argc,     /* I - Number of command-line arguments */
     fprintf(stderr, "   -C           Generate overview XML file only\n");
     fprintf(stderr, "                containing combos leading to a valid\n");
     fprintf(stderr, "                PPD file (for CUPS PPD list)\n");
+    fprintf(stderr, "   -n           (used only with \"-C\") suppress the\n");
+    fprintf(stderr, "                printer/driver combos which point to \n");
+    fprintf(stderr, "                ready-made PPD file (CUPS usually \n");
+    fprintf(stderr, "                lists ready-made PPD files directly).\n");
     fprintf(stderr, "   -l dir       Directory where the Foomatic database is located\n");
     fprintf(stderr, "   -v           Verbose (debug) mode\n");
     fprintf(stderr, "   -vv          Very Verbose (debug) mode\n");
@@ -1753,6 +1798,9 @@ main(int  argc,     /* I - Number of command-line arguments */
 	    break;
 	case 'C' : /* Overview for CUPS PPD list */
 	    overview = 2;
+	    break;
+	case 'n' : /* suppress ready-made PPDs in overview for CUPS PPD list */
+	    noreadymadeppds = 1;
 	    break;
         case 'l' : /* libdir */
 	    if (argv[i][2] != '\0')
@@ -1952,7 +2000,10 @@ main(int  argc,     /* I - Number of command-line arguments */
     
     /* Mark overview mode */
     if (overview == 2)
-      pid = "C";
+      if (noreadymadeppds)
+	pid = "c";
+      else
+	pid = "C";
     else
       pid = NULL;
 

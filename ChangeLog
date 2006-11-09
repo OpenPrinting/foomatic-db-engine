@@ -1,3 +1,11 @@
+2006-11-09  Till Kamppeter <till.kamppeter@gmx.net>
+
+	* foomatic-combo-xml.c, foomatic-ppdfile.in, lib/Foomatic/DB.pm:
+	  Let the listing of auto-generatable PPD files for CUPS 1.2
+	  ("foomatic-ppdfile list") not contain entries for combos of
+	  printers with driver entries with a ready-made PPD file, as
+	  these PPD files are usually listed by CUPS directly.
+
 2006-09-25  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* Makefile.in: Added forgotten DESTDIR (upstream merge from Debian 
