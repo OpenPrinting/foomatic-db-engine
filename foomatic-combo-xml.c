@@ -1457,7 +1457,7 @@ parse(char **data, /* I/O - Data to process */
 		      }
 		    }
 		    if ((cid[0] != '\0') && (cppd[0] != '\0')) {
-		      if (pid[0] == 'C') {
+		      if ((pid == NULL) || (pid[0] == 'C')) {
 			/* CUPS should also show entries for ready-made 
 			   PPD files in the Foomatic database */
 			if (debug)
@@ -1490,7 +1490,7 @@ parse(char **data, /* I/O - Data to process */
 				  " Driver/PPD in list: %s %s\n",
 				  ppdlistpointer->driver,
 				  ppdlistpointer->ppd);
-		      } else {
+		      } else if ((pid != NULL) && (pid[0] == 'c')) {
 			/* CUPS should not show entries for ready-made 
 			   PPD files in the Foomatic database */
 			/* To suppress the printer/driver combo from the output
