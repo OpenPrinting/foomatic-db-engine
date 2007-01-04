@@ -27,7 +27,7 @@ program will search the printer database and return either all
 printer entries or those whose name and/or model information
 match a regular expression.
 
-.pp
+.PP
 The last form prints a help message and exits.
 
 .SS Options
