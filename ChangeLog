@@ -1,3 +1,9 @@
+2006-11-09  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppdfile.1.in: Corrected mark-up in the man page for
+	  foomatic-ppdfile (Thanks to Eric Raymond for his man page
+	  verification bot).
+
 2006-11-09  Till Kamppeter <till.kamppeter@gmx.net>
 
 	* foomatic-combo-xml.c, foomatic-ppdfile.in, lib/Foomatic/DB.pm:
