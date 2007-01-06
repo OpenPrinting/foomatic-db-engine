@@ -1,9 +1,9 @@
 foomatic-db-engine for Debian
 -----------------------------
 
-Note that the structure of the LinuxPrinting.org (foomatic) printer
+Note that the structure of the FSG OpenPrinting (foomatic) printer
 configuration system in Debian (and upstream) has changed from the 2.0
-series.  There are now 3 core packages:
+series.  There are 3 core packages:
 
 * foomatic-db: Contains the foomatic printer database.
 
@@ -14,7 +14,7 @@ series.  There are now 3 core packages:
 
 In addition, the new foomatic-db-hpijs package includes the database
 entries for printers supported by the HPIJS print filter developed by
-Hewlett-Packard for its consumer inkjet line of printers.
+Hewlett-Packard for their non-PostScript printers.
 
 The foomatic-bin package is provided for upgrade purposes from
 Foomatic 2.0, and can be purged after its dependencies have been
@@ -51,14 +51,12 @@ printer: The printer database name.  Generally:
 
 driver: The driver backend to use.  For most modern printers, one of:
   hpijs      (if you have foomatic-db-hpijs installed)
-  gimp-print (if you have foomatic-db-gimp-print installed)
-  gimp-print-ijs (a hybrid that ijsgimpprint and hpijs to be installed)
+  gutenprint (if you have foomatic-db-gutenprint installed)
   Postscript
-  pcl5
 
 Your best bet on these two items is looking them up in the database at
-LinuxPrinting.org or looking through the XML files in
-/usr/share/foomatic/db/source/printer/
+  FSG OpenPrinting (http://www.openprinting.org/) or looking through the
+  XML files in /usr/share/foomatic/db/source/printer/
 
 spooler: one of: cups, lpd, lprng, ppd, direct, ppr, pdq, gnulpr
   (You can omit the -s option and it will try to guess.)

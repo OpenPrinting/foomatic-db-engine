@@ -4,9 +4,9 @@ Building the foomatic-filters-ppds package
 
 The foomatic-filters-ppds package is a simple way to use Foomatic
 
-Till Kamppeter <till.kamppeter@gmx.net>
+Till Kamppeter <till.kamppeter@gmail.com>
 
-http://www.linuxprinting.org/
+http://www.openprinting.org/
 
 
 Introduction
@@ -36,11 +36,6 @@ foomatic-db-hpijs
 To include support for Gimp-Print
 
 Gimp-Print from http://gimp-print.sf.net/
-
-To include support for Omni
-
-Omni from
-http://www-124.ibm.com/developerworks/oss/linux/projects/omni/
 
 
 How to build
@@ -83,14 +78,6 @@ code directory):
 cd foomatic-db-engine*
 ./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gimp-print
 ./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gimp-print-ijs
-cd ..
-
-Add support for Omni (optional):
-
-cd foomatic-db-engine*
-export PATH=$PATH:/opt/Omni/bin
-/opt/Omni/bin/OmniFoomaticGenerator
-./foomatic-kitload -k foomatic-db/db/source
 cd ..
 
 Exclude unwished drivers or printers from being packaged by deleting

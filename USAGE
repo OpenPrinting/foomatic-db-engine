@@ -10,9 +10,8 @@ Foomatic's XML database. It also contains scripts to directly generate
 print queues and handle jobs.
 
 
-Grant Taylor <gtaylor@picante.com>
-Till Kamppeter <till.kamppeter@gmx.net>
-http://www.linuxprinting.org/
+Till Kamppeter <till.kamppeter@gmail.com>
+http://www.openprinting.org/
 
 This usage documentation file is written by Till Kamppeter
 
@@ -457,9 +456,9 @@ queue: "dj"), the line has to be:
 		      -p HP-DeskJet_840C -d cdj880 -o PageSize=A4
 
 If you have an HP LaserJet 4050, which is a PostScript printer, you
-can get its PPD file from its Windows driver CD, http://hp.sf.net/,
-or http://www.linuxprinting.org/download/PPD/. After downloading it
-you can set up a queue as follows:
+can get its PPD file from its Windows driver CD, http://hplip.sf.net/,
+or http://www.openprinting.org/. After downloading it you can set up a
+queue as follows:
 
    foomatic-configure -s pdq  -n LJ4050 -c socket://printer:9100
 		      --ppd HP_LaserJet_4050_Series.ppd -o PageSize=A4
@@ -638,7 +637,7 @@ You can get Foomatic PPD files for manual queue setup. Use
 to get information about how to get the PPD files and follow the
 links on
 
-   http://www.linuxprinting.org/foomatic.html
+   http://www.openprinting.org/foomatic.html
 
 to know how to set up a queue with these PPD files.
 

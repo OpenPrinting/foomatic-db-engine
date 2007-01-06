@@ -13,7 +13,7 @@ Recommends: netcat
 Suggests: foomatic-db-hpijs, foomatic-db-gimp-print, foomatic-gui
 Conflicts: foomatic-bin (<< 2.9), foomatic-db (<< 2.9)
 Replaces: foomatic-bin (<< 2.9)
-Description: linuxprinting.org printer support - programs
+Description: FSG OpenPrinting printer support - programs
  Foomatic is a printing system designed to make it easier to set up
  common printers for use with Debian (and other operating systems).
  It provides the "glue" between a print spooler (like CUPS or lpr) and
@@ -36,12 +36,12 @@ Description: linuxprinting.org printer support - programs
  foomatic-gui provides a GNOME-based setup tool for Foomatic printer
  queues using the command-line tools provided in this package.
  .
- Home Page: http://www.linuxprinting.org/
+ Home Page: http://www.openprinting.org/
 
 Package: foomatic-bin
 Architecture: all
 Depends: foomatic-db (>> 2.9), foomatic-db-hpijs, foomatic-db-engine, foomatic-filters
-Description: linuxprinting.org printer support - transition package
+Description: FSG OpenPrinting printer support - transition package
  Release 3.0 of foomatic has reorganized the foomatic printing system.
  This package is provided to facilitate a smooth upgrade from Foomatic
  2.0 or earlier.
@@ -49,4 +49,4 @@ Description: linuxprinting.org printer support - transition package
  Once you have installed the dependencies of this package, this
  package can be safely purged from your system.
  .
- Home Page: http://www.linuxprinting.org/
+ Home Page: http://www.openprinting.org/

@@ -3470,7 +3470,7 @@ EOFPGSZ
 
     my $headcomment =
 "*% For information on using this, and to obtain the required backend
-*% script, consult http://www.linuxprinting.org/
+*% script, consult http://www.openprinting.org/
 *%
 *% This file is published under the GNU General Public License
 *%
@@ -4197,7 +4197,7 @@ sub getpapersize {
 }
 
 # Get documentation for the printer/driver pair to print out. For
-# "Execution Details" section of driver web pages on linuxprinting.org
+# "Execution Details" section of driver web pages on FSG OpenPrinting
 
 sub getexecdocs {
 
