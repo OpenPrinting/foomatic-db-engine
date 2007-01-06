@@ -50,4 +50,7 @@ Existing files are always conserved instead of older files being
 overwritten. So deleting the destination directory (rm -rf dir) and
 calling foomatic-compiledb without the -f option is recommended.
 
-Please send bug reports to foomatic-devel@linuxprinting.org.
+Please post bug reports on
+
+http://lists.freestandards.org/mailman/listinfo/printing-foomatic
+

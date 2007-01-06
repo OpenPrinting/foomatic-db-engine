@@ -1,4 +1,15 @@
-2006-11-09  Till Kamppeter <till.kamppeter@gmail.com>
+2007-01-06  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README, USAGE, README.build-foomatic-filters-ppds,
+	  foomatic-addpjloptions.8.in, foomatic-combo-xml.1.in,
+	  foomatic-compiledb.1.in, Foomatic-Devel-Ideas.txt,
+	  foomatic-filters-ppds-README, foomatic-kitload.8.in,
+	  foomatic-ppdfile.1.in, lib/Foomatic/DB.pm, debian/control,
+	  debian/copyright, debian/foomatic-bin.README.Debian,
+	  debian/README.Debian: Updated texts and links to have
+	  "http://www.openprinting.org/" and "FSG OpenPrinting".
+
+2007-01-04  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppdfile.1.in: Corrected mark-up in the man page for
 	  foomatic-ppdfile (Thanks to Eric Raymond for his man page

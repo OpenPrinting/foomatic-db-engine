@@ -20,7 +20,7 @@ appropriate distro or driver. Bug fixes for old distros or drivers
 which do not apply any more to the current state of Foomatic can be
 commited to the appropriate CVS branch.
 
-The web interface of linuxprinting.org could have buttons than where
+The web interface of FSG OpenPrinting could have buttons than where
 one can choose the driver or distro version for which one wants to
 have the Foomatic data.
 

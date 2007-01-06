@@ -4,10 +4,10 @@ It was originally packaged by Manfred Wassmann <manolo@NCC-1701.B.Shuttle.de>.
 It is now maintained by Chris Lawrence <lawrencc@debian.org>.
 
 The current package was produced from sources obtained from:
-http://www.linuxprinting.org/download/foomatic/
+http://www.openprinting.org/download/foomatic/
 
-Upstream Authors: Grant Taylor <gtaylor@picante.com>,
-                  Till Kamppeter <till.kamppeter@gmx.net>
+Upstream Authors: Founder: Grant Taylor <gtaylor@picante.com>,
+                  Current maintainer: Till Kamppeter <till.kamppeter@gmx.net>
 
 License:
 

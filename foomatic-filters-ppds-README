@@ -16,17 +16,11 @@ PPDs (CUPS also understands compressed PPDs).
 
 "./install --help" lists all options of the installer.
 
-Now you can set up print queues as shown on
+Now you can set up print queues as shown on the documentation pages of
+the FSG OpenPrinting web site (http://www.openprinting.org/).
 
-http://www.linuxprinting.org/foomatic2.9/cups-doc.html
-http://www.linuxprinting.org/foomatic2.9/lpd-doc.html
-http://www.linuxprinting.org/foomatic2.9/ppr-doc.html
-http://www.linuxprinting.org/foomatic2.9/pdq-doc.html
-http://www.linuxprinting.org/foomatic2.9/direct-doc.html
-http://www.linuxprinting.org/foomatic2.9/ppd-doc.html
-
-But instead of downloading the PPD files from linuxprinting.org you
-get them from
+But instead of downloading the PPD files from the FSG OpenPrinting web
+site you get them from
 
 /usr/local/share/ppd
 
@@ -38,13 +32,15 @@ on your machine. The scripts "foomatic-rip" and "foomatic-gswrapper"
 are already correctly installed on your system.
 
 If you are using CUPS, you can also set up a queue for every printer
-supported by linuxprinting.org with the help of the web interface of
-CUPS. To do so, you have to restart the CUPS daemon so that your newly
-installed PPD files get known to CUPS. Use one of the following
-commands, depending on your system:
+supported by FSG OpenPrinting with the help of the web interface of
+CUPS. To do so and if you are using CUPS 1.1.x or older, you have to
+restart the CUPS daemon so that your newly installed PPD files get
+known to CUPS. Use one of the following commands, depending on your
+system:
 
    killall -HUP cupsd
    /etc/init.d/cups restart
+   sudo /etc/init.d/cups restart
    /etc/rc.d/init.d/cups restart
    /sbin/init.d/cups restart
    /etc/software/init.d/cups restart

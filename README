@@ -10,10 +10,9 @@ Foomatic's XML database. It also contains scripts to directly generate
 print queues and handle jobs.
 
 
-Grant Taylor <gtaylor@picante.com>
-Till Kamppeter <till.kamppeter@gmx.net>
+Till Kamppeter <till.kamppeter@gmail.com>
 
-http://www.linuxprinting.org/
+http://www.openprinting.org/
 
 This README contains mainly info for developers. See the file USAGE if
 you want to know how to use Foomatic.
@@ -25,11 +24,18 @@ Copying
 This package and also the other Foomatic packages needed to run this
 are under the GPL. See http://www.gnu.org/.
 
-If you spot a data error or any other bug, send mail describing the bug to
-foomatic-devel@linuxprinting.org
 
-General discussion happens in the foomatic-devel forum/list thing at
-www.linuxprinting.org.
+Bugs
+----
+
+If you spot a data error or any other bug, either post on the Foomatic
+developer mailing list
+
+http://lists.freestandards.org/mailman/listinfo/printing-foomatic
+
+or post on the FSG OpenPrinting site support forum
+
+http://forums.openprinting.org/list.php?34
 
 
 Intro
@@ -37,26 +43,17 @@ Intro
 
 This is the stable version of Foomatic. See
 
-http://www.linuxprinting.org/contribute.html#programming
-http://www.linuxprinting.org/pipermail/foomatic-devel/2002q3/thread.html
-http://www.linuxprinting.org/pipermail/foomatic-devel/2002q4/thread.html
-http://www.linuxprinting.org/kpfeifle/LinuxKongress2002/Tutorial/IV.Foomatic-Developer/IV.tutorial-handout-foomatic-development.html
+http://www.freestandards.org/en/OpenPrinting/Database/HowToContribute#programming
 
 to know more about its development.
 
 Your suggestions, bug reports, patches, ... are welcome on
 
-http://www.linuxprinting.org/newsportal/thread.php3?name=linuxprinting.foomatic.devel
+http://forums.openprinting.org/list.php?34
 
-This version is also the base of our web interface on
+This version is also the base of our database web interface on
 
-http://www.linuxprinting.org/
-
-Old roadmap which lead to Foomatic 2.0: 
-http://www.linuxprinting.org/pipermail/foomatic-devel/2001q1/000073.html
-
-This version implements the new foomatic-rip/PPD-based architecture.
-
+http://www.openprinting.org/
 
 
 New features for Foomatic 3.0.x
@@ -299,8 +296,8 @@ Implemented in 3.0.0:
  - Added a facility to chnage all the cryptic numerical printer IDs
    from the old PostGreSQL time to clear-text printer IDs. With a
    translation function it is assured that one can still use the old
-   IDs, for example to not break links to the linuxprinting.org web
-   site.
+   IDs, for example to not break links to the old linuxprinting.org
+   web site.
 
  - The Foomatic database uses clear-text printer IDs for all printers
    now.
@@ -655,10 +652,10 @@ foomatic-addpjloptions
 
   Instead of using "foomatic-configure" you can also generate the PPD file: 
 
-  ./foomatic-ppdfile -d lj5gray -p 62304 > lj4050.ppd
+  ./foomatic-ppdfile -d lj5gray -p HP-LaserJet_4050 > lj4050.ppd
 
   And set up the queue manually as described on
-  http://www.linuxprinting.org/
+  http://www.openprinting.org/
 
   For CUPS you can for example do:
 
@@ -962,7 +959,7 @@ get_summarydocs
   Grant also probably broke it in the xml rewrite. Till has
   rewritten getexecdocs to produce documentation for a given printer
   driver pair, it provides the data presented on the "Execution Details"
-  pages of linuxprinting.org.
+  pages of FSG OpenPrinting.
   
 get_libdir
 
@@ -1336,7 +1333,7 @@ printer/HP-LaserJet_4000.xml
 
 # Printer types can be <laser />, <led />, <inkjet />, <dotmatrix />,
 # <impact />, <sublimation />, <transfer />. Other types we have to
-# add to the CGI script on linuxprinting.org to make the web interface
+# add to the CGI script on FSG OpenPrinting to make the web interface
 # displaying them properly.
 
     <laser/>
@@ -2568,7 +2565,7 @@ put into the "*1284DeviceID:" field.
 *PPD-Adobe: "4.3"
 *%
 *% For information on using this, and to obtain the required backend
-*% script, consult http://www.linuxprinting.org/
+*% script, consult http://www.openprinting.org/
 *%
 *% This file is published under the GNU General Public License
 *%
