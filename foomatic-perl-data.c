@@ -1172,15 +1172,24 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "execution"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ghostscript"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
+	  ret->driver_type = (xmlChar *)"C";
+	  if (debug) fprintf(stderr, "  Driver type: CUPS Raster\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ijs"))) {
+	  ret->driver_type = (xmlChar *)"I";
+	  if (debug) fprintf(stderr, "  Driver type: IJS\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "opvp"))) {
+	  ret->driver_type = (xmlChar *)"V";
+	  if (debug) fprintf(stderr, "  Driver type: OpenPrinting Vector\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ghostscript"))) {
 	  ret->driver_type = (xmlChar *)"G";
-	  if (debug) fprintf(stderr, "  Driver type: GhostScript\n");
+	  if (debug) fprintf(stderr, "  Driver type: GhostScript built-in\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "filter"))) {
 	  ret->driver_type = (xmlChar *)"F";
 	  if (debug) fprintf(stderr, "  Driver type: Filter\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "uniprint"))) {
 	  ret->driver_type = (xmlChar *)"U";
-	  if (debug) fprintf(stderr, "  Driver type: Uniprint\n");
+	  if (debug) fprintf(stderr, "  Driver type: GhostScript Uniprint\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "postscript"))) {
 	  ret->driver_type = (xmlChar *)"P";
 	  if (debug) fprintf(stderr, "  Driver type: PostScript\n");
@@ -2138,15 +2147,24 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "execution"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ghostscript"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
+	  ret->driver_type = (xmlChar *)"C";
+	  if (debug) fprintf(stderr, "  Driver type: CUPS Raster\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ijs"))) {
+	  ret->driver_type = (xmlChar *)"I";
+	  if (debug) fprintf(stderr, "  Driver type: IJS\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "opvp"))) {
+	  ret->driver_type = (xmlChar *)"V";
+	  if (debug) fprintf(stderr, "  Driver type: OpenPrinting Vector\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ghostscript"))) {
 	  ret->driver_type = (xmlChar *)"G";
-	  if (debug) fprintf(stderr, "  Driver type: GhostScript\n");
+	  if (debug) fprintf(stderr, "  Driver type: GhostScript built-in\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "filter"))) {
 	  ret->driver_type = (xmlChar *)"F";
 	  if (debug) fprintf(stderr, "  Driver type: Filter\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "uniprint"))) {
 	  ret->driver_type = (xmlChar *)"U";
-	  if (debug) fprintf(stderr, "  Driver type: Uniprint\n");
+	  if (debug) fprintf(stderr, "  Driver type: GhostScript Uniprint\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "postscript"))) {
 	  ret->driver_type = (xmlChar *)"P";
 	  if (debug) fprintf(stderr, "  Driver type: PostScript\n");
