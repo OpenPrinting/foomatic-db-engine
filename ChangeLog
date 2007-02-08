@@ -1,3 +1,9 @@
+2007-02-07  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* Foomatic-Devel-Ideas.txt, README, debian/README.Debian,
+	  debian/control, foomatic-filters-ppds-README, lib/Foomatic/DB.pm:
+	  Replaced "FSG OpenPrinting" by "OpenPrinting".
+
 2007-02-06  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Added support for more driver types:

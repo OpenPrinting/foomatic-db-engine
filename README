@@ -33,7 +33,7 @@ developer mailing list
 
 http://lists.freestandards.org/mailman/listinfo/printing-foomatic
 
-or post on the FSG OpenPrinting site support forum
+or post on the OpenPrinting site support forum
 
 http://forums.openprinting.org/list.php?34
 
@@ -959,7 +959,7 @@ get_summarydocs
   Grant also probably broke it in the xml rewrite. Till has
   rewritten getexecdocs to produce documentation for a given printer
   driver pair, it provides the data presented on the "Execution Details"
-  pages of FSG OpenPrinting.
+  pages of OpenPrinting.
   
 get_libdir
 
@@ -1333,7 +1333,7 @@ printer/HP-LaserJet_4000.xml
 
 # Printer types can be <laser />, <led />, <inkjet />, <dotmatrix />,
 # <impact />, <sublimation />, <transfer />. Other types we have to
-# add to the CGI script on FSG OpenPrinting to make the web interface
+# add to the CGI script on OpenPrinting to make the web interface
 # displaying them properly.
 
     <laser/>

@@ -4197,7 +4197,7 @@ sub getpapersize {
 }
 
 # Get documentation for the printer/driver pair to print out. For
-# "Execution Details" section of driver web pages on FSG OpenPrinting
+# "Execution Details" section of driver web pages on OpenPrinting
 
 sub getexecdocs {
 

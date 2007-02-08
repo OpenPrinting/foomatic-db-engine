@@ -1,7 +1,7 @@
 foomatic-db-engine for Debian
 -----------------------------
 
-Note that the structure of the FSG OpenPrinting (foomatic) printer
+Note that the structure of the OpenPrinting (foomatic) printer
 configuration system in Debian (and upstream) has changed from the 2.0
 series.  There are 3 core packages:
 
@@ -55,7 +55,7 @@ driver: The driver backend to use.  For most modern printers, one of:
   Postscript
 
 Your best bet on these two items is looking them up in the database at
-  FSG OpenPrinting (http://www.openprinting.org/) or looking through the
+  OpenPrinting (http://www.openprinting.org/) or looking through the
   XML files in /usr/share/foomatic/db/source/printer/
 
 spooler: one of: cups, lpd, lprng, ppd, direct, ppr, pdq, gnulpr
