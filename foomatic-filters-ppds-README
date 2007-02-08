@@ -17,9 +17,9 @@ PPDs (CUPS also understands compressed PPDs).
 "./install --help" lists all options of the installer.
 
 Now you can set up print queues as shown on the documentation pages of
-the FSG OpenPrinting web site (http://www.openprinting.org/).
+the OpenPrinting web site (http://www.openprinting.org/).
 
-But instead of downloading the PPD files from the FSG OpenPrinting web
+But instead of downloading the PPD files from the OpenPrinting web
 site you get them from
 
 /usr/local/share/ppd
@@ -32,7 +32,7 @@ on your machine. The scripts "foomatic-rip" and "foomatic-gswrapper"
 are already correctly installed on your system.
 
 If you are using CUPS, you can also set up a queue for every printer
-supported by FSG OpenPrinting with the help of the web interface of
+supported by OpenPrinting with the help of the web interface of
 CUPS. To do so and if you are using CUPS 1.1.x or older, you have to
 restart the CUPS daemon so that your newly installed PPD files get
 known to CUPS. Use one of the following commands, depending on your
