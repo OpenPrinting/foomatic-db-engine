@@ -99,50 +99,17 @@ typedef struct printerDrvEntry {
   xmlChar *name;
   xmlChar *comment;
   xmlChar *ppd;
+  /* functionality exceptions */
+  xmlChar *excmaxresx;
+  xmlChar *excmaxresy;
+  xmlChar *exccolor;
+  xmlChar *exctext;
+  xmlChar *exclineart;
+  xmlChar *excgraphics;
+  xmlChar *excphoto;
+  xmlChar *excload;
+  xmlChar *excspeed;
 } printerDrvEntry, *printerDrvEntryPtr;
-
-/*
- * Records for the data of the overview
- */
-
-typedef struct overviewPrinter {
-  /* General info */
-  xmlChar *id;
-  xmlChar *make;
-  xmlChar *model;
-  xmlChar *functionality;
-  xmlChar *unverified;
-  /* Printer auto-detection */
-  xmlChar *general_ieee;
-  xmlChar *general_mfg;
-  xmlChar *general_mdl;
-  xmlChar *general_des;
-  xmlChar *general_cmd;
-  xmlChar *par_ieee;
-  xmlChar *par_mfg;
-  xmlChar *par_mdl;
-  xmlChar *par_des;
-  xmlChar *par_cmd;
-  xmlChar *usb_ieee;
-  xmlChar *usb_mfg;
-  xmlChar *usb_mdl;
-  xmlChar *usb_des;
-  xmlChar *usb_cmd;
-  xmlChar *snmp_ieee;
-  xmlChar *snmp_mfg;
-  xmlChar *snmp_mdl;
-  xmlChar *snmp_des;
-  xmlChar *snmp_cmd;
-  /* Drivers */
-  xmlChar *driver;
-  int     num_drivers;
-  xmlChar **drivers;
-} overviewPrinter, *overviewPrinterPtr;
-  
-typedef struct overview {
-  int     num_overviewPrinters;
-  overviewPrinterPtr *overviewPrinters;
-} overview, *overviewPtr;
 
 /*
  * Records for the data of a printer/driver combo
@@ -225,6 +192,33 @@ typedef struct comboData {
   xmlChar *driver_type;
   xmlChar *driver_comment;
   xmlChar *url;
+  xmlChar *supplier;
+  xmlChar *manufacturersupplied;
+  xmlChar *license;
+  xmlChar *free;
+  int num_supportcontacts;
+  xmlChar **supportcontacts;
+  xmlChar **supportcontacturls;
+  xmlChar **supportcontactlevels;
+  xmlChar *shortdescription;
+  xmlChar *drvmaxresx;
+  xmlChar *drvmaxresy;
+  xmlChar *drvcolor;
+  xmlChar *text;
+  xmlChar *lineart;
+  xmlChar *graphics;
+  xmlChar *photo;
+  xmlChar *load;
+  xmlChar *speed;
+  xmlChar *excmaxresx;
+  xmlChar *excmaxresy;
+  xmlChar *exccolor;
+  xmlChar *exctext;
+  xmlChar *exclineart;
+  xmlChar *excgraphics;
+  xmlChar *excphoto;
+  xmlChar *excload;
+  xmlChar *excspeed;
   xmlChar *cmd;
   xmlChar *nopjl;
   xmlChar *driverppdentry;
@@ -311,6 +305,24 @@ typedef struct driverEntry {
   xmlChar *id;
   xmlChar *name;
   xmlChar *url;
+  xmlChar *supplier;
+  xmlChar *manufacturersupplied;
+  xmlChar *license;
+  xmlChar *free;
+  int num_supportcontacts;
+  xmlChar **supportcontacts;
+  xmlChar **supportcontacturls;
+  xmlChar **supportcontactlevels;
+  xmlChar *shortdescription;
+  xmlChar *maxresx;
+  xmlChar *maxresy;
+  xmlChar *color;
+  xmlChar *text;
+  xmlChar *lineart;
+  xmlChar *graphics;
+  xmlChar *photo;
+  xmlChar *load;
+  xmlChar *speed;
   xmlChar *driver_type;
   xmlChar *cmd;
   xmlChar *driverppdentry;
@@ -319,6 +331,51 @@ typedef struct driverEntry {
   int     num_printers;
   drvPrnEntryPtr *printers;
 } driverEntry, *driverEntryPtr;
+
+/*
+ * Records for the data of the overview
+ */
+
+typedef struct overviewPrinter {
+  /* General info */
+  xmlChar *id;
+  xmlChar *make;
+  xmlChar *model;
+  xmlChar *functionality;
+  xmlChar *unverified;
+  /* Printer auto-detection */
+  xmlChar *general_ieee;
+  xmlChar *general_mfg;
+  xmlChar *general_mdl;
+  xmlChar *general_des;
+  xmlChar *general_cmd;
+  xmlChar *par_ieee;
+  xmlChar *par_mfg;
+  xmlChar *par_mdl;
+  xmlChar *par_des;
+  xmlChar *par_cmd;
+  xmlChar *usb_ieee;
+  xmlChar *usb_mfg;
+  xmlChar *usb_mdl;
+  xmlChar *usb_des;
+  xmlChar *usb_cmd;
+  xmlChar *snmp_ieee;
+  xmlChar *snmp_mfg;
+  xmlChar *snmp_mdl;
+  xmlChar *snmp_des;
+  xmlChar *snmp_cmd;
+  /* Drivers */
+  xmlChar *driver;
+  int     num_drivers;
+  printerDrvEntryPtr *drivers;
+} overviewPrinter, *overviewPrinterPtr;
+  
+typedef struct overview {
+  int     num_overviewDrivers;
+  driverEntryPtr *overviewDrivers;
+  int     num_overviewPrinters;
+  overviewPrinterPtr *overviewPrinters;
+} overview, *overviewPtr;
 
 /*
  * Function to quote "'" and "\" in a string
@@ -494,9 +551,15 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
   xmlNodePtr     cur3;  /* Another XML node pointer */
+  xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full printer ID, with "printer/" */
   xmlChar        *charset;
+  xmlChar        *drivername;
   overviewPrinterPtr printer;
+  printerDrvEntryPtr dentry; /* An entry for a driver supporting this
+				printer */
+  int            driverfound;
+  int            i, j;
 
   /* Allocate memory for the printer */
   ret->num_overviewPrinters ++;
@@ -576,14 +639,197 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "driver"))) {
-	  printer->num_drivers ++;
-	  printer->drivers =
-	    (xmlChar **)realloc((xmlChar **)printer->drivers, 
-				sizeof(xmlChar *) * printer->num_drivers);
-	  printer->drivers[printer->num_drivers-1] =
+	  drivername =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  driverfound = 0;
+	  for (i = 0; i < printer->num_drivers; i++) {
+	    dentry = printer->drivers[i];
+	    if ((dentry->name != NULL) &&
+		(!xmlStrcmp(drivername, dentry->name))) {
+	      driverfound = 1;
+	      break;
+	    }
+	  }
+	  if (!driverfound) {
+	    printer->num_drivers ++;
+	    printer->drivers =
+	      (printerDrvEntryPtr *)
+	      realloc((printerDrvEntryPtr *)printer->drivers, 
+		      sizeof(printerDrvEntryPtr) * 
+		      printer->num_drivers);
+	    dentry = (printerDrvEntryPtr) malloc(sizeof(printerDrvEntry));
+	    if (dentry == NULL) {
+	      fprintf(stderr,"Out of memory!\n");
+	      xmlFreeDoc(doc);
+	      exit(1);
+	    }
+	    printer->drivers[printer->num_drivers-1] = dentry;
+	    memset(dentry, 0, sizeof(printerDrvEntry));
+	    dentry->name = NULL;
+	    dentry->comment = NULL;
+	    dentry->ppd = NULL;
+	    dentry->excmaxresx = NULL;
+	    dentry->excmaxresy = NULL;
+	    dentry->exccolor = NULL;
+	    dentry->exctext = NULL;
+	    dentry->exclineart = NULL;
+	    dentry->excgraphics = NULL;
+	    dentry->excphoto = NULL;
+	    dentry->excload = NULL;
+	    dentry->excspeed = NULL;
+	  }
+	  dentry->name = drivername;
 	  if (debug) fprintf(stderr, "  Printer works with: %s\n",
-			     printer->drivers[printer->num_drivers-1]);
+			     dentry->name);
+	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "driverfunctionalityexceptions"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "driverfunctionalityexception"))) {
+	  drivername = NULL;
+	  dentry = NULL;
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "driver"))) {
+	      drivername =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1));
+	      if (debug)
+		fprintf(stderr, "  Functionality exceptions for driver: %s\n",
+			drivername);
+	      if ((dentry != NULL) && (dentry->name == NULL)) {
+		dentry->name = drivername;
+		/* Check whether there is already an entry for this driver
+		   and delete this old entry */
+		for (i = 0; i < printer->num_drivers - 1; i++) {
+		  if ((printer->drivers[i]->name != NULL) &&
+		      (!xmlStrcmp(drivername, printer->drivers[i]->name))) {
+		    for (j = i + 1; j < printer->num_drivers; j++)
+		      printer->drivers[j - 1] = printer->drivers[j];
+		    printer->num_drivers --;
+		    printer->drivers =
+		      (printerDrvEntryPtr *)
+		      realloc((printerDrvEntryPtr *)printer->drivers, 
+			      sizeof(printerDrvEntryPtr) * 
+			      printer->num_drivers);
+		    break;
+		  }
+		}
+	      }
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "functionality"))) {
+	      driverfound = 0;
+	      dentry = NULL;
+	      if (drivername != NULL) {
+		for (i = 0; i < printer->num_drivers; i++) {
+		  dentry = printer->drivers[i];
+		  if ((dentry->name != NULL) &&
+		      (!xmlStrcmp(drivername, dentry->name))) {
+		    driverfound = 1;
+		    break;
+		  }
+		}
+	      }
+	      if (!driverfound) {
+		printer->num_drivers ++;
+		printer->drivers =
+		  (printerDrvEntryPtr *)
+		  realloc((printerDrvEntryPtr *)printer->drivers, 
+			  sizeof(printerDrvEntryPtr) * 
+			  printer->num_drivers);
+		dentry = (printerDrvEntryPtr) malloc(sizeof(printerDrvEntry));
+		if (dentry == NULL) {
+		  fprintf(stderr,"Out of memory!\n");
+		  xmlFreeDoc(doc);
+		  exit(1);
+		}
+		printer->drivers[printer->num_drivers-1] = dentry;
+		memset(dentry, 0, sizeof(printerDrvEntry));
+		dentry->name = NULL;
+		dentry->comment = NULL;
+		dentry->ppd = NULL;
+		dentry->excmaxresx = NULL;
+		dentry->excmaxresy = NULL;
+		dentry->exccolor = NULL;
+		dentry->exctext = NULL;
+		dentry->exclineart = NULL;
+		dentry->excgraphics = NULL;
+		dentry->excphoto = NULL;
+		dentry->excload = NULL;
+		dentry->excspeed = NULL;
+	      }
+	      dentry->name = drivername;
+	      if (drivername != NULL) {
+		if (debug)
+		  fprintf(stderr, "  Functionality exceptions for driver: %s\n",
+			  dentry->name);
+	      }
+	      cur4 = cur3->xmlChildrenNode;
+	      while (cur4 != NULL) {
+		if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresx"))) {
+		  dentry->excmaxresx =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Maximum X resolution: %s\n",
+			    dentry->excmaxresx);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresy"))) {
+		  dentry->excmaxresy =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Maximum Y resolution: %s\n",
+			    dentry->excmaxresy);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "monochrome"))) {
+		  dentry->exccolor = (xmlChar *)"0";
+		  if (debug)
+		    fprintf(stderr, "    Color: %s\n",
+			    dentry->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "color"))) {
+		  dentry->exccolor = (xmlChar *)"1";
+		  if (debug)
+		    fprintf(stderr, "    Color: %s\n",
+			    dentry->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "text"))) {
+		  dentry->exctext =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for text: %s\n",
+			    dentry->exctext);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "lineart"))) {
+		  dentry->exclineart =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for line art: %s\n",
+			    dentry->exclineart);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "graphics"))) {
+		  dentry->excgraphics =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for graphics: %s\n",
+			    dentry->excgraphics);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "photo"))) {
+		  dentry->excphoto =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for photos: %s\n",
+			    dentry->excphoto);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "load"))) {
+		  dentry->excload =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Expected relative system load: %s\n",
+			    dentry->excload);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "speed"))) {
+		  dentry->excspeed =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Expected relative driver speed: %s\n",
+			    dentry->excspeed);
+		}
+		cur4 = cur4->next;
+	      }
+	    }
+	    cur3 = cur3->next;
+	  }
 	}
 	cur2 = cur2->next;
       }
@@ -842,6 +1088,15 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	  dentry->name = NULL;
 	  dentry->comment = NULL;
 	  dentry->ppd = NULL;
+          dentry->excmaxresx = NULL;
+	  dentry->excmaxresy = NULL;
+	  dentry->exccolor = NULL;
+	  dentry->exctext = NULL;
+	  dentry->exclineart = NULL;
+	  dentry->excgraphics = NULL;
+	  dentry->excphoto = NULL;
+	  dentry->excload = NULL;
+	  dentry->excspeed = NULL;
 	  if (debug) fprintf(stderr, "  Printer supported by drivers:\n");
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
@@ -857,6 +1112,70 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 	      dentry->ppd = perlquote(dppd);
 	      if (debug) fprintf(stderr, "    Ready-made PPD: %s\n",
 				 dentry->ppd);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "functionality"))) {
+	      cur4 = cur3->xmlChildrenNode;
+	      while (cur4 != NULL) {
+		if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresx"))) {
+		  dentry->excmaxresx =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Maximum X resolution: %s\n",
+			    dentry->excmaxresx);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresy"))) {
+		  dentry->excmaxresy =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Maximum Y resolution: %s\n",
+			    dentry->excmaxresy);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "monochrome"))) {
+		  dentry->exccolor = (xmlChar *)"0";
+		  if (debug)
+		    fprintf(stderr, "    Color: %s\n",
+			    dentry->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "color"))) {
+		  dentry->exccolor = (xmlChar *)"1";
+		  if (debug)
+		    fprintf(stderr, "    Color: %s\n",
+			    dentry->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "text"))) {
+		  dentry->exctext =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for text: %s\n",
+			    dentry->exctext);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "lineart"))) {
+		  dentry->exclineart =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for line art: %s\n",
+			    dentry->exclineart);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "graphics"))) {
+		  dentry->excgraphics =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for graphics: %s\n",
+			    dentry->excgraphics);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "photo"))) {
+		  dentry->excphoto =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Support level for photos: %s\n",
+			    dentry->excphoto);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "load"))) {
+		  dentry->excload =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Expected relative system load: %s\n",
+			    dentry->excload);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "speed"))) {
+		  dentry->excspeed =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "    Expected relative driver speed: %s\n",
+			    dentry->excspeed);
+		}
+		cur4 = cur4->next;
+	      }
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
 	      cur4 = cur3->xmlChildrenNode;
 	      while (cur4 != NULL) {
@@ -1111,13 +1430,43 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
   xmlNodePtr     cur3;  /* Another XML node pointer */
+  xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full driver ID, with "driver/" */
+  xmlChar        *level;
+  xmlChar        *url;
 
   /* Initialization of entries */
   ret->driver = NULL;
   ret->driver_type = NULL;
   ret->driver_comment = NULL;
   ret->url = NULL;
+  ret->supplier = NULL;
+  ret->manufacturersupplied = (xmlChar *)"0";
+  ret->license = NULL;
+  ret->free = (xmlChar *)"0";
+  ret->num_supportcontacts = 0;
+  ret->supportcontacts = NULL;
+  ret->supportcontacturls = NULL;
+  ret->supportcontactlevels = NULL;
+  ret->shortdescription = NULL;
+  ret->drvmaxresx = NULL;
+  ret->drvmaxresy = NULL;
+  ret->drvcolor = (xmlChar *)"0";
+  ret->text = NULL;
+  ret->lineart = NULL;
+  ret->graphics = NULL;
+  ret->photo = NULL;
+  ret->load = NULL;
+  ret->speed = NULL;
+  ret->excmaxresx = NULL;
+  ret->excmaxresy = NULL;
+  ret->exccolor = NULL;
+  ret->exctext = NULL;
+  ret->exclineart = NULL;
+  ret->excgraphics = NULL;
+  ret->excphoto = NULL;
+  ret->excload = NULL;
+  ret->excspeed = NULL;
   ret->cmd = NULL;
   ret->nopjl = (xmlChar *)"0";
   ret->driverppdentry = NULL;
@@ -1149,24 +1498,140 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver URL: %s\n", ret->url);
-    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "comments"))) {
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supplier"))) {
+      ret->supplier = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
+      ret->manufacturersupplied = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Driver supplied by manufacturer: %s\n", 
+			 ret->manufacturersupplied);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "license"))) {
+      ret->license = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver license: %s\n", ret->license);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
+      ret->free = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Driver is free software: %s\n", 
+			 ret->free);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supportcontacts"))) {
+      cur2 = cur1->xmlChildrenNode;
+      if (debug) fprintf(stderr, "  Driver support contacts:\n");
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "supportcontact"))) {
+	  ret->num_supportcontacts ++;
+	  ret->supportcontacts =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->supportcontacts, 
+		    sizeof(xmlChar *) * 
+		    ret->num_supportcontacts);
+	  ret->supportcontacturls =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->supportcontacturls, 
+		    sizeof(xmlChar *) * 
+		    ret->num_supportcontacts);
+	  ret->supportcontactlevels =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->supportcontactlevels, 
+		    sizeof(xmlChar *) * 
+		    ret->num_supportcontacts);
+	  level = xmlGetProp(cur2, (const xmlChar *) "level");
+	  if (level == NULL) {
+	    level = (xmlChar *)"Unknown";
+	  }
+	  url = xmlGetProp(cur2, (const xmlChar *) "url");
+	  ret->supportcontactlevels[ret->num_supportcontacts - 1] = level;
+	  ret->supportcontacturls[ret->num_supportcontacts - 1] = url;
+	  ret->supportcontacts[ret->num_supportcontacts - 1] =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "    %s (%s):\n      %s\n", 
+		    ret->supportcontacts[ret->num_supportcontacts - 1],
+		    ret->supportcontactlevels[ret->num_supportcontacts - 1],
+		    ret->supportcontacturls[ret->num_supportcontacts - 1]);
+	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "shortdescription"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
 	/*if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {*/
 	if ((!xmlStrcmp(cur2->name, language))) {
-	  ret->driver_comment =
+	  ret->shortdescription =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
-	  if (debug) fprintf(stderr, "  Driver Comment (%s):\n\n%s\n\n",
-			     language, ret->driver_comment);
+	  if (debug)
+	    fprintf(stderr, "  Driver short description (%s):\n\n%s\n\n",
+		    language, ret->shortdescription);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
 	  if (!ret->driver_comment) {
-	    ret->driver_comment =
+	    ret->shortdescription =
 	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode,
 					     1));
-	    if (debug) fprintf(stderr, "  Driver Comment (en):\n\n%s\n\n",
-			       ret->driver_comment);
+	    if (debug)
+	      fprintf(stderr, "  Driver short description (en):\n\n%s\n\n",
+		      ret->shortdescription);
 	  }
 	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "functionality"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "maxresx"))) {
+	  ret->drvmaxresx = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Max X resolution: %s\n",
+		    ret->drvmaxresx);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "maxresy"))) {
+	  ret->drvmaxresy = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Max Y resolution: %s\n",
+		    ret->drvmaxresy);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "color"))) {
+	  ret->drvcolor = (xmlChar *)"1";
+	  if (debug) fprintf(stderr, "  Driver functionality: Color\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "monochrome"))) {
+	  ret->drvcolor = (xmlChar *)"0";
+	  if (debug) fprintf(stderr, "  Driver functionality: Monochrome\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "text"))) {
+	  ret->text = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Text support rating: %s\n",
+		    ret->text);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "lineart"))) {
+	  ret->lineart = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Line art support rating: %s\n",
+		    ret->lineart);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "graphics"))) {
+	  ret->graphics = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Graphics support rating: %s\n",
+		    ret->graphics);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "photo"))) {
+	  ret->photo = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Photo support rating: %s\n",
+		    ret->photo);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "load"))) {
+	  ret->load = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: System load rating: %s\n",
+		    ret->load);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "speed"))) {
+	  ret->speed = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Speed rating: %s\n",
+		    ret->speed);
+     	}
 	cur2 = cur2->next;
       }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "execution"))) {
@@ -1211,6 +1676,26 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
      	}
 	cur2 = cur2->next;
       }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "comments"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	/*if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {*/
+	if ((!xmlStrcmp(cur2->name, language))) {
+	  ret->driver_comment =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr, "  Driver Comment (%s):\n\n%s\n\n",
+			     language, ret->driver_comment);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
+	  if (!ret->driver_comment) {
+	    ret->driver_comment =
+	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode,
+					     1));
+	    if (debug) fprintf(stderr, "  Driver Comment (en):\n\n%s\n\n",
+			       ret->driver_comment);
+	  }
+	}
+	cur2 = cur2->next;
+      }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "printers"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -1227,6 +1712,70 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "margins"))) {
 	      parseMargins(doc, cur3, &(ret->combomargins), 
 			   language, debug);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "functionality"))) {
+	      cur4 = cur3->xmlChildrenNode;
+	      while (cur4 != NULL) {
+		if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresx"))) {
+		  ret->excmaxresx =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Maximum X resolution: %s\n",
+			    ret->excmaxresx);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresy"))) {
+		  ret->excmaxresy =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Maximum Y resolution: %s\n",
+			    ret->excmaxresy);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "monochrome"))) {
+		  ret->exccolor = (xmlChar *)"0";
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Color: %s\n",
+			    ret->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "color"))) {
+		  ret->exccolor = (xmlChar *)"1";
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Color: %s\n",
+			    ret->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "text"))) {
+		  ret->exctext =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Support level for text: %s\n",
+			    ret->exctext);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "lineart"))) {
+		  ret->exclineart =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Support level for line art: %s\n",
+			    ret->exclineart);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "graphics"))) {
+		  ret->excgraphics =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Support level for graphics: %s\n",
+			    ret->excgraphics);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "photo"))) {
+		  ret->excphoto =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Support level for photos: %s\n",
+			    ret->excphoto);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "load"))) {
+		  ret->excload =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Expected relative system load: %s\n",
+			    ret->excload);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "speed"))) {
+		  ret->excspeed =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Combo exception: Expected relative driver speed: %s\n",
+			    ret->excspeed);
+		}
+		cur4 = cur4->next;
+	      }
 	    }
 	    cur3 = cur3->next;
 	  }
@@ -1713,6 +2262,9 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "color"))) {
 	  ret->color = (xmlChar *)"1";
 	  if (debug) fprintf(stderr, "  Color printer\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "monochrome"))) {
+	  ret->color = (xmlChar *)"0";
+	  if (debug) fprintf(stderr, "  Monochrome printer\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "resolution"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
@@ -2050,6 +2602,15 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	  dentry->name = NULL;
 	  dentry->comment = NULL;
 	  dentry->ppd = NULL;
+          dentry->excmaxresx = NULL;
+	  dentry->excmaxresy = NULL;
+	  dentry->exccolor = NULL;
+	  dentry->exctext = NULL;
+	  dentry->exclineart = NULL;
+	  dentry->excgraphics = NULL;
+	  dentry->excphoto = NULL;
+	  dentry->excload = NULL;
+	  dentry->excspeed = NULL;
 	  if (debug) fprintf(stderr, "  Printer supported by drivers:\n");
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
@@ -2111,11 +2672,30 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;   /* Full driver ID, with "driver/" */
   drvPrnEntryPtr entry; /* An entry for a printer supported by this driver*/
+  xmlChar        *url, *level;
 
   /* Initialization of entries */
   ret->id = NULL;
   ret->name = NULL;
   ret->url = NULL;
+  ret->supplier = NULL;
+  ret->manufacturersupplied = (xmlChar *)"0";
+  ret->license = NULL;
+  ret->free = (xmlChar *)"0";
+  ret->num_supportcontacts = 0;
+  ret->supportcontacts = NULL;
+  ret->supportcontacturls = NULL;
+  ret->supportcontactlevels = NULL;
+  ret->shortdescription = NULL;
+  ret->maxresx = NULL;
+  ret->maxresy = NULL;
+  ret->color = (xmlChar *)"0";
+  ret->text = NULL;
+  ret->lineart = NULL;
+  ret->graphics = NULL;
+  ret->photo = NULL;
+  ret->load = NULL;
+  ret->speed = NULL;
   ret->driver_type = NULL;
   ret->cmd = NULL;
   ret->driverppdentry = NULL;
@@ -2144,6 +2724,142 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver URL: %s\n", ret->url);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supplier"))) {
+      ret->supplier = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
+      ret->manufacturersupplied = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Driver supplied by manufacturer: %s\n", 
+			 ret->manufacturersupplied);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "license"))) {
+      ret->license = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver license: %s\n", ret->license);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
+      ret->free = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Driver is free software: %s\n", 
+			 ret->free);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supportcontacts"))) {
+      cur2 = cur1->xmlChildrenNode;
+      if (debug) fprintf(stderr, "  Driver support contacts:\n");
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "supportcontact"))) {
+	  ret->num_supportcontacts ++;
+	  ret->supportcontacts =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->supportcontacts, 
+		    sizeof(xmlChar *) * 
+		    ret->num_supportcontacts);
+	  ret->supportcontacturls =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->supportcontacturls, 
+		    sizeof(xmlChar *) * 
+		    ret->num_supportcontacts);
+	  ret->supportcontactlevels =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->supportcontactlevels, 
+		    sizeof(xmlChar *) * 
+		    ret->num_supportcontacts);
+	  level = xmlGetProp(cur2, (const xmlChar *) "level");
+	  if (level == NULL) {
+	    level = (xmlChar *)"Unknown";
+	  }
+	  url = xmlGetProp(cur2, (const xmlChar *) "url");
+	  ret->supportcontactlevels[ret->num_supportcontacts - 1] = level;
+	  ret->supportcontacturls[ret->num_supportcontacts - 1] = url;
+	  ret->supportcontacts[ret->num_supportcontacts - 1] =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "    %s (%s):\n      %s\n", 
+		    ret->supportcontacts[ret->num_supportcontacts - 1],
+		    ret->supportcontactlevels[ret->num_supportcontacts - 1],
+		    ret->supportcontacturls[ret->num_supportcontacts - 1]);
+	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "shortdescription"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	/*if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {*/
+	if ((!xmlStrcmp(cur2->name, language))) {
+	  ret->shortdescription =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver short description (%s):\n\n%s\n\n",
+		    language, ret->shortdescription);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
+	  if (!ret->shortdescription) {
+	    ret->shortdescription =
+	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode,
+					     1));
+	    if (debug)
+	      fprintf(stderr, "  Driver short description (en):\n\n%s\n\n",
+		      ret->shortdescription);
+	  }
+	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "functionality"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "maxresx"))) {
+	  ret->maxresx = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Max X resolution: %s\n",
+		    ret->maxresx);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "maxresy"))) {
+	  ret->maxresy = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Max Y resolution: %s\n",
+		    ret->maxresy);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "color"))) {
+	  ret->color = (xmlChar *)"1";
+	  if (debug) fprintf(stderr, "  Driver functionality: Color\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "monochrome"))) {
+	  ret->color = (xmlChar *)"0";
+	  if (debug) fprintf(stderr, "  Driver functionality: Monochrome\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "text"))) {
+	  ret->text = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Text support rating: %s\n",
+		    ret->text);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "lineart"))) {
+	  ret->lineart = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Line art support rating: %s\n",
+		    ret->lineart);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "graphics"))) {
+	  ret->graphics = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Graphics support rating: %s\n",
+		    ret->graphics);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "photo"))) {
+	  ret->photo = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Photo support rating: %s\n",
+		    ret->photo);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "load"))) {
+	  ret->load = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: System load rating: %s\n",
+		    ret->load);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "speed"))) {
+	  ret->speed = 
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug)
+	    fprintf(stderr, "  Driver functionality: Speed rating: %s\n",
+		    ret->speed);
+     	}
+	cur2 = cur2->next;
+      }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "execution"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -2295,6 +3011,7 @@ parseOverviewFile(char *filename, /* I - Input file name, NULL: stdin */
   xmlDocPtr      doc;  /* Output of XML parser */
   overviewPtr    ret;  /* C data structure of overview */
   xmlNodePtr     cur;  /* XML node currently worked on */
+  driverEntryPtr driver;
   
   /*
    * build an XML tree from a file or stdin;
@@ -2349,7 +3066,23 @@ parseOverviewFile(char *filename, /* I - Input file name, NULL: stdin */
       cur = cur->next;
       continue;
     }
-    if (!xmlStrcmp(cur->name, (const xmlChar *) "printer")) {
+    if (!xmlStrcmp(cur->name, (const xmlChar *) "driver")) {
+      ret->num_overviewDrivers ++;
+      ret->overviewDrivers =
+	(driverEntryPtr *)realloc
+	((driverEntryPtr *)(ret->overviewDrivers), 
+	 sizeof(driverEntryPtr) * ret->num_overviewDrivers);
+      driver = (driverEntryPtr) malloc(sizeof(driverEntry));
+      if (driver == NULL) {
+	fprintf(stderr,"Out of memory!\n");
+	xmlFreeDoc(doc);
+	exit(1);
+      }
+      ret->overviewDrivers[ret->num_overviewDrivers-1] = driver;
+      memset(driver, 0, sizeof(driverEntry));
+      if (debug) fprintf(stderr, "--> Parsing driver data\n");
+      parseDriverEntry(doc, cur, driver, language, debug);
+    } else if (!xmlStrcmp(cur->name, (const xmlChar *) "printer")) {
       if (debug) fprintf(stderr, "--> Parsing printer data\n");
       parseOverviewPrinter(doc, cur, ret, language, debug);
     } 
@@ -2629,7 +3362,7 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 						  input */
 			 int debug) { /* Debug flag */
 
-  int i, j; /* loop variables */
+  int i, j, k, l; /* loop variables */
   overviewPrinterPtr printer;
   
   printf("$VAR1 = [\n");
@@ -2712,11 +3445,125 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
     }
     if (printer->num_drivers > 0) {
       printf("            'drivers' => [\n");
+      for (j = 0; j < printer->num_drivers; j ++)
+	if (printer->drivers[j]->name != NULL)
+	  printf("                           '%s',\n",
+		 printer->drivers[j]->name);
+      printf("                         ],\n");
+      printf("            'driverproperties' => {\n");
       for (j = 0; j < printer->num_drivers; j ++) {
-	printf("                           '%s',\n",
-	       printer->drivers[j]);
+	for (k = 0; k < overview->num_overviewDrivers; k ++) {
+	  if (!xmlStrcmp(overview->overviewDrivers[k]->name,
+			 printer->drivers[j]->name)) break;
+	}
+	if ((k < overview->num_overviewDrivers) &&
+	    (!xmlStrcmp(overview->overviewDrivers[k]->name,
+			printer->drivers[j]->name))) {
+	  printf("              '%s' => {\n",
+		 printer->drivers[j]->name);
+	  if (overview->overviewDrivers[k]->supplier != NULL) {
+	    printf("                'supplier' => '%s',\n",
+		   overview->overviewDrivers[k]->supplier);
+	  }
+	  printf("                'manufacturersupplied' => '%s',\n",
+		 overview->overviewDrivers[k]->manufacturersupplied);
+	  if (overview->overviewDrivers[k]->license != NULL) {
+	    printf("                'license' => '%s',\n",
+		   overview->overviewDrivers[k]->license);
+	  }
+	  printf("                'free' => '%s',\n",
+		 overview->overviewDrivers[k]->free);
+	  if (overview->overviewDrivers[k]->num_supportcontacts != 0) {
+	    printf("                'supportcontacts' => [\n");
+	    for (l = 0;
+		 l < overview->overviewDrivers[k]->num_supportcontacts; l ++) {
+	      if (overview->overviewDrivers[k]->supportcontacturls[l] != 
+		  NULL) {
+		printf("                  {\n");
+		printf("                    'description' => '%s',\n",
+		       overview->overviewDrivers[k]->supportcontacts[l]);
+		if (overview->overviewDrivers[k]->supportcontacturls[l]
+		    != NULL)
+		  printf("                    'url' => '%s',\n",
+			 overview->overviewDrivers[k]->supportcontacturls[l]);
+		printf("                    'level' => '%s',\n",
+		       overview->overviewDrivers[k]->supportcontactlevels[l]);
+		printf("                  },\n");
+	      }
+	    }
+	    printf("                ],\n");
+	  }
+	  if (overview->overviewDrivers[k]->shortdescription != NULL) {
+	    printf("                'shortdescription' => '%s',\n",
+		   overview->overviewDrivers[k]->shortdescription);
+	  }
+	  if (printer->drivers[j]->excmaxresx != NULL) {
+	    printf("                'maxresx' => '%s',\n",
+		   printer->drivers[j]->excmaxresx);
+	  } else if (overview->overviewDrivers[k]->maxresx != NULL) {
+	    printf("                'maxresx' => '%s',\n",
+		   overview->overviewDrivers[k]->maxresx);
+	  }
+	  if (printer->drivers[j]->excmaxresy != NULL) {
+	    printf("                'maxresy' => '%s',\n",
+		   printer->drivers[j]->excmaxresy);
+	  } else if (overview->overviewDrivers[k]->maxresy != NULL) {
+	    printf("                'maxresy' => '%s',\n",
+		   overview->overviewDrivers[k]->maxresy);
+	  }
+	  if (printer->drivers[j]->exccolor != NULL) {
+	    printf("                'color' => '%s',\n",
+		   printer->drivers[j]->exccolor);
+	  } else if (overview->overviewDrivers[k]->color != NULL) {
+	    printf("                'color' => '%s',\n",
+		   overview->overviewDrivers[k]->color);
+	  }
+	  if (printer->drivers[j]->exctext != NULL) {
+	    printf("                'text' => '%s',\n",
+		   printer->drivers[j]->exctext);
+	  } else if (overview->overviewDrivers[k]->text != NULL) {
+	    printf("                'text' => '%s',\n",
+		   overview->overviewDrivers[k]->text);
+	  }
+	  if (printer->drivers[j]->exclineart != NULL) {
+	    printf("                'lineart' => '%s',\n",
+		   printer->drivers[j]->exclineart);
+	  } else if (overview->overviewDrivers[k]->lineart != NULL) {
+	    printf("                'lineart' => '%s',\n",
+		   overview->overviewDrivers[k]->lineart);
+	  }
+	  if (printer->drivers[j]->excgraphics != NULL) {
+	    printf("                'graphics' => '%s',\n",
+		   printer->drivers[j]->excgraphics);
+	  } else if (overview->overviewDrivers[k]->graphics != NULL) {
+	    printf("                'graphics' => '%s',\n",
+		   overview->overviewDrivers[k]->graphics);
+	  }
+	  if (printer->drivers[j]->excphoto != NULL) {
+	    printf("                'photo' => '%s',\n",
+		   printer->drivers[j]->excphoto);
+	  } else if (overview->overviewDrivers[k]->photo != NULL) {
+	    printf("                'photo' => '%s',\n",
+		   overview->overviewDrivers[k]->photo);
+	  }
+	  if (printer->drivers[j]->excload != NULL) {
+	    printf("                'load' => '%s',\n",
+		   printer->drivers[j]->excload);
+	  } else if (overview->overviewDrivers[k]->load != NULL) {
+	    printf("                'load' => '%s',\n",
+		   overview->overviewDrivers[k]->load);
+	  }
+	  if (printer->drivers[j]->excspeed != NULL) {
+	    printf("                'speed' => '%s',\n",
+		   printer->drivers[j]->excspeed);
+	  } else if (overview->overviewDrivers[k]->speed != NULL) {
+	    printf("                'speed' => '%s',\n",
+		   overview->overviewDrivers[k]->speed);
+	  }
+	  printf("              },\n");
+	}
       }
-      printf("                         ]\n");
+      printf("            },\n");
     } else {
       printf("            'drivers' => []\n");
     }
@@ -2961,6 +3808,105 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'url' => '%s',\n", combo->url);
   } else {
     printf("  'url' => undef,\n");
+  }
+  if (combo->supplier != NULL) {
+    printf("  'supplier' => '%s',\n",
+	   combo->supplier);
+  }
+  printf("  'manufacturersupplied' => '%s',\n",
+	 combo->manufacturersupplied);
+  if (combo->license != NULL) {
+    printf("  'license' => '%s',\n",
+	   combo->license);
+  }
+  printf("  'free' => '%s',\n",
+	 combo->free);
+  if (combo->num_supportcontacts != 0) {
+    printf("  'supportcontacts' => [\n");
+    for (i = 0;
+	 i < combo->num_supportcontacts; i ++) {
+      if (combo->supportcontacturls[i] != 
+	  NULL) {
+	printf("    {\n");
+	printf("      'description' => '%s',\n",
+	       combo->supportcontacts[i]);
+	if (combo->supportcontacturls[i]
+	    != NULL)
+	  printf("      'url' => '%s',\n",
+		 combo->supportcontacturls[i]);
+	printf("      'level' => '%s',\n",
+	       combo->supportcontactlevels[i]);
+	printf("    },\n");
+      }
+    }
+    printf("  ],\n");
+  }
+  if (combo->shortdescription != NULL) {
+    printf("  'shortdescription' => '%s',\n",
+	   combo->shortdescription);
+  }
+  if (combo->excmaxresx != NULL) {
+    printf("  'drvmaxresx' => '%s',\n",
+	   combo->excmaxresx);
+  } else if (combo->drvmaxresx != NULL) {
+    printf("  'drvmaxresx' => '%s',\n",
+	   combo->drvmaxresx);
+  }
+  if (combo->excmaxresy != NULL) {
+    printf("  'drvmaxresy' => '%s',\n",
+	   combo->excmaxresy);
+  } else if (combo->drvmaxresy != NULL) {
+    printf("  'drvmaxresy' => '%s',\n",
+	   combo->drvmaxresy);
+  }
+  if (combo->exccolor != NULL) {
+    printf("  'drvcolor' => '%s',\n",
+	   combo->exccolor);
+  } else if (combo->drvcolor != NULL) {
+    printf("  'drvcolor' => '%s',\n",
+	   combo->drvcolor);
+  }
+  if (combo->exctext != NULL) {
+    printf("  'text' => '%s',\n",
+	   combo->exctext);
+  } else if (combo->text != NULL) {
+    printf("  'text' => '%s',\n",
+	   combo->text);
+  }
+  if (combo->exclineart != NULL) {
+    printf("  'lineart' => '%s',\n",
+	   combo->exclineart);
+  } else if (combo->lineart != NULL) {
+    printf("  'lineart' => '%s',\n",
+	   combo->lineart);
+  }
+  if (combo->excgraphics != NULL) {
+    printf("  'graphics' => '%s',\n",
+	   combo->excgraphics);
+  } else if (combo->graphics != NULL) {
+    printf("  'graphics' => '%s',\n",
+	   combo->graphics);
+  }
+  if (combo->excphoto != NULL) {
+    printf("  'photo' => '%s',\n",
+	   combo->excphoto);
+  } else if (combo->photo != NULL) {
+    printf("  'photo' => '%s',\n",
+	   combo->photo);
+  }
+  if (combo->excload != NULL) {
+    printf("  'load' => '%s',\n",
+	   combo->excload);
+  } else if (combo->load != NULL) {
+    printf("  'load' => '%s',\n",
+	   combo->load);
+  }
+  if (combo->excspeed != NULL) {
+    printf("  'speed' => '%s',\n",
+	   combo->excspeed);
+  } else if (combo->speed != NULL) {
+    printf("  'speed' => '%s',\n",
+	   combo->speed);
   }
   if (combo->cmd) {
     printf("  'cmd' => '%s',\n", combo->cmd);
@@ -3294,6 +4240,78 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   printf("  'name' => '%s',\n", driver->name);
   if (driver->url) {
     printf("  'url' => '%s',\n", driver->url);
+  }
+  if (driver->supplier != NULL) {
+    printf("  'supplier' => '%s',\n",
+	   driver->supplier);
+  }
+  printf("  'manufacturersupplied' => '%s',\n",
+	 driver->manufacturersupplied);
+  if (driver->license != NULL) {
+    printf("  'license' => '%s',\n",
+	   driver->license);
+  }
+  printf("  'free' => '%s',\n",
+	 driver->free);
+  if (driver->num_supportcontacts != 0) {
+    printf("  'supportcontacts' => [\n");
+    for (i = 0;
+	 i < driver->num_supportcontacts; i ++) {
+      if (driver->supportcontacturls[i] != 
+	  NULL) {
+	printf("    {\n");
+	printf("      'description' => '%s',\n",
+	       driver->supportcontacts[i]);
+	if (driver->supportcontacturls[i]
+	    != NULL)
+	  printf("      'url' => '%s',\n",
+		 driver->supportcontacturls[i]);
+	printf("      'level' => '%s',\n",
+	       driver->supportcontactlevels[i]);
+	printf("    },\n");
+      }
+    }
+    printf("  ],\n");
+  }
+  if (driver->shortdescription != NULL) {
+    printf("  'shortdescription' => '%s',\n",
+	   driver->shortdescription);
+  }
+  if (driver->maxresx != NULL) {
+    printf("  'maxresx' => '%s',\n",
+	   driver->maxresx);
+  }
+  if (driver->maxresy != NULL) {
+    printf("  'maxresy' => '%s',\n",
+	   driver->maxresy);
+  }
+  if (driver->color != NULL) {
+    printf("  'color' => '%s',\n",
+	   driver->color);
+  }
+  if (driver->text != NULL) {
+    printf("  'text' => '%s',\n",
+	   driver->text);
+  }
+  if (driver->lineart != NULL) {
+    printf("  'lineart' => '%s',\n",
+	   driver->lineart);
+  }
+  if (driver->graphics != NULL) {
+    printf("  'graphics' => '%s',\n",
+	   driver->graphics);
+  }
+  if (driver->photo != NULL) {
+    printf("  'photo' => '%s',\n",
+	   driver->photo);
+  }
+  if (driver->load != NULL) {
+    printf("  'load' => '%s',\n",
+	   driver->load);
+  }
+  if (driver->speed != NULL) {
+    printf("  'speed' => '%s',\n",
+	   driver->speed);
   }
   if (driver->driver_type) {
     printf("  'type' => '%s',\n", driver->driver_type);
