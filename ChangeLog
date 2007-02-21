@@ -1,3 +1,13 @@
+2007-02-21  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c, foomatic-perl-data.c: Added support for
+	  new data fields in the driver XML files. These data fields
+	  should describe the properties of the drivers in a better way to
+	  guide the user to find the best driver for his personal needs
+	  and also make printer setup tools clearly informing the user
+	  before installing a driver which is not part of the
+	  distribution.
+
 2007-02-07  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* Foomatic-Devel-Ideas.txt, README, debian/README.Debian,

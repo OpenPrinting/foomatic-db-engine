@@ -7,7 +7,7 @@
  *   make Perl data structures out of the XML files are very slow and
  *   memory-consuming.
  *
- *   Copyright 2001 by Till Kamppeter
+ *   Copyright 2001-2007 by Till Kamppeter
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License as
@@ -43,6 +43,9 @@
 
 typedef struct { /* structure for a driver entry (linear list) */
   char                  name[128]; /* Name of driver */
+  char                  *functionality; /* Exceptions in driver
+                                      functionality profile for this
+				      printer */
   struct driverlist_t   *next;     /* pointer to next driver */
 } driverlist_t;
 
@@ -266,6 +269,8 @@ parse(char **data, /* I/O - Data to process */
   int           inargdefault = 0;
   int           infunctionality = 0;
   int           inunverified = 0;
+  int           indfunctionality = 0;
+  int           incomments = 0;
   int           printertobesaved = 0;
   int           printerentryfound = 0;
   int           constrainttoberemoved = 0;
@@ -309,6 +314,7 @@ parse(char **data, /* I/O - Data to process */
   char          argdefault[256];
   char          defaultline[256];
   char          printerentry[1024*1024];
+  char          dfunctionalityentry[10240];
   const char    *scan;               /* pointer for scanning through the file*/
   const char    *lasttag = NULL;     /* Start of last XML tag */
   const char    *lasttagend = NULL;  /* End of last XML tag */
@@ -319,11 +325,15 @@ parse(char **data, /* I/O - Data to process */
   char    *lastconstraints = NULL;   /* Start of last <constraints> tag */
   char    *lastoption = NULL;        /* Start of last <option> tag */
   char    *lastautodetect = NULL;    /* Start of last <autodetect> tag */
+  char    *lastdfunctionality = NULL;/* Start of last <functionality> tag */
+  char    *lastcomments = NULL;      /* Start of last <comments> tag */
+  char    *lastprototype = NULL;     /* Start of last <prototype> tag */
   static char   make[256];           /* Printer make/model read from printer */
   static char   model[256];          /* XML file needed by constraints in */
                                      /* option XML files */
   int           comboconfirmed = 0;
   int           driverhasproto = 0;
+  int           exceptionfound = 0;
 
   char          *s;
   int           l;
@@ -536,15 +546,26 @@ parse(char **data, /* I/O - Data to process */
 		} else if (operation == 3) { /* Driver XML file (Overview) */
 		  if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
-		    cprinter[0] = '\0';
+		    if (tagtype == 1) {
+		      cprinter[0] = '\0';
+		      dfunctionalityentry[0] = '\0';
+		    }
 		  } else if (strcmp(currtagname, "id") == 0) {
 		    inid = nestinglevel + 1;
+		  } else if (strcmp(currtagname, "functionality") == 0) {
+		    indfunctionality = nestinglevel + 1;
+		    if (tagtype == 1) lastdfunctionality = (char*)lasttag;
 		  } else if (strcmp(currtagname, "execution") == 0) {
 		    inexecution = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "prototype") == 0) {
 		    inprototype = nestinglevel + 1;
+		    if (tagtype == 1) lastprototype = (char*)lasttagend + 1;
 		  } else if (strcmp(currtagname, "printers") == 0) {
 		    inprinters = nestinglevel + 1;
+		    if (tagtype == 1) lastprinters = (char*)lasttagend + 1;
+		  } else if (strcmp(currtagname, "comments") == 0) {
+		    incomments = nestinglevel + 1;
+		    if (tagtype == 1) lastcomments = (char*)lasttagend + 1;
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
 		  } 
@@ -1244,8 +1265,30 @@ parse(char **data, /* I/O - Data to process */
 		}
 	      } else if (operation == 3) { /* Driver XML file (Overview) */
 		if (nestinglevel < indriver) indriver = 0;
-		if (nestinglevel < inprinters) inprinters = 0;
-		if (nestinglevel < inprinter) inprinter = 0;
+		if (nestinglevel < inprinters) {
+		  inprinters = 0;
+		  /* Remove the whole <printers> block */
+		  if (lastprinters != NULL) {
+		    if (debug) 
+		      fprintf(stderr, "    Removing <printers> block\n");
+		    memmove(lastprinters, scan + 1, 
+			    *data + datalength - scan);
+		    datalength -= scan + 1 - lastprinters;
+		    scan = lastprinters - 1;
+		  }
+		}
+		if (nestinglevel < incomments) {
+		  incomments = 0;
+		  /* Remove the whole <comments> block */
+		  if ((lastcomments != NULL) && (!inprinter)) {
+		    if (debug) 
+		      fprintf(stderr, "    Removing <comments> block\n");
+		    memmove(lastcomments, scan + 1, 
+			    *data + datalength - scan);
+		    datalength -= scan + 1 - lastcomments;
+		    scan = lastcomments - 1;
+		  }
+		}
 		if (nestinglevel < inexecution) inexecution = 0;
 		if (nestinglevel < inid) {
 		  inid = 0;
@@ -1256,6 +1299,28 @@ parse(char **data, /* I/O - Data to process */
 		    fprintf(stderr,
 			    "    Overview: Printer: %s Driver: %s\n",
 			    cprinter, cdriver);
+		}
+		if (nestinglevel < indfunctionality) {
+		  indfunctionality = 0;
+		  /* Save the functionality entry in a buffer to insert it
+		     into the overview */
+		  if (lastdfunctionality != NULL) {
+		    if (debug) fprintf(stderr,
+				       "    Saving <functionality> entry\n");
+		    memmove(dfunctionalityentry, lastdfunctionality,
+			    scan + 1 - lastdfunctionality);
+		    dfunctionalityentry[scan + 1 - lastdfunctionality] = '\0';
+		    if (debug) fprintf(stderr,
+				       "    <functionality> entry: %s\n",
+				       dfunctionalityentry);
+		  }
+		}
+		if (nestinglevel < inprinter) {
+		  inprinter = 0;
+		  if (debug)
+		    fprintf(stderr,
+			    "    Overview: Add driver %s to printer %s (%s)\n",
+			    cdriver, cprinter, dfunctionalityentry);
 		  /* Add this driver to the current printer's entry in the
 		     printer list, create the printer entry if necessary */
 		  plistpointer = *printerlist;
@@ -1289,6 +1354,10 @@ parse(char **data, /* I/O - Data to process */
 		  dlistpointer = 
 		    (driverlist_t *)malloc(sizeof(driverlist_t));
 		  strcpy(dlistpointer->name, cdriver);
+		  if ((dfunctionalityentry != NULL) &&
+		      (dfunctionalityentry[0]))
+		    dlistpointer->functionality = strdup(dfunctionalityentry);
+		  else dlistpointer->functionality = NULL;
 		  dlistpointer->next = NULL;
 		  if (dlistpreventry != NULL)
 		    dlistpreventry->next =
@@ -1333,6 +1402,7 @@ parse(char **data, /* I/O - Data to process */
 			dlistpointer = 
 			  (driverlist_t *)malloc(sizeof(driverlist_t));
 			strcpy(dlistpointer->name, cdriver);
+			dlistpointer->functionality = NULL;
 			dlistpointer->next = NULL;
 			if (dlistpreventry != NULL)
 			  dlistpreventry->next =
@@ -1347,6 +1417,15 @@ parse(char **data, /* I/O - Data to process */
 			fprintf(stderr, "    Driver entry does not produce PPDs!\n");
 		      return;
 		    }
+		  }
+		  /* Remove the whole <prototype> block */
+		  if (lastprototype != NULL) {
+		    if (debug) 
+		      fprintf(stderr, "    Removing <prototype> block\n");
+		    memmove(lastprototype, scan + 1, 
+			    *data + datalength - scan);
+		    datalength -= scan + 1 - lastprototype;
+		    scan = lastprototype - 1;
 		  }
 		}
 	      } else if (operation == 4) { /* Printer XML file (Overview) */
@@ -1448,6 +1527,7 @@ parse(char **data, /* I/O - Data to process */
 			dlistpointer = 
 			  (driverlist_t *)malloc(sizeof(driverlist_t));
 			strcpy(dlistpointer->name, cid);
+			dlistpointer->functionality = NULL;
 			dlistpointer->next = NULL;
 			if (dlistpreventry != NULL)
 			  dlistpreventry->next =
@@ -1640,21 +1720,41 @@ parse(char **data, /* I/O - Data to process */
 	strcat((char *)(*data), "    ");
 	strcat((char *)(*data), cautodetectentry);
       }
-      strcat((char *)(*data), "\n    <drivers>\n");
       plistpointer = *printerlist;
       while ((plistpointer) &&
              (strcmp(plistpointer->id, cprinter) != 0))
 	plistpointer = (printerlist_t *)(plistpointer->next);
       if (plistpointer) {
+	strcat((char *)(*data), "\n    <drivers>\n");
 	dlistpointer = plistpointer->drivers;
+	exceptionfound = 0;
 	while (dlistpointer) {
 	  strcat((char *)(*data), "      <driver>");
 	  strcat((char *)(*data), dlistpointer->name);
 	  strcat((char *)(*data), "</driver>\n");
+	  if (dlistpointer->functionality != NULL) exceptionfound = 1;
 	  dlistpointer = (driverlist_t *)(dlistpointer->next);
 	}
+	strcat((char *)(*data), "    </drivers>\n");
+	if (exceptionfound) {
+	  strcat((char *)(*data), "    <driverfunctionalityexceptions>\n");
+	  dlistpointer = plistpointer->drivers;
+	  while (dlistpointer) {
+	    if (dlistpointer->functionality != NULL) {
+	      strcat((char *)(*data),
+		     "      <driverfunctionalityexception>\n");
+	      strcat((char *)(*data), "        <driver>");
+	      strcat((char *)(*data), dlistpointer->name);
+	      strcat((char *)(*data), "</driver>\n");
+	      strcat((char *)(*data), dlistpointer->functionality);
+	      strcat((char *)(*data),
+		     "\n      </driverfunctionalityexception>\n");
+	    }
+	    dlistpointer = (driverlist_t *)(dlistpointer->next);
+	  }
+	  strcat((char *)(*data), "    </driverfunctionalityexceptions>\n");
+	}
       }
-      strcat((char *)(*data), "    </drivers>\n");
       if (ppdlist != NULL) {
 	strcat((char *)(*data), "    <ppds>\n");
 	ppdlistpointer = ppdlist;
@@ -2019,6 +2119,8 @@ main(int  argc,     /* I - Number of command-line arguments */
       printerlist = plistpointer;
     }
 
+    printf("<overview>\n");
+
     /* Search the Foomatic driver directory and read all xml files found
        there. Read out the printers which the driver supports and add them
        to the printer's driver list */
@@ -2048,6 +2150,8 @@ main(int  argc,     /* I - Number of command-line arguments */
 	parse(&driverbuffer, pid, NULL, driverfilename, &printerlist, 3, 
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
 	      idlist, debug2);
+	/* put it out */
+	printf("%s\n", driverbuffer);
 	/* Delete the driver file from memory */
 	free((void *)driverbuffer);
 	driverbuffer = NULL;
@@ -2062,6 +2166,8 @@ main(int  argc,     /* I - Number of command-line arguments */
 	dlistpointer = plistpointer->drivers;
 	while (dlistpointer) {
 	  fprintf(stderr, "   Driver: %s\n", dlistpointer->name);
+	  if (dlistpointer->functionality != NULL)
+	    fprintf(stderr, "    %s\n", dlistpointer->functionality);
 	  dlistpointer = (driverlist_t *)(dlistpointer->next);
 	}
 	plistpointer = (printerlist_t *)(plistpointer->next);
@@ -2078,8 +2184,6 @@ main(int  argc,     /* I - Number of command-line arguments */
       exit(1);
     }
     
-    printf("<overview>\n");
-
     while((direntry = readdir(printerdir)) != NULL) {
       sprintf(printerfilename, "%s/db/source/printer/%s",
 	      libdir, direntry->d_name);
