@@ -2078,7 +2078,7 @@ sub cutguiname {
 sub ppd1284DeviceID {
 
     # Clean up IEEE-1284 device ID to only contain the fields relevant
-    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU), this
+    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU), thus
     # the line length limit of PPDs does not get exceeded on very long
     # ID strings.
 
@@ -3593,6 +3593,8 @@ EOFPGSZ
 	     ($dat->{'type'} eq "I" ? "/IJS" :
 	      ($dat->{'type'} eq "P" ? "/PostScript" : ""))))))) . 
 	      ": \"\"\n" if defined($dat->{'type'});
+    $drvproperties .= "*driverUrl: \"$dat->{'url'}\"\n" if
+	defined($dat->{'url'});
     $drvproperties .= "*driverSupplier: \"$dat->{'supplier'}\"\n" if
 	defined($dat->{'supplier'});
     $drvproperties .= "*driverManufacturerSupplied: " . 
