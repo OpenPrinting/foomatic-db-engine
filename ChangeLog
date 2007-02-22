@@ -2,7 +2,7 @@
 
 	* foomatic-combo-xml.c, foomatic-perl-data.c, lib/Foomatic/DB.pm: 
 	  Let new driver data fields go into the generated PPD files and
-	  into the oberbiew output. To get this information into the PPD
+	  into the oberview output. To get this information into the PPD
 	  lists of CUPS 1.2.x when using on-the-fly PPD generation added
 	  a new "DRV:" field to the device ID which contains all the
 	  driver functionality information.
