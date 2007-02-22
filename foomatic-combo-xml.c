@@ -2150,11 +2150,13 @@ main(int  argc,     /* I - Number of command-line arguments */
 	parse(&driverbuffer, pid, NULL, driverfilename, &printerlist, 3, 
 	      (const char **)defaultsettings, num_defaultsettings, &nopjl, 
 	      idlist, debug2);
-	/* put it out */
-	printf("%s\n", driverbuffer);
-	/* Delete the driver file from memory */
-	free((void *)driverbuffer);
-	driverbuffer = NULL;
+	if (driverbuffer != NULL) {
+	  /* put it out */
+	  printf("%s\n", driverbuffer);
+	  /* Delete the driver file from memory */
+	  free((void *)driverbuffer);
+	  driverbuffer = NULL;
+	}
       }
     }
     closedir(driverdir);

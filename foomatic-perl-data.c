@@ -1441,9 +1441,9 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->driver_comment = NULL;
   ret->url = NULL;
   ret->supplier = NULL;
-  ret->manufacturersupplied = (xmlChar *)"0";
+  ret->manufacturersupplied = NULL;
   ret->license = NULL;
-  ret->free = (xmlChar *)"0";
+  ret->free = NULL;
   ret->num_supportcontacts = 0;
   ret->supportcontacts = NULL;
   ret->supportcontacturls = NULL;
@@ -1451,7 +1451,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->shortdescription = NULL;
   ret->drvmaxresx = NULL;
   ret->drvmaxresy = NULL;
-  ret->drvcolor = (xmlChar *)"0";
+  ret->drvcolor = NULL;
   ret->text = NULL;
   ret->lineart = NULL;
   ret->graphics = NULL;
@@ -1504,16 +1504,20 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
       ret->manufacturersupplied = (xmlChar *)"1";
-      if (debug) fprintf(stderr, "  Driver supplied by manufacturer: %s\n", 
-			 ret->manufacturersupplied);
+      if (debug) fprintf(stderr, "  Driver supplied by manufacturer\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "thirdpartysupplied"))) {
+      ret->manufacturersupplied = (xmlChar *)"0";
+      if (debug) fprintf(stderr, "  Driver supplied by a third party\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "license"))) {
       ret->license = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver license: %s\n", ret->license);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
       ret->free = (xmlChar *)"1";
-      if (debug) fprintf(stderr, "  Driver is free software: %s\n", 
-			 ret->free);
+      if (debug) fprintf(stderr, "  Driver is free software\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "nonfreesoftware"))) {
+      ret->free = (xmlChar *)"0";
+      if (debug) fprintf(stderr, "  Driver is not free software:\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supportcontacts"))) {
       cur2 = cur1->xmlChildrenNode;
       if (debug) fprintf(stderr, "  Driver support contacts:\n");
@@ -2679,9 +2683,9 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->name = NULL;
   ret->url = NULL;
   ret->supplier = NULL;
-  ret->manufacturersupplied = (xmlChar *)"0";
+  ret->manufacturersupplied = NULL;
   ret->license = NULL;
-  ret->free = (xmlChar *)"0";
+  ret->free = NULL;
   ret->num_supportcontacts = 0;
   ret->supportcontacts = NULL;
   ret->supportcontacturls = NULL;
@@ -2689,7 +2693,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->shortdescription = NULL;
   ret->maxresx = NULL;
   ret->maxresy = NULL;
-  ret->color = (xmlChar *)"0";
+  ret->color = NULL;
   ret->text = NULL;
   ret->lineart = NULL;
   ret->graphics = NULL;
@@ -2730,16 +2734,20 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
       if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
       ret->manufacturersupplied = (xmlChar *)"1";
-      if (debug) fprintf(stderr, "  Driver supplied by manufacturer: %s\n", 
-			 ret->manufacturersupplied);
+      if (debug) fprintf(stderr, "  Driver supplied by manufacturer\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "thirdpartysupplied"))) {
+      ret->manufacturersupplied = (xmlChar *)"0";
+      if (debug) fprintf(stderr, "  Driver supplied by a third party\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "license"))) {
       ret->license = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver license: %s\n", ret->license);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
       ret->free = (xmlChar *)"1";
-      if (debug) fprintf(stderr, "  Driver is free software: %s\n", 
-			 ret->free);
+      if (debug) fprintf(stderr, "  Driver is free software\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "nonfreesoftware"))) {
+      ret->free = (xmlChar *)"0";
+      if (debug) fprintf(stderr, "  Driver is not free software\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supportcontacts"))) {
       cur2 = cur1->xmlChildrenNode;
       if (debug) fprintf(stderr, "  Driver support contacts:\n");
@@ -3465,14 +3473,18 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	    printf("                'supplier' => '%s',\n",
 		   overview->overviewDrivers[k]->supplier);
 	  }
-	  printf("                'manufacturersupplied' => '%s',\n",
-		 overview->overviewDrivers[k]->manufacturersupplied);
+	  if (overview->overviewDrivers[k]->manufacturersupplied != NULL) {
+	    printf("                'manufacturersupplied' => '%s',\n",
+		   overview->overviewDrivers[k]->manufacturersupplied);
+	  }
 	  if (overview->overviewDrivers[k]->license != NULL) {
 	    printf("                'license' => '%s',\n",
 		   overview->overviewDrivers[k]->license);
 	  }
-	  printf("                'free' => '%s',\n",
-		 overview->overviewDrivers[k]->free);
+	  if (overview->overviewDrivers[k]->free != NULL) {
+	    printf("                'free' => '%s',\n",
+		   overview->overviewDrivers[k]->free);
+	  }
 	  if (overview->overviewDrivers[k]->num_supportcontacts != 0) {
 	    printf("                'supportcontacts' => [\n");
 	    for (l = 0;
@@ -3497,25 +3509,29 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	    printf("                'shortdescription' => '%s',\n",
 		   overview->overviewDrivers[k]->shortdescription);
 	  }
+	  if (overview->overviewDrivers[k]->driver_type != NULL) {
+	    printf("                'type' => '%s',\n",
+		   overview->overviewDrivers[k]->driver_type);
+	  }
 	  if (printer->drivers[j]->excmaxresx != NULL) {
-	    printf("                'maxresx' => '%s',\n",
+	    printf("                'drvmaxresx' => '%s',\n",
 		   printer->drivers[j]->excmaxresx);
 	  } else if (overview->overviewDrivers[k]->maxresx != NULL) {
-	    printf("                'maxresx' => '%s',\n",
+	    printf("                'drvmaxresx' => '%s',\n",
 		   overview->overviewDrivers[k]->maxresx);
 	  }
 	  if (printer->drivers[j]->excmaxresy != NULL) {
-	    printf("                'maxresy' => '%s',\n",
+	    printf("                'drvmaxresy' => '%s',\n",
 		   printer->drivers[j]->excmaxresy);
 	  } else if (overview->overviewDrivers[k]->maxresy != NULL) {
-	    printf("                'maxresy' => '%s',\n",
+	    printf("                'drvmaxresy' => '%s',\n",
 		   overview->overviewDrivers[k]->maxresy);
 	  }
 	  if (printer->drivers[j]->exccolor != NULL) {
-	    printf("                'color' => '%s',\n",
+	    printf("                'drvcolor' => '%s',\n",
 		   printer->drivers[j]->exccolor);
 	  } else if (overview->overviewDrivers[k]->color != NULL) {
-	    printf("                'color' => '%s',\n",
+	    printf("                'drvcolor' => '%s',\n",
 		   overview->overviewDrivers[k]->color);
 	  }
 	  if (printer->drivers[j]->exctext != NULL) {
@@ -3813,14 +3829,18 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'supplier' => '%s',\n",
 	   combo->supplier);
   }
-  printf("  'manufacturersupplied' => '%s',\n",
-	 combo->manufacturersupplied);
+  if (combo->manufacturersupplied != NULL) {
+    printf("  'manufacturersupplied' => '%s',\n",
+	   combo->manufacturersupplied);
+  }
   if (combo->license != NULL) {
     printf("  'license' => '%s',\n",
 	   combo->license);
   }
-  printf("  'free' => '%s',\n",
-	 combo->free);
+  if (combo->free != NULL) {
+    printf("  'free' => '%s',\n",
+	   combo->free);
+  }
   if (combo->num_supportcontacts != 0) {
     printf("  'supportcontacts' => [\n");
     for (i = 0;
@@ -4245,14 +4265,18 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
     printf("  'supplier' => '%s',\n",
 	   driver->supplier);
   }
-  printf("  'manufacturersupplied' => '%s',\n",
-	 driver->manufacturersupplied);
+  if (driver->manufacturersupplied != NULL) {
+    printf("  'manufacturersupplied' => '%s',\n",
+	   driver->manufacturersupplied);
+  }
   if (driver->license != NULL) {
     printf("  'license' => '%s',\n",
 	   driver->license);
   }
-  printf("  'free' => '%s',\n",
-	 driver->free);
+  if (driver->free != NULL) {
+    printf("  'free' => '%s',\n",
+	   driver->free);
+  }
   if (driver->num_supportcontacts != 0) {
     printf("  'supportcontacts' => [\n");
     for (i = 0;
@@ -4278,15 +4302,15 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
 	   driver->shortdescription);
   }
   if (driver->maxresx != NULL) {
-    printf("  'maxresx' => '%s',\n",
+    printf("  'drvmaxresx' => '%s',\n",
 	   driver->maxresx);
   }
   if (driver->maxresy != NULL) {
-    printf("  'maxresy' => '%s',\n",
+    printf("  'drvmaxresy' => '%s',\n",
 	   driver->maxresy);
   }
   if (driver->color != NULL) {
-    printf("  'color' => '%s',\n",
+    printf("  'drvcolor' => '%s',\n",
 	   driver->color);
   }
   if (driver->text != NULL) {
