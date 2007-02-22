@@ -584,7 +584,11 @@ sub getdat ($ $ $) {
     checklongnames($this->{'dat'});
     sortoptions($this->{'dat'});
     generalentries($this->{'dat'});
-
+    if (defined($this->{'dat'}{'shortdescription'})) {
+	$this->{'dat'}{'shortdescription'} =~ s/[\s\n\r]+/ /s;
+	$this->{'dat'}{'shortdescription'} =~ s/^\s+//;
+	$this->{'dat'}{'shortdescription'} =~ s/\s+$//;
+    }
     return \%dat;
 }
 
@@ -2081,7 +2085,7 @@ sub ppd1284DeviceID {
     my ($id) = @_;
     my $ppdid = "";
     
-    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND SET)", "(DES|DESCRIPTION)", "SKU") {
+    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
 	if ($id =~ m/(\b$field:[^:;]+;)/is) {
 	    $ppdid .= $1;
 	}
@@ -2141,6 +2145,62 @@ sub getppdheaderdata {
 	$ieee1284 .= "DES:$pnpdescription;" if $pnpdescription;
     }
 
+    # Add driver profile to device ID string, so we get it into the
+    # PPD listing output of CUPS
+    my @profileitems = ();
+    my $profileelements =
+	[["manufacturersupplied", "M"],
+	 ["free", "F"],
+	 ["supportcontacts", "S"],
+	 ["type", "T"],
+	 ["drvmaxresx", "X"],
+	 ["drvmaxresx", "Y"],
+	 ["drvcolor", "C"],
+	 ["text", "t"],
+	 ["lineart", "l"],
+	 ["graphics", "g"],
+	 ["photo", "p"],
+	 ["load", "d"], 
+	 ["speed", "s"]];
+    my $drvfield = '';
+    foreach my $item (@{$profileelements}) {
+	my ($perlkey, $devidkey) = @{$item};
+	if ($perlkey ne "supportcontacts") {
+	    if (defined($dat->{$perlkey})) {
+		$drvfield .= "," . $devidkey . $dat->{$perlkey};
+	    } elsif (defined($dat->{'driverproperties'}{$driver}{$perlkey})) {
+		$drvfield .= "," . $devidkey . 
+		    $dat->{'driverproperties'}{$driver}{$perlkey};
+	    }
+	} else {
+	    my $sc;
+	    if (defined($dat->{$perlkey})) {
+		$sc = $dat->{$perlkey};
+	    } elsif (defined($dat->{'driverproperties'}{$driver}{$perlkey})) {
+		$sc = $dat->{'driverproperties'}{$driver}{$perlkey};
+	    }
+	    if ($sc) {
+		my $commercial = 0;
+		my $voluntary = 0;
+		my $unknown = 0;
+		foreach my $entry (@{$sc}) {
+		    if ($entry->{'level'} =~ /^commercial$/i) {
+			$commercial = 1;
+		    } elsif ($entry->{'level'} =~ /^voluntary$/i) {
+			$voluntary = 1;
+		    } else {
+			$unknown = 1;
+		    }
+		}
+		$drvfield .= "," . $devidkey . ($commercial ? "c" : "") .
+		    ($voluntary ? "v" : "") . ($unknown ? "u" : "");
+	    }
+	}
+    }
+    $ieee1284 .= "DRV:D$driver" .
+	($recdriver ? ($driver eq $recdriver ? ",R1" : ",R0") : "") .
+	"$drvfield;";
+
     # Remove everything from the device ID which is not relevant to
     # auto-detection of the printer model.
     $ieee1284 = ppd1284DeviceID($ieee1284) if $ieee1284;
@@ -2176,7 +2236,7 @@ sub getppdheaderdata {
     # evil special case.
     $drivername = "stp-4.0" if $drivername eq 'stp';
 
-    # Nickname for the PPPD file
+    # Nickname for the PPD file
     my $nickname =
 	"$make $model Foomatic/$drivername$driverrecommended";
     my $modelname = "$make $model";
@@ -3515,11 +3575,68 @@ EOFPGSZ
 	$drivername,$nickname,$modelname) =
 	    getppdheaderdata($dat, $dat->{'driver'}, $dat->{'recdriver'});
     if ($ieee1284) {
-	#$ieee1284 =~ s/;(.)/;\n  $1/gs;
-	#$ieee1284 = "*1284DeviceID: \"\n  " . $ieee1284 . "\n\"\n*End";
-	#$ieee1284 =~ s/;(.)/;\n  $1/gs;
 	$ieee1284 = "*1284DeviceID: \"" . $ieee1284 . "\"";
     }
+
+    # Add info about driver properties
+    my $drvproperties = "";
+    $drvproperties .= "*driverName $dat->{'driver'}/$dat->{'driver'}" .
+	($dat->{'shortdescription'} ? 
+	 " - $dat->{'shortdescription'}" : "") . 
+	 ": \"\"\n" if defined($dat->{'driver'});
+    $drvproperties .= "*driverType $dat->{'type'}" .
+	($dat->{'type'} eq "G" ? "/GhostScript built-in" :
+	 ($dat->{'type'} eq "U" ? "/GhostScript Uniprint" :
+	  ($dat->{'type'} eq "F" ? "/Filter" :
+	   ($dat->{'type'} eq "C" ? "/CUPS Raster" :
+	    ($dat->{'type'} eq "V" ? "/OpenPrinting Vector" :
+	     ($dat->{'type'} eq "I" ? "/IJS" :
+	      ($dat->{'type'} eq "P" ? "/PostScript" : ""))))))) . 
+	      ": \"\"\n" if defined($dat->{'type'});
+    $drvproperties .= "*driverSupplier: \"$dat->{'supplier'}\"\n" if
+	defined($dat->{'supplier'});
+    $drvproperties .= "*driverManufacturerSupplied: " . 
+	($dat->{'manufacturersupplied'} ? "True" : "False") . "\n" if
+	defined($dat->{'manufacturersupplied'});
+    $drvproperties .= "*driverLicense: \"$dat->{'license'}\"\n" if
+	defined($dat->{'license'});
+    $drvproperties .= "*driverFreeSoftware: " . 
+	($dat->{'free'} ? "True" : "False") . "\n" if
+	defined($dat->{'free'});
+    if (defined($dat->{'supportcontacts'})) {
+	foreach my $entry (@{$dat->{'supportcontacts'}}) {
+	    my $uclevel = uc(substr($entry->{'level'}, 0, 1)) .
+		lc(substr($entry->{'level'}, 1));
+	    $drvproperties .= "*driverSupportContact${uclevel}: " .
+		"\"$entry->{'url'} $entry->{'description'}\"\n";
+	}
+    }
+    if (defined($dat->{'drvmaxresx'}) || defined($dat->{'drvmaxresy'})) {
+	my ($maxresx, $maxresy);
+	$maxresx = $dat->{'drvmaxresx'} if defined($dat->{'drvmaxresx'});
+	$maxresy = $dat->{'drvmaxresy'} if defined($dat->{'drvmaxresy'});
+	$maxresx = $maxresy if !$maxresx;
+	$maxresy = $maxresx if !$maxresy;
+	$drvproperties .= "*driverMaxResolution: " .
+	    "${maxresx} ${maxresy}\n";
+    }
+    $drvproperties .= "*driverColor: " . 
+	($dat->{'drvcolor'} ? "True" : "False") . "\n" if
+	defined($dat->{'drvcolor'});
+    $drvproperties .= "*driverTextSupport: $dat->{'text'}\n" if
+	defined($dat->{'text'});
+    $drvproperties .= "*driverLineartSupport: $dat->{'lineart'}\n" if
+	defined($dat->{'lineart'});
+    $drvproperties .= "*driverGraphicsSupport: $dat->{'graphics'}\n" if
+	defined($dat->{'graphics'});
+    $drvproperties .= "*driverPhotoSupport: $dat->{'photo'}\n" if
+	defined($dat->{'photo'});
+    $drvproperties .= "*driverSystemmLoad: $dat->{'load'}\n" if
+	defined($dat->{'load'});
+    $drvproperties .= "*driverRenderingSpeed: $dat->{'speed'}\n" if
+	defined($dat->{'speed'});
+    $drvproperties = "\n$drvproperties" if $drvproperties;
+
     # Do not use "," or "+" in the *ShortNickName to make the Windows
     # PostScript drivers happy
     my $shortnickname = "$make $model $drivername";
@@ -3625,6 +3742,7 @@ EOFPGSZ
     $tmpl =~ s!\@\@SHORTNICKNAME\@\@!$shortnickname!g;
     $tmpl =~ s!\@\@COLOR\@\@!$color!g;
     $tmpl =~ s!\@\@IEEE1284\@\@!$ieee1284!g;
+    $tmpl =~ s!\@\@DRIVERPROPERTIES\@\@!$drvproperties!g;
     $tmpl =~ s!\@\@OTHERSTUFF\@\@!$otherstuff!g;
     $tmpl =~ s!\@\@OPTIONS\@\@!$opts!g;
     $tmpl =~ s!\@\@EXTRALINES\@\@!$extralines!g;
@@ -3914,6 +4032,7 @@ sub get_tmpl {
 *LandscapeOrientation: Plus90
 *TTRasterizer:	Type42
 \@\@IEEE1284\@\@
+\@\@DRIVERPROPERTIES\@\@
 \@\@EXTRALINES\@\@
 \@\@OTHERSTUFF\@\@
 
