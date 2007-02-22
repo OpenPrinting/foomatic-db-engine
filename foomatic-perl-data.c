@@ -3469,6 +3469,10 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 			printer->drivers[j]->name))) {
 	  printf("              '%s' => {\n",
 		 printer->drivers[j]->name);
+	  if (overview->overviewDrivers[k]->url != NULL) {
+	    printf("                'url' => '%s',\n",
+		   overview->overviewDrivers[k]->url);
+	  }
 	  if (overview->overviewDrivers[k]->supplier != NULL) {
 	    printf("                'supplier' => '%s',\n",
 		   overview->overviewDrivers[k]->supplier);
