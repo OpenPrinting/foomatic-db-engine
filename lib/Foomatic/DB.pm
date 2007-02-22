@@ -2154,7 +2154,7 @@ sub getppdheaderdata {
 	 ["supportcontacts", "S"],
 	 ["type", "T"],
 	 ["drvmaxresx", "X"],
-	 ["drvmaxresx", "Y"],
+	 ["drvmaxresy", "Y"],
 	 ["drvcolor", "C"],
 	 ["text", "t"],
 	 ["lineart", "l"],
