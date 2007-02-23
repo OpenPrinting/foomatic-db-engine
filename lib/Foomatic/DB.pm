@@ -1658,7 +1658,7 @@ sub checkarg {
 }
 
 sub checksetting {
-    # Check if there is already an choice record $setting in the $argname
+    # Check if there is already a choice record $setting in the $argname
     # argument in $dat, if not, create one
     my ($dat, $argname, $setting) = @_;
     return if 
@@ -1867,8 +1867,7 @@ sub checkoptions {
     }
 
     # If the settings for "PageSize" and "PageRegion" are different,
-    # set the one for "PageRegion" to the one for "PageSize" and issue
-    # a warning.
+    # set the one for "PageRegion" to the one for "PageSize".
     if ($dat->{'args_byname'}{'PageSize'}{$optionset} ne
 	$dat->{'args_byname'}{'PageRegion'}{$optionset}) {
 	$dat->{'args_byname'}{'PageRegion'}{$optionset} =
@@ -1905,7 +1904,7 @@ sub syncpagesize {
     }
     
     # Do it!
-	my $val;
+    my $val;
     if ($val=valbyname($dat->{'args_byname'}{$dest}, $value)) {
 	# Standard paper size
 	$dat->{'args_byname'}{$dest}{$optionset} = $val->{'value'};
@@ -2165,14 +2164,16 @@ sub getppdheaderdata {
     my $drvfield = '';
     foreach my $item (@{$profileelements}) {
 	my ($perlkey, $devidkey) = @{$item};
-	if ($perlkey ne "supportcontacts") {
+	if ($perlkey eq "manufacturersupplied") {
+	    my $ms;
 	    if (defined($dat->{$perlkey})) {
-		$drvfield .= "," . $devidkey . $dat->{$perlkey};
+		$ms = $dat->{$perlkey};
 	    } elsif (defined($dat->{'driverproperties'}{$driver}{$perlkey})) {
-		$drvfield .= "," . $devidkey . 
-		    $dat->{'driverproperties'}{$driver}{$perlkey};
+		$ms = $dat->{'driverproperties'}{$driver}{$perlkey};
 	    }
-	} else {
+	    $drvfield .= "," . $devidkey .
+		($ms eq "1" ? "1" : ($dat->{make} =~ m,^($ms)$,i ? "1" : "0"));
+	} elsif ($perlkey eq "supportcontacts") {
 	    my $sc;
 	    if (defined($dat->{$perlkey})) {
 		$sc = $dat->{$perlkey};
@@ -2194,6 +2195,13 @@ sub getppdheaderdata {
 		}
 		$drvfield .= "," . $devidkey . ($commercial ? "c" : "") .
 		    ($voluntary ? "v" : "") . ($unknown ? "u" : "");
+	    }
+	} else {
+	    if (defined($dat->{$perlkey})) {
+		$drvfield .= "," . $devidkey . $dat->{$perlkey};
+	    } elsif (defined($dat->{'driverproperties'}{$driver}{$perlkey})) {
+		$drvfield .= "," . $devidkey . 
+		    $dat->{'driverproperties'}{$driver}{$perlkey};
 	    }
 	}
     }
@@ -3598,7 +3606,9 @@ EOFPGSZ
     $drvproperties .= "*driverSupplier: \"$dat->{'supplier'}\"\n" if
 	defined($dat->{'supplier'});
     $drvproperties .= "*driverManufacturerSupplied: " . 
-	($dat->{'manufacturersupplied'} ? "True" : "False") . "\n" if
+	($dat->{'manufacturersupplied'} eq "1" ? "True" : 
+	 ($dat->{make} =~ m,^($dat->{'manufacturersupplied'})$,i ? "True" :
+	  "False")) . "\n" if
 	defined($dat->{'manufacturersupplied'});
     $drvproperties .= "*driverLicense: \"$dat->{'license'}\"\n" if
 	defined($dat->{'license'});

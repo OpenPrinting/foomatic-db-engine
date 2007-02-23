@@ -386,6 +386,7 @@ perlquote(xmlChar *str) { /* I - Original string */
   xmlChar *dest, *s;
   int offset = 0;
 
+  if (str == NULL) return NULL;
   dest = xmlStrdup(str);
   while ((s = (xmlChar *)xmlStrchr((const xmlChar *)(dest + offset),
 				   (xmlChar)'\'')) ||
@@ -1503,8 +1504,13 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
-      ret->manufacturersupplied = (xmlChar *)"1";
-      if (debug) fprintf(stderr, "  Driver supplied by manufacturer\n");
+      ret->manufacturersupplied =
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if ((ret->manufacturersupplied == NULL) ||
+	  (ret->manufacturersupplied[0] == '\0'))
+	ret->manufacturersupplied = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Driver supplied by manufacturer: %s\n",
+			 ret->manufacturersupplied);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "thirdpartysupplied"))) {
       ret->manufacturersupplied = (xmlChar *)"0";
       if (debug) fprintf(stderr, "  Driver supplied by a third party\n");
@@ -2733,8 +2739,13 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
-      ret->manufacturersupplied = (xmlChar *)"1";
-      if (debug) fprintf(stderr, "  Driver supplied by manufacturer\n");
+      ret->manufacturersupplied =
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if ((ret->manufacturersupplied == NULL) ||
+	  (ret->manufacturersupplied[0] == '\0'))
+	ret->manufacturersupplied = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Driver supplied by manufacturer: %s\n",
+			 ret->manufacturersupplied);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "thirdpartysupplied"))) {
       ret->manufacturersupplied = (xmlChar *)"0";
       if (debug) fprintf(stderr, "  Driver supplied by a third party\n");
