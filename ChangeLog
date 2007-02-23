@@ -1,3 +1,13 @@
+2007-02-23  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm: Allow specifying
+	  manufacturer names along with the "<manufacturersupplied>" tag
+	  in the driver XML file. In this case in the PPDs and in the PPD
+	  lists the driver is only marked as supplied by the manufacturer
+	  if the printer manufacturer's name matches one of the given
+	  names. For example if a Brother printer is used with HPIJS, the
+	  driver is not considered manufacturer-suppiled.
+
 2007-02-22  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-combo-xml.c, foomatic-perl-data.c, lib/Foomatic/DB.pm: 
