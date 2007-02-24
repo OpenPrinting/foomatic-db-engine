@@ -1,3 +1,9 @@
+2007-02-24  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: Let Perl data structure for driver XML
+	  files also contain the printer-specific exceptions of the driver
+	  functionality data.
+
 2007-02-23  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c, lib/Foomatic/DB.pm: Allow specifying

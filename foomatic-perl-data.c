@@ -299,6 +299,16 @@ typedef struct printerEntry {
 typedef struct drvPrnEntry {
   xmlChar *id;
   xmlChar *comment;
+  /* functionality exceptions */
+  xmlChar *excmaxresx;
+  xmlChar *excmaxresy;
+  xmlChar *exccolor;
+  xmlChar *exctext;
+  xmlChar *exclineart;
+  xmlChar *excgraphics;
+  xmlChar *excphoto;
+  xmlChar *excload;
+  xmlChar *excspeed;
 } drvPrnEntry, *drvPrnEntryPtr;
 
 typedef struct driverEntry {
@@ -2955,6 +2965,15 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	  memset(entry, 0, sizeof(drvPrnEntry));
 	  entry->id = NULL;
 	  entry->comment = NULL;
+          entry->excmaxresx = NULL;
+	  entry->excmaxresy = NULL;
+	  entry->exccolor = NULL;
+	  entry->exctext = NULL;
+	  entry->exclineart = NULL;
+	  entry->excgraphics = NULL;
+	  entry->excphoto = NULL;
+	  entry->excload = NULL;
+	  entry->excspeed = NULL;
 	  if (debug) fprintf(stderr, "  Driver supports printer:\n");
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
@@ -2983,6 +3002,70 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 		    if (debug) fprintf(stderr, "    Comment (en): \n%s\n\n",
 				       entry->comment);
 		  }
+		}
+		cur4 = cur4->next;
+	      }
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "functionality"))) {
+	      cur4 = cur3->xmlChildrenNode;
+	      while (cur4 != NULL) {
+		if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresx"))) {
+		  entry->excmaxresx =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Maximum X resolution: %s\n",
+			    entry->excmaxresx);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "maxresy"))) {
+		  entry->excmaxresy =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Maximum Y resolution: %s\n",
+			    entry->excmaxresy);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "monochrome"))) {
+		  entry->exccolor = (xmlChar *)"0";
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Color: %s\n",
+			    entry->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "color"))) {
+		  entry->exccolor = (xmlChar *)"1";
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Color: %s\n",
+			    entry->exccolor);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "text"))) {
+		  entry->exctext =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Support level for text: %s\n",
+			    entry->exctext);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "lineart"))) {
+		  entry->exclineart =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Support level for line art: %s\n",
+			    entry->exclineart);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "graphics"))) {
+		  entry->excgraphics =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Support level for graphics: %s\n",
+			    entry->excgraphics);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "photo"))) {
+		  entry->excphoto =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Support level for photos: %s\n",
+			    entry->excphoto);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "load"))) {
+		  entry->excload =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Expected relative system load: %s\n",
+			    entry->excload);
+		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "speed"))) {
+		  entry->excspeed =
+		    perlquote(xmlNodeListGetString(doc, cur4->xmlChildrenNode, 1));
+		  if (debug)
+		    fprintf(stderr, "  Printer exception: Expected relative driver speed: %s\n",
+			    entry->excspeed);
 		}
 		cur4 = cur4->next;
 	      }
@@ -4380,6 +4463,42 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
       if (driver->printers[i]->comment) {
 	printf("      'comment' => '%s'\n",
 	       driver->printers[i]->comment);
+      }
+      if (driver->printers[i]->excmaxresx != NULL) {
+	printf("      'excmaxresx' => '%s',\n",
+	       driver->printers[i]->excmaxresx);
+      }
+      if (driver->printers[i]->excmaxresy != NULL) {
+	printf("      'excmaxresy' => '%s',\n",
+	       driver->printers[i]->excmaxresy);
+      }
+      if (driver->printers[i]->exccolor != NULL) {
+	printf("      'exccolor' => '%s',\n",
+	       driver->printers[i]->exccolor);
+      }
+      if (driver->printers[i]->exctext != NULL) {
+	printf("      'exctext' => '%s',\n",
+	       driver->printers[i]->exctext);
+      }
+      if (driver->printers[i]->exclineart != NULL) {
+	printf("      'exclineart' => '%s',\n",
+	       driver->printers[i]->exclineart);
+      }
+      if (driver->printers[i]->excgraphics != NULL) {
+	printf("      'excgraphics' => '%s',\n",
+	       driver->printers[i]->excgraphics);
+      }
+      if (driver->printers[i]->excphoto != NULL) {
+	printf("      'excphoto' => '%s',\n",
+	       driver->printers[i]->excphoto);
+      }
+      if (driver->printers[i]->excload != NULL) {
+	printf("      'excload' => '%s',\n",
+	       driver->printers[i]->excload);
+      }
+      if (driver->printers[i]->excspeed != NULL) {
+	printf("      'excspeed' => '%s',\n",
+	       driver->printers[i]->excspeed);
       }
       printf("    },\n");
     }
