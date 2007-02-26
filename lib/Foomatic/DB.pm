@@ -2149,6 +2149,7 @@ sub getppdheaderdata {
     my @profileitems = ();
     my $profileelements =
 	[["manufacturersupplied", "M"],
+	 ["obsolete", "O"],
 	 ["free", "F"],
 	 ["supportcontacts", "S"],
 	 ["type", "T"],
@@ -3603,6 +3604,16 @@ EOFPGSZ
 	      ": \"\"\n" if defined($dat->{'type'});
     $drvproperties .= "*driverUrl: \"$dat->{'url'}\"\n" if
 	defined($dat->{'url'});
+    if ((defined($dat->{'obsolete'})) &&
+	($dat->{'obsolete'} ne "0")) {
+	$drvproperties .= "*driverObsolete: True\n";
+	if ($dat->{'obsolete'} ne "1") {
+	    $drvproperties .= "*driverRecommendedReplacement: " .
+		"\"$dat->{'obsolete'}\"\n";
+	}
+    } else {
+	$drvproperties .= "*driverObsolete: False\n";
+    }
     $drvproperties .= "*driverSupplier: \"$dat->{'supplier'}\"\n" if
 	defined($dat->{'supplier'});
     $drvproperties .= "*driverManufacturerSupplied: " . 

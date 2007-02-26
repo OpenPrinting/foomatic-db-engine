@@ -192,6 +192,7 @@ typedef struct comboData {
   xmlChar *driver_type;
   xmlChar *driver_comment;
   xmlChar *url;
+  xmlChar *driver_obsolete;
   xmlChar *supplier;
   xmlChar *manufacturersupplied;
   xmlChar *license;
@@ -315,6 +316,7 @@ typedef struct driverEntry {
   xmlChar *id;
   xmlChar *name;
   xmlChar *url;
+  xmlChar *driver_obsolete;
   xmlChar *supplier;
   xmlChar *manufacturersupplied;
   xmlChar *license;
@@ -1452,6 +1454,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->driver_comment = NULL;
   ret->url = NULL;
   ret->supplier = NULL;
+  ret->driver_obsolete = NULL;
   ret->manufacturersupplied = NULL;
   ret->license = NULL;
   ret->free = NULL;
@@ -1509,6 +1512,14 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver URL: %s\n", ret->url);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "obsolete"))) {
+      ret->driver_obsolete = xmlGetProp(cur1, (const xmlChar *) "replace");
+      if (ret->driver_obsolete == NULL) {
+	if (debug) fprintf(stderr, "    No replacement driver found!\n");
+	ret->driver_obsolete = (xmlChar *)"1";
+      }
+      if (debug) fprintf(stderr, "  Driver is obsolete: %s\n",
+			 ret->driver_obsolete);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supplier"))) {
       ret->supplier = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -2698,6 +2709,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->id = NULL;
   ret->name = NULL;
   ret->url = NULL;
+  ret->driver_obsolete = NULL;
   ret->supplier = NULL;
   ret->manufacturersupplied = NULL;
   ret->license = NULL;
@@ -2744,6 +2756,14 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver URL: %s\n", ret->url);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "obsolete"))) {
+      ret->driver_obsolete = xmlGetProp(cur1, (const xmlChar *) "replace");
+      if (ret->driver_obsolete == NULL) {
+	if (debug) fprintf(stderr, "    No replacement driver found!\n");
+	ret->driver_obsolete = (xmlChar *)"1";
+      }
+      if (debug) fprintf(stderr, "  Driver is obsolete: %s\n",
+			 ret->driver_obsolete);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supplier"))) {
       ret->supplier = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -3567,6 +3587,10 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	    printf("                'url' => '%s',\n",
 		   overview->overviewDrivers[k]->url);
 	  }
+	  if (overview->overviewDrivers[k]->driver_obsolete != NULL) {
+	    printf("                'obsolete' => '%s',\n",
+		   overview->overviewDrivers[k]->driver_obsolete);
+	  }
 	  if (overview->overviewDrivers[k]->supplier != NULL) {
 	    printf("                'supplier' => '%s',\n",
 		   overview->overviewDrivers[k]->supplier);
@@ -3922,6 +3946,9 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'url' => '%s',\n", combo->url);
   } else {
     printf("  'url' => undef,\n");
+  }
+  if (combo->driver_obsolete) {
+    printf("  'obsolete' => '%s',\n", combo->driver_obsolete);
   }
   if (combo->supplier != NULL) {
     printf("  'supplier' => '%s',\n",
@@ -4358,6 +4385,9 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   printf("  'name' => '%s',\n", driver->name);
   if (driver->url) {
     printf("  'url' => '%s',\n", driver->url);
+  }
+  if (driver->driver_obsolete) {
+    printf("  'obsolete' => '%s',\n", driver->driver_obsolete);
   }
   if (driver->supplier != NULL) {
     printf("  'supplier' => '%s',\n",

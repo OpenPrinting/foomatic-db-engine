@@ -1,3 +1,11 @@
+2007-02-26  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c, lib/Foomatic/DB.pm: Let "<obsolete>" tags
+	  in driver XML files be read and added to the Perl data structures
+	  of driver entries, printer/driver combos, and the overview. Let
+	  this info also be put into the PPDs and into the "DRV:" field
+	  of the device IDs.
+
 2007-02-24  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Let Perl data structure for driver XML
