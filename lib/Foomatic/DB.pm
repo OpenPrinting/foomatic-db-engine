@@ -470,10 +470,6 @@ sub find_printer {
 	    }
 	}
 
-	# Do not search human-readable make and model names if we
-	# had a match with the auto-detection ID string 
-	next DBENTRY if $bestmatchlength >= 100;
-
 	# Try to match the (human-readable) make and model of the
 	# Foomatic database or of the PPD file
 	my $dbmakemodel = "$p->{make}|$p->{model}";
