@@ -149,13 +149,13 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-addpjloptions foomatic-compiledb foomatic-fix-xml \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
 	foomatic-ppd-options foomatic-printermap-to-gimp-print-xml \
-	foomatic-extract-text
+	foomatic-extract-text foomatic-searchprinter
 
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
 	foomatic-combo-xml foomatic-perl-data \
 	foomatic-ppdfile foomatic-compiledb \
-	foomatic-ppd-options
+	foomatic-ppd-options foomatic-searchprinter
 
 # Administrative commands, only useful for admins
 SBINFILES:=foomatic-kitload \
