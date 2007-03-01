@@ -182,6 +182,398 @@ sub get_drivers_for_printer {
     return undef;
 }
 
+
+# Clean some manufacturer's names (for printer search function, taken
+# from printerdrake, printer setup tool of Mandriva Linux)
+sub clean_manufacturer_name {
+    my ($make) = @_;
+    $make =~ s/^Canon\W.*$/Canon/i;
+    $make =~ s/^Lexmark.*$/Lexmark/i;
+    $make =~ s/^Hewlett?[\s\-]*Packard/HP/i;
+    $make =~ s/^Seiko[\s\-]*Epson/Epson/i;
+    $make =~ s/^Kyocera[\s\-]*Mita/Kyocera/i;
+    $make =~ s/^CItoh/C.Itoh/i;
+    $make =~ s/^Oki(|[\s\-]*Data)\s*$/Okidata/i;
+    $make =~ s/^(SilentWriter2?|ColorMate)/NEC/i;
+    $make =~ s/^(XPrint|Majestix)/Xerox/i;
+    $make =~ s/^QMS-PS/QMS/i;
+    $make =~ s/^(Personal|LaserWriter)/Apple/i;
+    $make =~ s/^Digital/DEC/i;
+    $make =~ s/\s+Inc\.//i;
+    $make =~ s/\s+Corp\.//i;
+    $make =~ s/\s+SA\.//i;
+    $make =~ s/\s+S\.\s*A\.//i;
+    $make =~ s/\s+Ltd\.//i;
+    $make =~ s/\s+International//i;
+    $make =~ s/\s+Int\.//i;
+    return $make;
+}    
+
+# Guess manufacturer by description with only model name (for printer
+# search function, taken from printerdrake, printer setup tool of
+# Mandriva Linux)
+
+sub guessmake {
+
+    my ($description) = @_;
+
+    my $manufacturer;
+    my $model;
+
+    if ($description =~
+	/^\s*(DeskJet|LaserJet|OfficeJet|PSC|PhotoSmart)\b/i) {
+	# HP printer
+	$manufacturer = "HP";
+	$model = $description;
+    } elsif ($description =~
+	     /^\s*(Stylus|EPL|AcuLaser)\b/i) {
+	# Epson printer
+	$manufacturer = "Epson";
+	$model = $description;
+    } elsif ($description =~
+	     /^\s*(Aficio)\b/i) {
+	# Ricoh printer
+	$manufacturer = "Ricoh";
+	$model = $description;
+    } elsif ($description =~
+	     /^\s*(Optra|Color\s+JetPrinter)\b/i) {
+	# Lexmark printer
+	$manufacturer = "Lexmark";
+	$model = $description;
+    } elsif ($description =~
+	     /^\s*(imageRunner|Pixma|Pixus|BJC|LBP)\b/i) {
+	# Canon printer
+	$manufacturer = "Canon";
+	$model = $description;
+    } elsif ($description =~
+	     /^\s*(Phaser|DocuPrint|(Work|Document)\s*(Home|)Centre)\b/i) {
+	# Xerox printer
+	$manufacturer = "Xerox";
+	$model = $description;
+    } elsif (($description =~ /^\s*(KONICA\s*MINOLTA)\s+(\S.*)$/i) ||
+	     ($description =~ /^\s*(\S*)\s+(\S.*)$/)) {
+	$manufacturer = $1 if $manufacturer eq "";
+	$model = $2 if $model eq "";
+    }
+    return ($manufacturer, $model);
+}
+
+# Find a printer in the database based on an auto-detected device ID
+# or a user-typed search term
+sub find_printer {
+    my ($this, $searchterm, $mode, $output) = @_;
+    # $mode = 0: Everything (default)
+    # $mode = 1: No matches on only the manufacturer
+    # $mode = 2: No matches on only the manufacturer or only the model
+    # $mode = 3: Exact matches of device ID, make/model, or Foomatic ID
+    #            plus matches of the page description language
+    # $mode = 4: Exact matches of device ID, make/model, or Foomatic ID
+    #            only
+    # $output = 0: Everything
+    # $output = 1: Only best match class (default)
+    # $output = 2: Only best match
+
+    # Correct options
+    $mode = 0 if !defined $mode;
+    $mode = 0 if $mode < 0;
+    $mode = 4 if $mode > 4;
+    $output = 1 if !defined $output;
+    $output = 0 if $output < 0;
+    $output = 2 if $output > 2;
+
+    my $over = $this->get_overview();
+
+    my %results;
+
+    # Parse the search term
+    my ($automake, $automodel, $autodescr, $autocmdset, $autosku);
+    my $deviceid = 0;
+
+    # Do we have a device ID?
+    if ($searchterm =~ /(MFG|MANUFACTURER):([^;]+);/) {
+	$automake = $2;
+	$deviceid = 1;
+    }
+    if ($searchterm =~ /(MDL|MODEL):([^;]+);/) {
+	$automodel = $2;
+	$automodel =~ s/\s+$//;
+	$deviceid = 1;
+    }
+    if ($searchterm =~ /(DES|DESCRIPTION):([^;]+);/) {
+	$autodescr = $2;
+	$autodescr =~ s/\s+$//;
+	$deviceid = 1;
+    }
+    if ($searchterm =~ /(CMD|COMMAND\s?SET):([^;]+);/) {
+	$autocmdset = $2;
+	$deviceid = 1;
+    }
+    if ($searchterm =~ /(SKU):([^;]+);/) {
+	$autosku = $2;
+	$autosku =~ s/\s+$//;
+	$deviceid = 1;
+    }
+
+    # Search term is not a device ID
+    if (!$deviceid) {
+	if ($searchterm =~ /^([^\|]+)\|([^\|]+)(\|.*|)$/) {
+	    $automake = $1;
+	    $automodel = $2;
+	} else {
+	    $autodescr = $searchterm;
+	}
+    }
+
+    # This is the algorithm used in printerdrake (printer setup tool
+    # of Mandriva Linux) to match results of the printer auto-detection
+    # with the printer database
+
+    # Clean some manufacturer's names
+    my $descrmake = clean_manufacturer_name($automake);
+
+    # Generate data to match human-readable make/model names
+    # of Foomatic database
+    my $descr;
+    if ($automake && $autosku) {
+	$descr = "$descrmake|$autosku";
+    } elsif ($automake && $automodel) {
+	$descr = "$descrmake|$automodel";
+    } elsif ($autodescr && (length($autodescr) > 5)) {
+	my ($mf, $md) =
+	    guessmake($autodescr);
+	$descrmake = clean_manufacturer_name($mf);
+	$descr = "$descrmake|$md";
+    } elsif ($automodel) {
+	my ($mf, $md) =
+	    guessmake($automodel);
+	$descrmake = clean_manufacturer_name($mf);
+	$descr = "$descrmake|$md";
+    } elsif ($automake) {
+	$descr = "$descrmake|";
+    } else {
+	return ();
+    }
+
+    # Remove manufacturer's name from the beginning of the
+    # description (do not do this with manufacturer names which
+    # contain odd characters)
+    $descr =~ s/^$descrmake\|\s*$descrmake\s*/$descrmake|/i
+	if $descrmake && 
+	$descrmake !~ m![\\/\(\)\[\]\|\.\$\@\%\*\?]!;
+
+    # Clean up the description from noise which makes the best match
+    # difficult
+    $descr =~ s/\s+[Ss]eries//i;
+    $descr =~ s/\s+\(?[Pp]rinter\)?$//i;
+
+    # Try to find an exact match, check both whether the detected
+    # make|model is in the make|model of the database entry and vice versa
+    # If there is more than one matching database entry, the longest match
+    # counts.
+    my $matchlength = -1000;
+    my $bestmatchlength = -1000;
+    my $p;
+  DBENTRY: for $p (@{$over}) {
+	# Try to match the device ID string of the auto-detection
+	if ($p->{make} =~ /Generic/i) {
+	    # Database entry for generic printer, check printer
+	    # languages (command set)
+	    if ($p->{model} =~ m!PCL\s*5/5e!i) {
+		# Generic PCL 5/5e Printer
+		if ($autocmdset =~
+		    /(^|[:,])PCL\s*\-*\s*(5|)($|[,;])/i) {
+		    $matchlength = 70;
+		    $bestmatchlength = $matchlength if
+			$bestmatchlength < $matchlength;
+		    $results{$p->{id}} = $matchlength if
+			(!defined($results{$p->{id}}) ||
+			 ($results{$p->{id}} < $matchlength));
+		    next;
+		}
+	    } elsif ($p->{model} =~ m!PCL\s*(6|XL)!i) {
+		# Generic PCL 6/XL Printer
+		if ($autocmdset =~
+		    /(^|[:,])PCL\s*\-*\s*(6|XL)($|[,;])/i) {
+		    $matchlength = 80;
+		    $bestmatchlength = $matchlength if
+			$bestmatchlength < $matchlength;
+		    $results{$p->{id}} = $matchlength if
+			(!defined($results{$p->{id}}) ||
+			 ($results{$p->{id}} < $matchlength));
+		    next;
+		}
+	    } elsif ($p->{model} =~ m!(PostScript)!i) {
+		# Generic PostScript Printer
+		if ($autocmdset =~
+		    /(^|[:,])(PS|POSTSCRIPT)[^:;,]*($|[,;])/i) {
+		    $matchlength = 90;
+		    $bestmatchlength = $matchlength if
+			$bestmatchlength < $matchlength;
+		    $results{$p->{id}} = $matchlength if
+			(!defined($results{$p->{id}}) ||
+			 ($results{$p->{id}} < $matchlength));
+		    next;
+		}
+	    }
+
+	} else {
+	    # "Real" manufacturer, check manufacturer, model, and/or
+	    # description
+	    my $matched = 1;
+	    my ($mfg, $mdl, $des, $sku);
+	    my $ieee1284 = deviceIDfromDBEntry($p);
+	    if ($ieee1284 =~ /(MFG|MANUFACTURER):([^;]+);/) {
+		$mfg = $2;
+	    }
+	    if ($ieee1284 =~ /(MDL|MODEL):([^;]+);/) {
+		$mdl = $2;
+		$mdl =~ s/\s+$//;
+	    }
+	    if ($ieee1284 =~ /(DES|DESCRIPTION):([^;]+);/) {
+		$des = $2;
+		$des =~ s/\s+$//;
+	    }
+	    if ($ieee1284 =~ /(SKU):([^;]+);/) {
+		$sku = $2;
+		$sku =~ s/\s+$//;
+	    }
+	    if ($mfg) {
+		if ($mfg ne $automake) {
+		    $matched = 0;
+		}
+	    }
+	    if ($mdl) {
+		if ($mdl ne $automodel) {
+		    $matched = 0;
+		}
+	    }
+	    if ($des) {
+		if ($des ne $autodescr) {
+		    $matched = 0;
+		}
+	    }
+	    if ($sku && $autosku) {
+		if ($sku ne $autosku) {
+		    $matched = 0;
+		}
+	    }
+	    if ($matched &&
+		($des || ($mfg && ($mdl || ($sku && $autosku))))) {
+		# Full match to known auto-detection data
+		$matchlength = 1000;
+		$bestmatchlength = $matchlength if
+		    $bestmatchlength < $matchlength;
+		$results{$p->{id}} = $matchlength if
+			    (!defined($results{$p->{id}}) ||
+			     ($results{$p->{id}} < $matchlength)); 
+		next;
+	    }
+	}
+
+	# Do not search human-readable make and model names if we
+	# had a match with the auto-detection ID string 
+	next DBENTRY if $bestmatchlength >= 100;
+
+	# Try to match the (human-readable) make and model of the
+	# Foomatic database or of the PPD file
+	my $dbmakemodel = "$p->{make}|$p->{model}";
+
+	# At first try to match make and model, then only model and
+	# after that only make
+	my $searchtasks = [[$descr, $dbmakemodel, 0],
+			   [$searchterm, $p->{model}, -200],
+			   [clean_manufacturer_name($searchterm),
+			    $p->{make}, -300],
+			   [$searchterm, $p->{id}, 0]];
+
+	foreach my $task (@{$searchtasks}) {
+
+	    # Do not try to match search terms or database entries without
+	    # real content
+	    next unless $task->[0] =~ /[a-z]/i;
+	    next unless $task->[1] =~ /[a-z]/i;
+
+	    # If make and model match exactly, we have found the correct
+	    # entry and we can stop searching human-readable makes and
+	    # models
+	    if (lc($task->[1]) eq lc($task->[0])) {
+		$matchlength = 100;
+		$bestmatchlength = $matchlength + $task->[2] if
+		    $bestmatchlength < $matchlength + $task->[2];
+		$results{$p->{id}} = $matchlength + $task->[2] if
+			    (!defined($results{$p->{id}}) ||
+			     ($results{$p->{id}} < $matchlength)); 
+		next DBENTRY;
+	    }
+
+	    # Matching a part of the human-readable makes and models
+	    # should only be done if the search term is not the name of
+	    # an old model, otherwise the newest, not yet listed models
+	    # match with the oldest model of the manufacturer (as the
+	    # Epson Stylus Photo 900 with the original Epson Stylus Photo)
+	    my @badsearchterms = 
+		("HP|DeskJet",
+		 "HP|LaserJet",
+		 "HP|DesignJet",
+		 "HP|OfficeJet",
+		 "HP|PhotoSmart",
+		 "EPSON|Stylus",
+		 "EPSON|Stylus Color",
+		 "EPSON|Stylus Photo",
+		 "EPSON|Stylus Pro",
+		 "XEROX|WorkCentre",
+		 "XEROX|DocuPrint");
+	    if (!member($task->[0], @badsearchterms)) {
+		my $searcht = $task->[0];
+		my $lsearcht = length($searcht);
+		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
+		if ((1 || $lsearcht >= $matchlength) &&
+		    $task->[1] =~ m!$searcht!i) {
+		    $matchlength = $lsearcht;
+		    $bestmatchlength = $matchlength + $task->[2] if
+			$bestmatchlength < $matchlength + $task->[2];
+		    $results{$p->{id}} = $matchlength + $task->[2] if
+			    (!defined($results{$p->{id}}) ||
+			     ($results{$p->{id}} < $matchlength)); 
+		}
+	    }
+	    if (!member($task->[1], @badsearchterms)) {
+		my $searcht = $task->[1];
+		my $lsearcht = length($searcht);
+		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
+		if ((1 || $lsearcht >= $matchlength) &&
+		    $task->[0] =~ m!$searcht!i) {
+		    $matchlength = $lsearcht;
+		    $bestmatchlength = $matchlength + $task->[2] if
+			$bestmatchlength < $matchlength + $task->[2];
+		    $results{$p->{id}} = $matchlength + $task->[2] if
+			    (!defined($results{$p->{id}}) ||
+			     ($results{$p->{id}} < $matchlength)); 
+		}
+	    }
+	}
+    }
+
+    return grep {
+	((($mode == 4) && ($results{$_} >= 100)) ||
+	 (($mode == 3) && ($results{$_} > 60)) ||
+	 (($mode == 2) && ($results{$_} > -100)) ||
+	 (($mode == 1) && ($results{$_} > -200)) ||
+	 ($mode == 0)) &&
+	(($output == 0) ||
+	 (($output == 1) &&
+	  !((($bestmatchlength >= 100) && ($results{$_} < 100)) || 
+	    (($bestmatchlength >= 60) && ($results{$_} < 60)) || 
+	    (($bestmatchlength >= 0) && ($results{$_} < 0)) || 
+	    (($bestmatchlength >= -100) && ($results{$_} < -100)) || 
+	    (($bestmatchlength >= -200) && ($results{$_} < -200)) || 
+	    (($bestmatchlength >= -300) && ($results{$_} < -300)) || 
+	    (($bestmatchlength >= -400) && ($results{$_} < -400)))) ||
+	 (($output == 2) &&
+	  ($results{$_} == $bestmatchlength)))
+    } sort { $results{$b} <=> $results{$a} } keys(%results);
+}
+
 # This function sorts the options at first by their group membership and
 # then by their names appearing in the list of functional areas. This way
 # it will be made easier to build the PPD file with option groups and in
@@ -2074,28 +2466,9 @@ sub cutguiname {
     }
 }
 
-sub ppd1284DeviceID {
+sub deviceIDfromDBEntry {
 
-    # Clean up IEEE-1284 device ID to only contain the fields relevant
-    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU), thus
-    # the line length limit of PPDs does not get exceeded on very long
-    # ID strings.
-
-    my ($id) = @_;
-    my $ppdid = "";
-    
-    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
-	if ($id =~ m/(\b$field:[^:;]+;)/is) {
-	    $ppdid .= $1;
-	}
-    }
-
-    return $ppdid;
-}
-
-sub getppdheaderdata {
-    
-    my ($dat, $driver, $recdriver) = @_;
+    my ($dat) = @_;
 
     # Complete IEEE 1284 ID string?
     my $ieee1284;
@@ -2143,6 +2516,33 @@ sub getppdheaderdata {
 	$ieee1284 .= "CMD:$pnpcmd;" if $pnpcmd;
 	$ieee1284 .= "DES:$pnpdescription;" if $pnpdescription;
     }
+    return $ieee1284;
+}
+
+sub ppd1284DeviceID {
+
+    # Clean up IEEE-1284 device ID to only contain the fields relevant
+    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU), thus
+    # the line length limit of PPDs does not get exceeded on very long
+    # ID strings.
+
+    my ($id) = @_;
+    my $ppdid = "";
+    
+    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
+	if ($id =~ m/(\b$field:[^:;]+;)/is) {
+	    $ppdid .= $1;
+	}
+    }
+
+    return $ppdid;
+}
+
+sub getppdheaderdata {
+    
+    my ($dat, $driver, $recdriver) = @_;
+
+    my $ieee1284 = deviceIDfromDBEntry($dat);
 
     # Add driver profile to device ID string, so we get it into the
     # PPD listing output of CUPS
@@ -2217,7 +2617,11 @@ sub getppdheaderdata {
     my $make = $dat->{'make'};
     my $model = $dat->{'model'};
 
+    $ieee1284 =~ /(MFG|MANUFACTURER):([^;]+);/;
+    my $pnpmake = $2;
     $pnpmake = $make if !$pnpmake;
+    $ieee1284 =~ /(MDL|MODEL):([^;]+);/;
+    my $pnpmodel = $2;
     $pnpmodel = $model if !$pnpmodel;
 
     # File name for the PPD file

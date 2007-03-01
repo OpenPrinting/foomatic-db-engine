@@ -1,0 +1,62 @@
+#!@PERL@
+# -*- Perl -*-
+
+#
+# This script searches for printers in the database. You can give the
+# printer manufacturer and model names or the IEEE-1284 device ID of
+# the printer. You will get one or more results sorted by how well they
+# match. Exact metch of the model-identifying parts of the IEEE-1284 device ID
+# counts highest. Run "foomatic-addpjloptions -h" to get help.
+#
+ 
+#
+# Till Kamppeter (till.kamppeter@gmx.net)
+#
+# Copyright 2007 Till Kamppeter
+#
+# This software may be freely redistributed under the terms of the GNU
+# General Public License (http://www.gnu.org/).
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+ 
+use strict;
+use FileHandle;
+
+sub usage(){
+    print STDERR <<EOF;
+Usage: foomatic-searchprinter <search term>
+       foomatic-searchprinter -h
+
+   <search term>: Manufacturer/model, separated by a space or a '|' or
+                  IEEE-1284 device ID
+
+   -h             This help message
+
+EOF
+
+    exit(1);
+}
+
+# Read command line options
+use Getopt::Std;
+# Help
+my $opt;
+getopts("h",$opt) || usage();
+ 
+# Show usage info
+if ($opt->{h}) {
+    usage();
+}
+
+# Search term
+my $searchterm = join(' ', @ARGV);
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+
+my $db = new Foomatic::DB;
+
+print join("\n", $db->find_printer($searchterm, 3, 0)) . "\n";
