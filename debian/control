@@ -10,7 +10,7 @@ Architecture: any
 Pre-Depends: bash (>= 2.05)
 Depends: ${perl:Depends}, ${shlibs:Depends}, foomatic-db, foomatic-filters, wget | curl
 Recommends: netcat
-Suggests: foomatic-db-hpijs, foomatic-db-gimp-print, foomatic-gui
+Suggests: foomatic-db-hpijs, foomatic-db-gutenprint, foomatic-gui
 Conflicts: foomatic-bin (<< 2.9), foomatic-db (<< 2.9)
 Replaces: foomatic-bin (<< 2.9)
 Description: OpenPrinting printer support - programs
@@ -30,7 +30,7 @@ Description: OpenPrinting printer support - programs
  Hewlett-Packard and some other consumer inkjets using the HPIJS
  backend developed by HP.
  .
- foomatic-db-gimp-print includes support for photo-quality printing
+ foomatic-db-gutenprint includes support for photo-quality printing
  with many consumer inkjets (including those from HP and Epson).
  .
  foomatic-gui provides a GNOME-based setup tool for Foomatic printer
