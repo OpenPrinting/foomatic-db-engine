@@ -1,3 +1,11 @@
+2007-03-04  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Improved find_printer() method. Now
+	  searches of make and model names do not consider other characters
+	  than letters and numbers any more. All other characters are and
+	  boundaries between letters and numbers are converted to single
+	  spaces.
+
 2007-03-03  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* debian/control: "gimp-print" -> "gutenprint".

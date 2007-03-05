@@ -258,6 +258,22 @@ sub guessmake {
     return ($manufacturer, $model);
 }
 
+# Normalize a string, so that for a search only letters
+# (case-insensitive), numbers and boundaries between letter blocks and
+# number blocks are considered. The pipe '|' as separator between make
+# and model is also considered. Blocks of other characters are
+# replaced by a single space and boundaries between letters and
+# numbers are marked with a single space.
+sub normalize {
+    my ($str) = @_;
+    $str = lc($str);
+    $str =~ s/\+/plus/g;
+    $str =~ s/[^a-z0-9\|]+/ /g;
+    $str =~ s/(?<=[a-z])(?=[0-9])/ /g;
+    $str =~ s/(?<=[0-9])(?=[a-z])/ /g;
+    return $str;
+}
+
 # Find a printer in the database based on an auto-detected device ID
 # or a user-typed search term
 sub find_printer {
@@ -350,8 +366,6 @@ sub find_printer {
 	$descr = "$descrmake|$md";
     } elsif ($automake) {
 	$descr = "$descrmake|";
-    } else {
-	return ();
     }
 
     # Remove manufacturer's name from the beginning of the
@@ -492,7 +506,7 @@ sub find_printer {
 	    # If make and model match exactly, we have found the correct
 	    # entry and we can stop searching human-readable makes and
 	    # models
-	    if (lc($task->[1]) eq lc($task->[0])) {
+	    if (normalize($task->[1]) eq normalize($task->[0])) {
 		$matchlength = 100;
 		$bestmatchlength = $matchlength + $task->[2] if
 		    $bestmatchlength < $matchlength + $task->[2];
@@ -520,11 +534,12 @@ sub find_printer {
 		 "XEROX|WorkCentre",
 		 "XEROX|DocuPrint");
 	    if (!member($task->[0], @badsearchterms)) {
-		my $searcht = $task->[0];
+		my $searcht = normalize($task->[0]);
 		my $lsearcht = length($searcht);
 		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
+		my $s = normalize($task->[1]);
 		if ((1 || $lsearcht >= $matchlength) &&
-		    $task->[1] =~ m!$searcht!i) {
+		    $s =~ m!$searcht!i) {
 		    $matchlength = $lsearcht;
 		    $bestmatchlength = $matchlength + $task->[2] if
 			$bestmatchlength < $matchlength + $task->[2];
@@ -534,11 +549,12 @@ sub find_printer {
 		}
 	    }
 	    if (!member($task->[1], @badsearchterms)) {
-		my $searcht = $task->[1];
+		my $searcht = normalize($task->[1]);
 		my $lsearcht = length($searcht);
 		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
+		my $s = normalize($task->[0]);
 		if ((1 || $lsearcht >= $matchlength) &&
-		    $task->[0] =~ m!$searcht!i) {
+		    $s =~ m!$searcht!i) {
 		    $matchlength = $lsearcht;
 		    $bestmatchlength = $matchlength + $task->[2] if
 			$bestmatchlength < $matchlength + $task->[2];
