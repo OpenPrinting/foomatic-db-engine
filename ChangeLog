@@ -1,3 +1,8 @@
+2007-03-08  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: Let the PPD files listed in the XML version
+	  of the overview also get listed in the Perl version.
+
 2007-03-04  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Improved find_printer() method. Now
