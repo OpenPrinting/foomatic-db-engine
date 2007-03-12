@@ -348,6 +348,11 @@ typedef struct driverEntry {
  * Records for the data of the overview
  */
 
+typedef struct ppdFile {
+  xmlChar *driver;
+  xmlChar *filename;
+} ppdFile, *ppdFilePtr;
+
 typedef struct overviewPrinter {
   /* General info */
   xmlChar *id;
@@ -380,6 +385,9 @@ typedef struct overviewPrinter {
   xmlChar *driver;
   int     num_drivers;
   printerDrvEntryPtr *drivers;
+  /* PPD files */
+  int     num_ppdfiles;
+  ppdFilePtr *ppdfiles;
 } overviewPrinter, *overviewPrinterPtr;
   
 typedef struct overview {
@@ -571,6 +579,7 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   overviewPrinterPtr printer;
   printerDrvEntryPtr dentry; /* An entry for a driver supporting this
 				printer */
+  ppdFilePtr     ppd;
   int            driverfound;
   int            i, j;
 
@@ -618,6 +627,8 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   printer->driver = NULL;
   printer->num_drivers = 0;
   printer->drivers = NULL;
+  printer->num_ppdfiles = 0;
+  printer->ppdfiles = NULL;
 
   /* Go through subnodes */
   cur1 = node->xmlChildrenNode;
@@ -840,6 +851,45 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 		}
 		cur4 = cur4->next;
 	      }
+	    }
+	    cur3 = cur3->next;
+	  }
+	}
+	cur2 = cur2->next;
+      }
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "ppds"))) {
+      cur2 = cur1->xmlChildrenNode;
+      while (cur2 != NULL) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ppd"))) {
+	  printer->num_ppdfiles ++;
+	  printer->ppdfiles =
+	    (ppdFilePtr *)
+	    realloc((ppdFilePtr *)printer->ppdfiles, 
+		    sizeof(ppdFilePtr) *
+		    printer->num_ppdfiles);
+	  ppd = (ppdFilePtr) malloc(sizeof(ppdFile));
+	  if (ppd == NULL) {
+	    fprintf(stderr,"Out of memory!\n");
+	    xmlFreeDoc(doc);
+	    exit(1);
+	  }
+	  printer->ppdfiles[printer->num_ppdfiles-1] = ppd;
+	  memset(ppd, 0, sizeof(ppdFile));
+	  ppd->driver = NULL;
+	  ppd->filename = NULL;
+	  if (debug) fprintf(stderr, "  Available ready-made PPD file:\n");
+	  cur3 = cur2->xmlChildrenNode;
+	  while (cur3 != NULL) {
+	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "driver"))) {
+	      ppd->driver =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1));
+	      if (debug) fprintf(stderr, "    For driver: %s\n",
+				 ppd->driver);
+	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "ppdfile"))) {
+	      ppd->filename =
+		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode, 1));
+	      if (debug) fprintf(stderr, "    File name: %s\n",
+				 ppd->filename);
 	    }
 	    cur3 = cur3->next;
 	  }
@@ -3703,7 +3753,21 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
       }
       printf("            },\n");
     } else {
-      printf("            'drivers' => []\n");
+      printf("            'drivers' => [],\n");
+    }
+    if (printer->num_ppdfiles > 0) {
+      printf("            'ppds' => [\n");
+      for (j = 0; j < printer->num_ppdfiles; j ++)
+	if ((printer->ppdfiles[j]->driver != NULL) &&
+	    (printer->ppdfiles[j]->filename != NULL)) {
+	  printf("                        {\n");
+	  printf("                          'driver' => '%s',\n",
+		 printer->ppdfiles[j]->driver);
+	  printf("                          'ppdfile' => '%s',\n",
+		 printer->ppdfiles[j]->filename);
+	  printf("                        },\n");
+	}
+      printf("                      ],\n");
     }
     printf("          },\n");
   }
