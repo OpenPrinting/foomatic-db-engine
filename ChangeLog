@@ -1,3 +1,11 @@
+2007-07-09  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Allow group names preceeded by asterisks
+	  ('*') in PPD files ("*OpenGroup: ..."/"*CloseGroup: ..." lines).
+	  This is needed by the PPD for the KONICA MINOLTA magicolor 5430
+	  DL, provided by KONICA MINOLTA and probably also by several
+	  other manufacturer-supplied PPD files.
+
 2007-03-08  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Let the PPD files listed in the XML version
