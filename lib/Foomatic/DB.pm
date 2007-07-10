@@ -1202,7 +1202,7 @@ sub ppdfromvartoperl ($) {
 		$dat->{'args_byname'}{'PageSize'}{'vals_byname'}{$setting}{'driverval'} = $code;
 		$dat->{'args_byname'}{'PageRegion'}{'vals_byname'}{$setting}{'driverval'} = $code;
 	    }
-	} elsif (m!^\*Open(Sub|)Group:\s*([^/]+)(/(.*)|)$!) {
+	} elsif (m!^\*Open(Sub|)Group:\s*\*?([^/]+?)(/(.*)|)$!) {
 	    # "*Open[Sub]Group: <group>[/<translation>]
 	    my $group = $2;
 	    chomp($group) if $group;
@@ -1217,7 +1217,7 @@ sub ppdfromvartoperl ($) {
 	    $currentgroup .= $group;
 	    push(@currentgrouptrans, 
 		 unhexify($grouptrans, $dat->{"encoding"}));
-	} elsif (m!^\*Close(Sub|)Group:\s*([^/]+)$!) {
+	} elsif (m!^\*Close(Sub|)Group:\s*\*?([^/]+?)$!) {
 	    # "*Close[Sub]Group: <group>"
 	    my $group = $2;
 	    chomp($group) if $group;
