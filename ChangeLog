@@ -1,4 +1,12 @@
-2007-07-09  Till Kamppeter <till.kamppeter@gmail.com>
+2007-07-11  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* Makefile.in, README, README.build-foomatic-filters-ppds, USAGE,
+	  configure.ac, foomatic-preferred-driver.in,
+	  foomatic-printermap-to-gimp-print-xml.in,
+	  foomatic-printermap-to-gutenprint-xml.in, debian/presubj,
+	  lib/Foomatic/DB.pm: Replaced "Gimp-Print" by "Gutenprint".
+
+2007-07-10  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Allow group names preceeded by asterisks
 	  ('*') in PPD files ("*OpenGroup: ..."/"*CloseGroup: ..." lines).

@@ -33,9 +33,9 @@ To include support for HPIJS
 
 foomatic-db-hpijs
 
-To include support for Gimp-Print
+To include support for Gutenprint
 
-Gimp-Print from http://gimp-print.sf.net/
+Gutenprint from http://gutenprint.sf.net/
 
 
 How to build
@@ -72,12 +72,12 @@ cd ../foomatic-db-engine*
 ./foomatic-kitload -f -k ../foomatic-db-hoijs*/db/source/
 cd ..
 
-Add support for Gimp-Print (optional, <...> is the Gimp-Print source
+Add support for Gutenprint (optional, <...> is the Gutenprint source
 code directory):
 
 cd foomatic-db-engine*
-./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gimp-print
-./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gimp-print-ijs
+./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gutenprint
+./foomatic-kitload -f -k <...>/src/foomatic/foomatic-db/gutenprint-ijs
 cd ..
 
 Exclude unwished drivers or printers from being packaged by deleting

@@ -1,9 +1,9 @@
 #!@PERL@
 
 # This script updates the printer list of the driver XML file of
-# Gimp-Print (db/source/driver/gimp-print.xml in foomatic-db package)
+# Gutenprint (db/source/driver/gutenprint.xml in foomatic-db package)
 # according to the file src/foomatic/foomatic-printermap of the source
-# tarball of Gimp-Print 4.2.x or later.
+# tarball of Gutenprint 5.0.x or later.
 #
 # Remarks:
 #
@@ -34,30 +34,30 @@ use Getopt::Std;
 getopts("f:g:h") or $opt_h = 1;
 if ($opt_h) {
     print "
-foomatic-printermap-to-gimp-print-xml [ -f <foomatic-printermap> ] \
-                              [ -g <gimp-print.xml> ]
+foomatic-printermap-to-gutenprint-xml [ -f <foomatic-printermap> ] \
+                              [ -g <gutenprint.xml> ]
  -f <foomatic-printermap>: File src/foomatic/foomatic-printermap of
-                    Gimp-Print source tarball (4.2.x or later). Default
+                    Gutenprint source tarball (4.2.x or later). Default
                     is foomatic-printermap in the current directory
 
- -g <gimp-print.xml>: File gimp-print.xml whose printer list should be
-                    updated. Default is the gimp-print.xml of the
+ -g <gutenprint.xml>: File gutenprint.xml whose printer list should be
+                    updated. Default is the gutenprint.xml of the
                     Foomatic database currently in use.
 
 This program updates the printer list of the driver XML file of
-Gimp-Print (db/source/driver/gimp-print.xml in foomatic-db package)
+Gutenprint (db/source/driver/gutenprint.xml in foomatic-db package)
 according to the file src/foomatic/foomatic-printermap of the source
-tarball of Gimp-Print 4.2.x or later.
+tarball of Gutenprint 5.0.x or later.
 
 ";
     exit 0;
 }
 
-# Determine gimp-print.xml file
-my $gimpprintxmlfile = $opt_g;
-if (!$gimpprintxmlfile) {
+# Determine gutenprint.xml file
+my $gutenprintxmlfile = $opt_g;
+if (!$gutenprintxmlfile) {
     use Foomatic::Defaults;
-    $gimpprintxmlfile = "$libdir/db/source/driver/gimp-print.xml";
+    $gutenprintxmlfile = "$libdir/db/source/driver/gutenprint.xml";
 }
 
 # Determine foomatic-printermap file
@@ -66,7 +66,7 @@ if (!$foomaticprintermapfile) {
    $foomaticprintermapfile = "./foomatic-printermap";
 }
 
-# Read list of printer IDs from Gimp-Print's foomatic-printermap
+# Read list of printer IDs from Gutenprint's foomatic-printermap
 open PM, "< $foomaticprintermapfile" or
     die "Cannot read $foomaticprintermapfile!\n";
 my @printermap = <PM>;
@@ -76,18 +76,18 @@ close PM;
 
 #print $#printermap;
 
-# Read gimp-print.xml
-open GPX, "< $gimpprintxmlfile" or
-    die "Cannot read $gimpprintxmlfile!\n";
-my $gimpprintxml = join("", <GPX>);
+# Read gutenprint.xml
+open GPX, "< $gutenprintxmlfile" or
+    die "Cannot read $gutenprintxmlfile!\n";
+my $gutenprintxml = join("", <GPX>);
 close GPX;
 
 # Remove printer list
-#$gimpprintxml =~ s!(<\s*printers\s*>).*(\n\s*<\s*/\s*printers\s*>)!$1$2!s;
+#$gutenprintxml =~ s!(<\s*printers\s*>).*(\n\s*<\s*/\s*printers\s*>)!$1$2!s;
 
 # Mark beginning of printer list from foomatic-printermap before deleting
 # these printer entries
-$gimpprintxml =~ s:\n  <!-- The following printers are listed in the current foomatic-printermap -->:XXXXXXXXXX:s;
+$gutenprintxml =~ s:\n  <!-- The following printers are listed in the current foomatic-printermap -->:XXXXXXXXXX:s;
 
 # Remove only those printers which are in foomatic-printermap. We
 # re-add them in the next step, this way we have all printers of
@@ -98,34 +98,34 @@ $gimpprintxml =~ s:\n  <!-- The following printers are listed in the current foo
 print STDERR "Removing old printer entries ";
 foreach my $printer (@printermap) {
     print STDERR ".";
-    $gimpprintxml =~ s:\s*<\!\-\-[^<>]*?\-\->\s*<printer>\s*<id>\s*$printer\s*</id>.*?</printer>::s or
-	$gimpprintxml =~ s:\s*<printer>\s*<id>\s*$printer\s*</id>.*?</printer>::s or 
+    $gutenprintxml =~ s:\s*<\!\-\-[^<>]*?\-\->\s*<printer>\s*<id>\s*$printer\s*</id>.*?</printer>::s or
+	$gutenprintxml =~ s:\s*<printer>\s*<id>\s*$printer\s*</id>.*?</printer>::s or 
 	print STDERR "\n\nNew printer: $printer\n\n";
 }
 print STDERR "\n\n";
 
 # Insert comment to mark the part of the list set up manually
-$gimpprintxml =~ s:(\n\s*<\s*printers\s*>)\n\s*<!--\s*Manually inserted printer entries\s*-->:$1:s;
-$gimpprintxml =~ s:(\n\s*<\s*printers\s*>):$1\n  <!-- Manually inserted printer entries -->:s;
+$gutenprintxml =~ s:(\n\s*<\s*printers\s*>)\n\s*<!--\s*Manually inserted printer entries\s*-->:$1:s;
+$gutenprintxml =~ s:(\n\s*<\s*printers\s*>):$1\n  <!-- Manually inserted printer entries -->:s;
 
 # Insert comment to mark the part of the list generated from
 # foomatic-printermap
-$gimpprintxml =~ s:\n  <!-- The following printers were deleted in the current foomatic-printermap -->::s;
-$gimpprintxml =~ s:\n  <!-- The following printers are listed in the current foomatic-printermap -->::s;
-$gimpprintxml =~ s:XXXXXXXXXX:\n  <!-- The following printers were deleted in the current foomatic-printermap -->:s;
-$gimpprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n  <!-- The following printers are listed in the current foomatic-printermap -->$1:s;
+$gutenprintxml =~ s:\n  <!-- The following printers were deleted in the current foomatic-printermap -->::s;
+$gutenprintxml =~ s:\n  <!-- The following printers are listed in the current foomatic-printermap -->::s;
+$gutenprintxml =~ s:XXXXXXXXXX:\n  <!-- The following printers were deleted in the current foomatic-printermap -->:s;
+$gutenprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n  <!-- The following printers are listed in the current foomatic-printermap -->$1:s;
 
 # Insert printers of foomatic-printermap to the end of the list
 print STDERR "Inserting printer entries of foomatic-printermap ";
 foreach my $printer (@printermap) {
     print STDERR ".";
-    $gimpprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n  <printer>\n   <id>$printer</id>\n  </printer>$1:s;
+    $gutenprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n  <printer>\n   <id>$printer</id>\n  </printer>$1:s;
 }
 print STDERR "\n\n";
 
-open GPX, "> $gimpprintxmlfile" or
-    die "Cannot write $gimpprintxmlfile!\n";
-print GPX $gimpprintxml;
+open GPX, "> $gutenprintxmlfile" or
+    die "Cannot write $gutenprintxmlfile!\n";
+print GPX $gutenprintxml;
 close GPX;
 
 exit 0;

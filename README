@@ -186,8 +186,8 @@ Implemented in 3.0.0:
       Very High Quality
       Photo
 
-   For an Epson Stylus Color 680 with Gimp-Print it sets the options
-   resolution, ditherering, and image type as follows:
+   For an Epson Stylus Color 680 with Gutenprint it sets the options
+   resolution, dithering, and image type as follows:
 
       Choice           Resolution     Dither            ImageType
       ------------------------------------------------------------------
@@ -355,9 +355,9 @@ Implemented in 3.0.1:
 
  - Compatibility fixes for IRIX and the *BSD operating systems.
 
- - Script to update the "gimp-print" driver entry in the database
+ - Script to update the "gutenprint" driver entry in the database
    using the src/foomatic/foomatic-printermap file of the source
-   tarball of Gimp-Print 4.2.x.
+   tarball of Gutenprint 5.0.x.
 
  - perltoxml() Perl function in DB.pm to generate XML database entries
    from PPD files (thanks to Tim Waugh from Red Hat).
@@ -477,7 +477,7 @@ General features
    having an on-disk cache is not necessary.
 
  - The PPD files serve also for PPD-aware applications as Star Office,
-   Open Office, the GIMP (for printers not supported by Gimp-Print), GPR,
+   Open Office, the GIMP (for printers not supported by Gutenprint), GPR,
    Windows/Mac clients using their PostScript driver (and the Linux/Unix
    server using the Linux driver for the printer). They give access to
    all the driver's options in the printing dialogs of said
@@ -668,7 +668,7 @@ foomatic-kitload
   toplevel directory of a foomatic driver "kit".  A "kit" is a
   selection of XML source files arranged exactly as in the source/
   section of the master database (ie, opt/ driver/ printer/ subdirs).
-  The gimp-print's foomatic-generator produces exactly such a kit.
+  The gutenprint's foomatic-generator produces exactly such a kit.
 
   Foomatic-kitload is moderately paranoid about kits: the kit must
   contain at least one of printer/ driver/ and opt/; the kit must
@@ -980,9 +980,9 @@ to its components get auto-detected during the build of this package.
 
 Composite options are introduced in "foomatic-db" from December 17,
 2002 ("20021217") or newer, "foomatic-db-hpijs" 1.3-2 or newer, and
-Gimp-Print 4.2.5 or newer. "foomatic-filters" 2.9.1 or newer is needed
-for using them. Nested composite options are supported and introduced
-on August 1, 2003.
+Gimp-Print (now Gutenprint) 4.2.5 or newer. "foomatic-filters" 2.9.1
+or newer is needed for using them. Nested composite options are
+supported and introduced on August 1, 2003.
 
 "wget" (from www.gnu.org) is really a standard tool which nearly every
 distribution includes.
@@ -1026,7 +1026,7 @@ source/opt/2.xml
 # Every option exists independently from printers or drivers, because
 # they might apply to arbitrary combinations of printers and/or
 # drivers.  In practice, some drivers have wholly unique options
-# (gimp-print/stp, for example), while others (lots of generic basic
+# (gutenprint for example), while others (lots of generic basic
 # Ghostscript drivers, for example) share some options.
 
 <option type="enum" id="opt/2">
