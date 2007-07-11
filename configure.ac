@@ -297,7 +297,7 @@ foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
 foomatic-getpjloptions foomatic-addpjloptions
 foomatic-compiledb foomatic-fix-xml
 foomatic-nonumericalids foomatic-replaceoldprinterids
-foomatic-ppd-options foomatic-printermap-to-gimp-print-xml
+foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
 foomatic-extract-text foomatic-searchprinter
 )
 

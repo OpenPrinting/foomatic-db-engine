@@ -2,7 +2,7 @@ In your bug report, please include the following information:
 
 - The spooler you are using (CUPS, lpd, LPRng, etc.).
 - The printer make and model.
-- Which driver you are using (hpijs, GIMP-Print, cdj*, etc.).
+- Which driver you are using (hpijs, Gutenprint, cdj*, etc.).
 - How you installed the printer PPD file (foomatic-configure, manually
   following the HOWTO's instructions, foomatic-gui, etc.).
 

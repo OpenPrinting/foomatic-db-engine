@@ -148,7 +148,7 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-cleanupdrivers foomatic-getpjloptions \
 	foomatic-addpjloptions foomatic-compiledb foomatic-fix-xml \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
-	foomatic-ppd-options foomatic-printermap-to-gimp-print-xml \
+	foomatic-ppd-options foomatic-printermap-to-gutenprint-xml \
 	foomatic-extract-text foomatic-searchprinter
 
 # User programs and helper programs
@@ -162,7 +162,7 @@ SBINFILES:=foomatic-kitload \
 	foomatic-getpjloptions foomatic-addpjloptions \
 	foomatic-preferred-driver foomatic-fix-xml \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
-	foomatic-printermap-to-gimp-print-xml \
+	foomatic-printermap-to-gutenprint-xml \
 	foomatic-cleanupdrivers foomatic-extract-text
 
 # Foomatic XML templates
