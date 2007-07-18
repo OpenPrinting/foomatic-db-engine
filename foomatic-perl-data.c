@@ -222,6 +222,7 @@ typedef struct comboData {
   xmlChar *excspeed;
   xmlChar *cmd;
   xmlChar *nopjl;
+  xmlChar *nopageaccounting;
   xmlChar *driverppdentry;
   xmlChar *comboppdentry;
   marginsPtr drivermargins;
@@ -1533,6 +1534,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->excspeed = NULL;
   ret->cmd = NULL;
   ret->nopjl = (xmlChar *)"0";
+  ret->nopageaccounting = (xmlChar *)"0";
   ret->driverppdentry = NULL;
   ret->comboppdentry = NULL;
   ret->drivermargins = NULL;
@@ -1742,6 +1744,9 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "nopjl"))) {
 	  ret->nopjl = (xmlChar *)"1";
 	  if (debug) fprintf(stderr, "  Driver suppresses PJL options\n");
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "nopageaccounting"))) {
+	  ret->nopageaccounting = (xmlChar *)"1";
+	  if (debug) fprintf(stderr, "  Driver suppresses CUPS page accounting\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "prototype"))) {
 	  ret->cmd =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
@@ -4126,6 +4131,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'drivernopjl' => %s,\n", combo->nopjl);
   } else {
     printf("  'drivernopjl' => 0,\n");
+  }
+  if (combo->nopageaccounting) {
+    printf("  'drivernopageaccounting' => %s,\n", combo->nopageaccounting);
+  } else {
+    printf("  'drivernopageaccounting' => 0,\n");
   }
   if (combo->driverppdentry) {
     printf("  'driverppdentry' => '%s',\n", combo->driverppdentry);

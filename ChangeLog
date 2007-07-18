@@ -1,3 +1,13 @@
+2007-07-18  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README, foomatic-perl-data.c, lib/Foomatic/DB.pm: Added support
+	  for suppressing page accounting on a per-driver basis. If a
+	  driver XML file is marked with "<nopageaccounting/>" in its
+	  "<execution>" section, the line "*FoomaticNoPageAccounting:
+	  True" is added to the PPD file to let foomatic-rip suppress
+	  inserting the page accounting code into the PostScript data
+	  stream.
+
 2007-07-11  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* Makefile.in, README, README.build-foomatic-filters-ppds, USAGE,
