@@ -1163,6 +1163,15 @@ sub ppdfromvartoperl ($) {
 	    $line =~ m!^([^\"]*)\"!;
 	    $cmd .= $1;
 	    $dat->{'cmd'} = unhtmlify($cmd);
+	} elsif (m!^\*FoomaticRIPNoPageAccounting:\s*(\S+)\s*$!) {
+	    # "*FoomaticRIPNoPageAccounting: <boolean value>"
+	    my $value = $1;
+	    # Store the value
+	    if ($value =~ /^True$/i) {
+		$dat->{'drivernopageaccounting'} = 1;
+	    } else {
+		delete $dat->{'drivernopageaccounting'};
+	    }
 	} elsif (m!^\*CustomPageSize\s+True:\s*\"(.*)$!) {
 	    # "*CustomPageSize True: <code>"
 	    my $setting = "Custom";
@@ -2812,6 +2821,9 @@ sub getppd (  $ $ $ ) {
 	if ($cmdlinestr =~ /\n/s) {
 	    push(@optionblob, "*End\n");
 	}
+    }
+    if ($dat->{'drivernopageaccounting'}) {
+	push(@optionblob, "*FoomaticRIPNoPageAccounting: True\n");
     }
 
     # Search for composite options and prepare the member options
@@ -4998,7 +5010,7 @@ sub getexecdocs {
 	     (defined($dat->{'pjl'}))) {
 	my @pjltmp;
 	push(@pjltmp,
-	     "This driver produces a PJL header with PJL commands internally, so commands in a PJL header sent to the printer before the output of this driver would be ignored. Therefore there are no PJL options available when using this driver.<P>");
+	     "This driver produces a PJL header with PJL commands internally and it is incompatible with extra PJL options merged into that header. Therefore there are no PJL options available when using this driver.<P>");
 	push(@docs, "<B>PJL</B><P>");
 	push(@docs, @pjltmp);
     }
