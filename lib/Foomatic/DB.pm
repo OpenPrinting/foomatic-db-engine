@@ -189,14 +189,15 @@ sub clean_manufacturer_name {
     my ($make) = @_;
     $make =~ s/^Canon\W.*$/Canon/i;
     $make =~ s/^Lexmark.*$/Lexmark/i;
-    $make =~ s/^Hewlett?[\s\-]*Packard/HP/i;
-    $make =~ s/^Seiko[\s\-]*Epson/Epson/i;
-    $make =~ s/^Kyocera[\s\-]*Mita/Kyocera/i;
+    $make =~ s/^Hewlett?[_\s\-]*Packard/HP/i;
+    $make =~ s/^Seiko[_\s\-]*Epson/Epson/i;
+    $make =~ s/^Kyocera[_\s\-]*Mita/Kyocera/i;
     $make =~ s/^CItoh/C.Itoh/i;
-    $make =~ s/^Oki(|[\s\-]*Data)\s*$/Okidata/i;
+    $make =~ s/^Oki(|[_\s\-]*Data)\s*$/Okidata/i;
     $make =~ s/^(SilentWriter2?|ColorMate)/NEC/i;
     $make =~ s/^(XPrint|Majestix)/Xerox/i;
     $make =~ s/^QMS-PS/QMS/i;
+    $make =~ s/^konica([_\s\-]|)minolta/KONICA MINOLTA/i;
     $make =~ s/^(Personal|LaserWriter)/Apple/i;
     $make =~ s/^Digital/DEC/i;
     $make =~ s/\s+Inc\.//i;
@@ -332,7 +333,7 @@ sub find_printer {
 
     # Search term is not a device ID
     if (!$deviceid) {
-	if ($searchterm =~ /^([^\|]+)\|([^\|]+)(\|.*|)$/) {
+	if ($searchterm =~ /^([^\|]+)\|([^\|]+|)(\|.*?|)$/) {
 	    $automake = $1;
 	    $automodel = $2;
 	} else {
@@ -1012,7 +1013,7 @@ sub getdatfromppd ($ $) {
 
 sub ppdfromvartoperl ($);
 sub ppdtoperl($);
-sub perltoxml($);
+sub perltoxml;
 
 sub ppdtoperl($) {
 
@@ -1653,80 +1654,103 @@ sub ppdfromvartoperl ($) {
     return $dat;
 }
 
-sub perltoxml ($) {
-    my ($this, $dat) = @_;
+sub perltoxml {
+    my ($this, $dat, $mode) = @_;
 
-    my $xml =
-	"<foomatic><printer id=\"printer/" . $dat->{'id'} . "\">\n" .
-	" <make>" . $dat->{'make'} . "</make>\n" .
-	" <model>" . $dat->{'model'} . "</model>\n" .
-	" <comments><en /></comments>\n" .
-	"</printer>\n\n\n";
+    my $xml = "";
 
-    $xml .=
-	"<driver id=\"driver/" . $dat->{'driver'} . "\">\n" .
-	" <name>" . $dat->{'driver'} . "</name>\n" .
-	" <execution>\n" .
-	"  <filter />\n" .
-	"  <prototype>" . $dat->{'cmd'} . "</prototype>\n" .
-	" </execution>\n" .
-	"</driver>\n\n";
+    $xml .= "<foomatic>\n" if !$mode || ($mode =~ /^c/i); 
 
-    $xml .= "<options>\n";
-
-    foreach (@{$dat->{'args'}}) {
-	my $type = $_->{'type'};
-	my $optname = $_->{'name'};
-	$xml .= " <option type=\"$type\" " .
-	    "id=\"opt/" . $dat->{'driver'} . "-" . $optname . "\">\n";
+    if (!$mode || ($mode =~ /^[cp]/i)) { 
 	$xml .=
-	    "  <arg_longname>\n" .
-	    "   <en>" . $_->{'comment'} . "</en>\n" .
-	    "  </arg_longname>\n" .
-	    "  <arg_shortname>\n" .
-	    "   <en>" . $_->{'name'} . "</en>\n" .
-	    "  </arg_shortname>\n" .
-	    "  <arg_execution>\n";
-	$xml .= "   <arg_group>" . $_->{'group'} . "</arg_group>\n"
-	    if $_->{'group'};
-	$xml .= "   <arg_order>" . $_->{'order'} . "</arg_order>\n"
-	    if $_->{'order'};
-	$xml .= "   <arg_spot>" . $_->{'spot'} . "</arg_spot>\n"
-	    if $_->{'spot'};
-	$xml .= "   <arg_proto>" . $_->{'proto'} . "</arg_proto>\n"
-	    if $_->{'proto'};
-	$xml .= "  </arg_execution>\n";
+	    "<printer id=\"printer/" . $dat->{'id'} . "\">\n" .
+	    " <make>" . $dat->{'make'} . "</make>\n" .
+	    " <model>" . $dat->{'model'} . "</model>\n" .
+	    " <mechanism>\n" .
+	    ($dat->{'type'} ? "  <" . $dat->{'type'} . "/>\n" : ()) .
+	    ($dat->{'color'} ? "  <color/>\n" : ()) .
+	    ($dat->{'maxxres'} || $dat->{'maxyres'} ?
+	     "  <resolution>\n" .
+	     "   <dpi>\n" .
+	     ($dat->{'maxxres'} ?
+	      "    <x>" . $dat->{'maxxres'} . "</x>\n" : ()) .
+	     ($dat->{'maxyres'} ?
+	      "    <y>" . $dat->{'maxyres'} . "</y>\n" : ()) .
+	     "   </dpi>\n" .
+	     "  </resolution>\n" : ()) .
 
-	if ($type eq 'enum') {
-	    $xml .= "  <enum_vals>\n";
-	    my $vals_byname = $_->{'vals_byname'};
-	    foreach (keys(%{$vals_byname})) {
-		my $val = $vals_byname->{$_};
-		$xml .=
-		    "   <enum_val id=\"ev/" . $dat->{'driver'} . "-" .
-		    $optname . "-" . $_ . "\">\n";
-		$xml .=
-		    "    <ev_longname>\n" .
-		    "     <en>" . $val->{'comment'} . "</en>\n" .
-		    "    </ev_longname>\n" .
-		    "    <ev_shortname>\n" .
-		    "     <en>$_</en>\n" .
-		    "    </ev_shortname>\n";
-
-		$xml .=
-		    "    <ev_driverval>" .
-		    $val->{'driverval'} .
-		    "</ev_driverval>\n" if $val->{'driverval'};
-
-		$xml .= "   </enum_val>\n";
-	    }
-	}
-
-	$xml .= " </option>\n";
+	    " <comments><en /></comments>\n" .
+	    "</printer>\n\n\n";
     }
 
-    $xml .= "</options>\n";
+    if (!$mode || ($mode =~ /^[cd]/i)) { 
+	$xml .=
+	    "<driver id=\"driver/" . $dat->{'driver'} . "\">\n" .
+	    " <name>" . $dat->{'driver'} . "</name>\n" .
+	    " <execution>\n" .
+	    "  <filter />\n" .
+	    "  <prototype>" . $dat->{'cmd'} . "</prototype>\n" .
+	    " </execution>\n" .
+	    "</driver>\n\n";
+    }
 
+    if (!$mode || ($mode =~ /^c/i)) { 
+	$xml .= "<options>\n";
+
+	foreach (@{$dat->{'args'}}) {
+	    my $type = $_->{'type'};
+	    my $optname = $_->{'name'};
+	    $xml .= " <option type=\"$type\" " .
+		"id=\"opt/" . $dat->{'driver'} . "-" . $optname . "\">\n";
+	    $xml .=
+		"  <arg_longname>\n" .
+		"   <en>" . $_->{'comment'} . "</en>\n" .
+		"  </arg_longname>\n" .
+		"  <arg_shortname>\n" .
+		"   <en>" . $_->{'name'} . "</en>\n" .
+		"  </arg_shortname>\n" .
+		"  <arg_execution>\n";
+	    $xml .= "   <arg_group>" . $_->{'group'} . "</arg_group>\n"
+		if $_->{'group'};
+	    $xml .= "   <arg_order>" . $_->{'order'} . "</arg_order>\n"
+		if $_->{'order'};
+	    $xml .= "   <arg_spot>" . $_->{'spot'} . "</arg_spot>\n"
+		if $_->{'spot'};
+	    $xml .= "   <arg_proto>" . $_->{'proto'} . "</arg_proto>\n"
+		if $_->{'proto'};
+	    $xml .= "  </arg_execution>\n";
+	    
+	    if ($type eq 'enum') {
+		$xml .= "  <enum_vals>\n";
+		my $vals_byname = $_->{'vals_byname'};
+		foreach (keys(%{$vals_byname})) {
+		    my $val = $vals_byname->{$_};
+		    $xml .=
+			"   <enum_val id=\"ev/" . $dat->{'driver'} . "-" .
+			$optname . "-" . $_ . "\">\n";
+		    $xml .=
+			"    <ev_longname>\n" .
+			"     <en>" . $val->{'comment'} . "</en>\n" .
+			"    </ev_longname>\n" .
+			"    <ev_shortname>\n" .
+			"     <en>$_</en>\n" .
+			"    </ev_shortname>\n";
+
+		    $xml .=
+			"    <ev_driverval>" .
+			$val->{'driverval'} .
+			"</ev_driverval>\n" if $val->{'driverval'};
+
+		    $xml .= "   </enum_val>\n";
+		}
+	    }
+
+	    $xml .= " </option>\n";
+	}
+
+	$xml .= "</options>\n";
+	$xml .= "</foomatic>\n";
+    }
     return $xml;
 }
 
