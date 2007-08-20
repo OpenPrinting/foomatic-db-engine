@@ -1,7 +1,7 @@
 2007-08-20  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Let margins default to safer values (1/4
-	  inch on the lft and on the right, 1/2 inch at the top and the
+	  inch on the left and on the right, 1/2 inch at the top and the
 	  bottom) if no margins are defined in the Foomatic database.
 	  Before, the default margins were all zero.
 
