@@ -4267,13 +4267,13 @@ sub getpage {
 sub getmarginsformarginrecord {
     my ($margins, $width, $height, $pagesize) = @_;
     if (!defined($margins)) {
-	# No margins defined? Return zero margins
-	return (0, $width, $height, 0);
+	# No margins defined? Return invalid margins
+	return (undef, undef, undef, undef);
     }
     # Defaults
     my $unit = 'pt';
     my $absolute = 0;
-    my ($left, $right, $top, $bottom) = (0, $width, $height, 0);
+    my ($left, $right, $top, $bottom) = (undef, undef, undef, undef);
     # Check the general margins and then the particular paper size
     for my $i ('_general', $pagesize) {
 	# Skip a section if it is not defined
@@ -4325,9 +4325,7 @@ sub getmarginsformarginrecord {
 sub getmargins {
     my ($dat, $width, $height, $pagesize) = @_;
     # Determine the unprintable margins
-    # Zero margins when no margin info exists
-    my ($left, $right, $top, $bottom) =
-	(0, $width, $height, 0);
+    my ($left, $right, $top, $bottom) = (undef, undef, undef, undef);
     # Margins from printer database entry
     my ($pleft, $pright, $ptop, $pbottom) =
 	getmarginsformarginrecord($dat->{'printermargins'}, 
@@ -4341,21 +4339,38 @@ sub getmargins {
 	getmarginsformarginrecord($dat->{'combomargins'}, 
 				  $width, $height, $pagesize);
     # Left margin
-    if ($pleft > $left) {$left = $pleft};
-    if ($dleft > $left) {$left = $dleft};
-    if ($cleft > $left) {$left = $cleft};
+    if (defined($pleft)) {$left = $pleft};
+    if (defined($dleft) &&
+	(!defined($left) || ($dleft > $left))) {$left = $dleft};
+    if (defined($cleft) &&
+	(!defined($left) || ($cleft > $left))) {$left = $cleft};
     # Right margin
-    if ($pright < $right) {$right = $pright};
-    if ($dright < $right) {$right = $dright};
-    if ($cright < $right) {$right = $cright};
+    if (defined($pright)) {$right = $pright};
+    if (defined($dright) &&
+	(!defined($right) || ($dright < $right))) {$right = $dright};
+    if (defined($cright) &&
+	(!defined($right) || ($cright < $right))) {$right = $cright};
     # Top margin
-    if ($ptop < $top) {$top = $ptop};
-    if ($dtop < $top) {$top = $dtop};
-    if ($ctop < $top) {$top = $ctop};
+    if (defined($ptop)) {$top = $ptop};
+    if (defined($dtop) &&
+	(!defined($top) || ($dtop < $top))) {$top = $dtop};
+    if (defined($ctop) &&
+	(!defined($top) || ($ctop < $top))) {$top = $ctop};
     # Bottom margin
-    if ($pbottom > $bottom) {$bottom = $pbottom};
-    if ($dbottom > $bottom) {$bottom = $dbottom};
-    if ($cbottom > $bottom) {$bottom = $cbottom};
+    if (defined($pbottom)) {$bottom = $pbottom};
+    if (defined($dbottom) &&
+	(!defined($bottom) || ($dbottom > $bottom))) {$bottom = $dbottom};
+    if (defined($cbottom) &&
+	(!defined($bottom) || ($dbottom > $bottom))) {$bottom = $cbottom};
+    # Safe margins when margin info is missing
+    my $tborder = 36;
+    my $bborder = 36;
+    my $lborder = 18;
+    my $rborder = 18;
+    $left = $lborder if !defined($left);
+    $right = $width - $rborder if !defined($right);
+    $top = $height - $tborder if !defined($top);
+    $bottom = $bborder if !defined($bottom);
     # If we entered with $width == 0 and $height == 0, we mean
     # relative margins, so correct the signs
     if ($width == 0) {$right = -$right};
