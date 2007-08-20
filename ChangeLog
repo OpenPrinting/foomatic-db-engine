@@ -1,3 +1,15 @@
+2007-08-20  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Allow an empty model name in the search term
+	  for the find_printer() function ("ricoh|"), This way one can
+	  also search all printers from a given manufacturer, where the
+	  given manufacturer name does not need to match exactly with the
+	  name in the database.
+
+	  Some improvements in cleaning the manufacturer names.
+
+	  Improvements in the perltoxml() function.
+
 2007-07-18  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README, foomatic-perl-data.c, lib/Foomatic/DB.pm: Added support
