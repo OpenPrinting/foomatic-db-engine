@@ -2673,7 +2673,7 @@ sub getppdheaderdata {
     my $filename = join('-',($dat->{'make'},
 			     $dat->{'model'},
 			     $driver));;
-    $filename =~ s![ /\(\)]!_!g;
+    $filename =~ s![ /\(\)\,]!_!g;
     $filename =~ s![\+]!plus!g;
     $filename =~ s!__+!_!g;
     $filename =~ s!_$!!;
