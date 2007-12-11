@@ -1,3 +1,21 @@
+2007-12-11  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: Added new XML tags "<licensetext>" (full
+	  text of the license), "<locales>" (locales for which this driver
+	  is recommended), "<requires>" (drivers which are required to be
+	  on the system to run this driver), and "<packages>" (explicit
+	  listing of downloadable package files). They were introduced to
+	  fulfill demands of the printer manufacturers.
+
+	  Allow internationalization in the "<license>", "<supplier>", and
+	  "<supportcontact>" fields.
+
+	  Fixed internationalization. Now it is at first tried to find a
+	  text version which matches the user-supplied locale ID exactly,
+	  then it is searched for a text version where the supplied locale
+	  ID matches at least the language (First two characters), and as
+	  last mean english text is shown.
+	
 2007-10-09  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: The PPD gnerator for CUPS did not list the
