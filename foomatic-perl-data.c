@@ -196,12 +196,17 @@ typedef struct comboData {
   xmlChar *supplier;
   xmlChar *manufacturersupplied;
   xmlChar *license;
+  xmlChar *licensetext;
   xmlChar *free;
   int num_supportcontacts;
   xmlChar **supportcontacts;
   xmlChar **supportcontacturls;
   xmlChar **supportcontactlevels;
   xmlChar *shortdescription;
+  xmlChar *locales;
+  int num_packages;
+  xmlChar **packageurls;
+  xmlChar **packagescopes;
   xmlChar *drvmaxresx;
   xmlChar *drvmaxresy;
   xmlChar *drvcolor;
@@ -220,6 +225,9 @@ typedef struct comboData {
   xmlChar *excphoto;
   xmlChar *excload;
   xmlChar *excspeed;
+  int num_requires;
+  xmlChar **requires;
+  xmlChar **requiresversion;
   xmlChar *cmd;
   xmlChar *nopjl;
   xmlChar *nopageaccounting;
@@ -321,12 +329,17 @@ typedef struct driverEntry {
   xmlChar *supplier;
   xmlChar *manufacturersupplied;
   xmlChar *license;
+  xmlChar *licensetext;
   xmlChar *free;
   int num_supportcontacts;
   xmlChar **supportcontacts;
   xmlChar **supportcontacturls;
   xmlChar **supportcontactlevels;
   xmlChar *shortdescription;
+  xmlChar *locales;
+  int num_packages;
+  xmlChar **packageurls;
+  xmlChar **packagescopes;
   xmlChar *maxresx;
   xmlChar *maxresy;
   xmlChar *color;
@@ -336,6 +349,9 @@ typedef struct driverEntry {
   xmlChar *photo;
   xmlChar *load;
   xmlChar *speed;
+  int num_requires;
+  xmlChar **requires;
+  xmlChar **requiresversion;
   xmlChar *driver_type;
   xmlChar *cmd;
   xmlChar *driverppdentry;
@@ -422,6 +438,74 @@ perlquote(xmlChar *str) { /* I - Original string */
     offset += 2;
   }
   return(dest);
+}
+
+/*
+ * Function to read out localized text, choosing the translation into the
+ * desirted language. Reads also simple text without language tags, for
+ * backward compatibility for the case that a not yet localized database
+ * field gets localized
+ */
+
+static void
+getLocalizedText(xmlDocPtr doc,   /* I - The whole data tree */
+		 xmlNodePtr node, /* I - Node of XML tree to work on */
+		 xmlChar **ret,   /* O - Text which was selected by the
+				         language */
+		 xmlChar *language, /* I - User language */
+		 int debug) { /* I - Debug mode flag */
+  xmlNodePtr     cur1;  /* XML node currently worked on */
+
+  cur1 = node->xmlChildrenNode;
+  if (xmlStrcasecmp(cur1->name, "C") && xmlStrcasecmp(cur1->name, "POSIX")) {
+    while (cur1 != NULL) {
+      /* Exact match of locale ID */
+      if ((!xmlStrcasecmp(cur1->name, language))) {
+	*ret = xmlStrdup
+	  (perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1)));
+	if (debug)
+	  fprintf
+	    (stderr,
+	     "    Localized text with full locale ID matched (%s):\n\n%s\n\n",
+	     language, *ret);
+	return;
+      }
+      cur1 = cur1->next;
+    }
+    cur1 = node->xmlChildrenNode;
+    while (cur1 != NULL) {
+      /* Fall back to match only the two-character language code */
+      if ((!xmlStrncasecmp(cur1->name, language, 2))) {
+	*ret = xmlStrdup
+	  (perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1)));
+	if (debug)
+	  fprintf
+	    (stderr,
+	     "    Localized text with only language ID matched (%s):\n\n%s\n\n",
+	     language, *ret);
+	return;
+      }
+      cur1 = cur1->next;
+    }
+    cur1 = node->xmlChildrenNode;
+  }
+  while (cur1 != NULL) {
+    /* Fall back to English */
+    if ((!xmlStrncasecmp(cur1->name, (const xmlChar *) "en", 2))) {
+      *ret = xmlStrdup
+	(perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1)));
+      if (debug)
+	fprintf(stderr, "    English text:\n\n%s\n\n", *ret);
+      return;
+    }
+    cur1 = cur1->next;
+  }
+  cur1 = node->xmlChildrenNode;
+  /* Fall back to non-localized text (allows backward compatibility if
+     deciding on localizing a database item later */
+  *ret = xmlStrdup(perlquote(xmlNodeListGetString(doc, cur1, 1)));
+  if (debug)
+    fprintf(stderr, "    Non-localized text:\n\n%s\n\n", *ret);
 }
 
 /*
@@ -1241,27 +1325,9 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 		cur4 = cur4->next;
 	      }
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
-	      cur4 = cur3->xmlChildrenNode;
-	      while (cur4 != NULL) {
-		if ((!xmlStrcmp(cur4->name, (const xmlChar *) language))) {
-		  dentry->comment =
-		    perlquote(xmlNodeListGetString(doc, 
-						   cur4->xmlChildrenNode,
-						   1));
-		  if (debug) fprintf(stderr, "    Comment (%s): \n%s\n\n",
-				     language, dentry->comment);
-		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "en"))) {
-		  if (!dentry->comment) {
-		    dentry->comment =
-		      perlquote(xmlNodeListGetString(doc, 
-						     cur4->xmlChildrenNode,
-						     1));
-		    if (debug) fprintf(stderr, "    Comment (en): \n%s\n\n",
-				       dentry->comment);
-		  }
-		}
-		cur4 = cur4->next;
-	      }
+	      if (debug)
+		fprintf(stderr, "    Comments:\n");
+	      getLocalizedText(doc, cur3, &(dentry->comment), language, debug);
 	    }
 	    cur3 = cur3->next;
 	  }
@@ -1496,7 +1562,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   xmlNodePtr     cur3;  /* Another XML node pointer */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full driver ID, with "driver/" */
-  xmlChar        *level;
+  xmlChar        *level, *version, *scope;
   xmlChar        *url;
 
   /* Initialization of entries */
@@ -1508,12 +1574,17 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->driver_obsolete = NULL;
   ret->manufacturersupplied = NULL;
   ret->license = NULL;
+  ret->licensetext = NULL;
   ret->free = NULL;
   ret->num_supportcontacts = 0;
   ret->supportcontacts = NULL;
   ret->supportcontacturls = NULL;
   ret->supportcontactlevels = NULL;
   ret->shortdescription = NULL;
+  ret->locales = NULL;
+  ret->num_packages = 0;
+  ret->packageurls = NULL;
+  ret->packagescopes = NULL;
   ret->drvmaxresx = NULL;
   ret->drvmaxresy = NULL;
   ret->drvcolor = NULL;
@@ -1532,6 +1603,9 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->excphoto = NULL;
   ret->excload = NULL;
   ret->excspeed = NULL;
+  ret->num_requires = 0;
+  ret->requires = NULL;
+  ret->requiresversion = NULL;
   ret->cmd = NULL;
   ret->nopjl = (xmlChar *)"0";
   ret->nopageaccounting = (xmlChar *)"0";
@@ -1573,9 +1647,9 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       if (debug) fprintf(stderr, "  Driver is obsolete: %s\n",
 			 ret->driver_obsolete);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supplier"))) {
-      ret->supplier = 
-	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
-      if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
+      if (debug)
+	fprintf(stderr, "  Driver supplier:\n");
+      getLocalizedText(doc, cur1, &(ret->supplier), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
       ret->manufacturersupplied =
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -1588,9 +1662,13 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->manufacturersupplied = (xmlChar *)"0";
       if (debug) fprintf(stderr, "  Driver supplied by a third party\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "license"))) {
-      ret->license = 
-	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
-      if (debug) fprintf(stderr, "  Driver license: %s\n", ret->license);
+      if (debug)
+	fprintf(stderr, "  Driver license:\n");
+      getLocalizedText(doc, cur1, &(ret->license), language, debug);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "licensetext"))) {
+      if (debug)
+	fprintf(stderr, "  Driver license text:\n");
+      getLocalizedText(doc, cur1, &(ret->licensetext), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
       ret->free = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Driver is free software\n");
@@ -1625,8 +1703,10 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	  url = xmlGetProp(cur2, (const xmlChar *) "url");
 	  ret->supportcontactlevels[ret->num_supportcontacts - 1] = level;
 	  ret->supportcontacturls[ret->num_supportcontacts - 1] = url;
-	  ret->supportcontacts[ret->num_supportcontacts - 1] =
-	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  getLocalizedText
+	    (doc, cur2,
+	     &(ret->supportcontacts[ret->num_supportcontacts - 1]),
+	     language, debug);
 	  if (debug)
 	    fprintf(stderr, "    %s (%s):\n      %s\n", 
 		    ret->supportcontacts[ret->num_supportcontacts - 1],
@@ -1636,24 +1716,37 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	cur2 = cur2->next;
       }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "shortdescription"))) {
+      if (debug)
+	fprintf(stderr, "  Driver short description:\n");
+      getLocalizedText(doc, cur1, &(ret->shortdescription), language, debug);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "locales"))) {
+      ret->locales = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver list of locales: %s\n", ret->locales);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "packages"))) {
       cur2 = cur1->xmlChildrenNode;
+      if (debug) fprintf(stderr, "  Driver downloadable packages:\n");
       while (cur2 != NULL) {
-	/*if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {*/
-	if ((!xmlStrcmp(cur2->name, language))) {
-	  ret->shortdescription =
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "package"))) {
+	  ret->num_packages ++;
+	  ret->packageurls =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->packageurls, 
+		    sizeof(xmlChar *) * 
+		    ret->num_packages);
+	  ret->packagescopes =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->packagescopes, 
+		    sizeof(xmlChar *) * 
+		    ret->num_packages);
+	  scope = xmlGetProp(cur2, (const xmlChar *) "scope");
+	  ret->packageurls[ret->num_packages - 1] =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  ret->packagescopes[ret->num_packages - 1] = perlquote(scope);
 	  if (debug)
-	    fprintf(stderr, "  Driver short description (%s):\n\n%s\n\n",
-		    language, ret->shortdescription);
-	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
-	  if (!ret->driver_comment) {
-	    ret->shortdescription =
-	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode,
-					     1));
-	    if (debug)
-	      fprintf(stderr, "  Driver short description (en):\n\n%s\n\n",
-		      ret->shortdescription);
-	  }
+	    fprintf(stderr, "    %s (%s)\n", 
+		    ret->packageurls[ret->num_packages - 1],
+		    ret->packagescopes[ret->num_packages - 1]);
 	}
 	cur2 = cur2->next;
       }
@@ -1720,7 +1813,31 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "execution"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "requires"))) {
+	  ret->num_requires ++;
+	  ret->requires =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->requires, 
+		    sizeof(xmlChar *) * 
+		    ret->num_requires);
+	  ret->requiresversion =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->requiresversion, 
+		    sizeof(xmlChar *) * 
+		    ret->num_requires);
+	  version = xmlGetProp(cur2, (const xmlChar *) "version");
+	  ret->requires[ret->num_requires - 1] =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  ret->requiresversion[ret->num_requires - 1] = perlquote(version);
+	  if (debug)
+	    if (!version)
+	      fprintf(stderr, "  Driver requires driver: %s\n", 
+		      ret->requires[ret->num_requires - 1]);
+	    else
+	      fprintf(stderr, "  Driver requires driver: %s (%s)\n", 
+		      ret->requires[ret->num_requires - 1],
+		      ret->requiresversion[ret->num_requires - 1]);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
 	  ret->driver_type = (xmlChar *)"C";
 	  if (debug) fprintf(stderr, "  Driver type: CUPS Raster\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ijs"))) {
@@ -1763,25 +1880,9 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	cur2 = cur2->next;
       }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "comments"))) {
-      cur2 = cur1->xmlChildrenNode;
-      while (cur2 != NULL) {
-	/*if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {*/
-	if ((!xmlStrcmp(cur2->name, language))) {
-	  ret->driver_comment =
-	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
-	  if (debug) fprintf(stderr, "  Driver Comment (%s):\n\n%s\n\n",
-			     language, ret->driver_comment);
-	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
-	  if (!ret->driver_comment) {
-	    ret->driver_comment =
-	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode,
-					     1));
-	    if (debug) fprintf(stderr, "  Driver Comment (en):\n\n%s\n\n",
-			       ret->driver_comment);
-	  }
-	}
-	cur2 = cur2->next;
-      }
+      if (debug)
+	fprintf(stderr, "  Driver Comment:\n");
+      getLocalizedText(doc, cur1, &(ret->driver_comment), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "printers"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -1928,38 +2029,13 @@ parseChoices(xmlDocPtr doc, /* I - The whole combo data tree */
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ev_shortname"))) {
-	  cur3 = cur2->xmlChildrenNode;
-	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "en"))) {
-	      enum_val->value =
-		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-					       1));
-	      if (debug) fprintf(stderr, "      Choice short name: %s\n",
-				 enum_val->value);
-	    }
-	    cur3 = cur3->next;
-	  } 
+	  if (debug)
+	    fprintf(stderr, "      Choice short name (do not translate):\n");
+	  getLocalizedText(doc, cur2, &(enum_val->value), "C", debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ev_longname"))) {
-	  cur3 = cur2->xmlChildrenNode;
-	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) language))) {
-	      enum_val->comment =
-		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-					       1));
-	      if (debug) fprintf(stderr,"      Choice long name (%s): %s\n",
-				 language, enum_val->comment);
-	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "en"))) {
-	      if (!enum_val->comment) {
-		enum_val->comment =
-		  perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-						 1));
-		if (debug) fprintf(stderr,
-				   "      Choice long name (en): %s\n",
-				   enum_val->comment);
-	      }
-	    }
-	    cur3 = cur3->next;
-	  }
+	  if (debug)
+	    fprintf(stderr, "      Choice long name:\n");
+	  getLocalizedText(doc, cur2, &(enum_val->comment), language, debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ev_driverval"))) {
 	  enum_val->driverval = 
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
@@ -2056,51 +2132,18 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_shortname"))) {
-	  cur3 = cur2->xmlChildrenNode;
-	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "en"))) {
-	      option->name =
-		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-					       1));
-	      if (debug) fprintf(stderr, "    Option short name: %s\n",
-				 option->name);
-	    }
-	    cur3 = cur3->next;
-	  } 
+	  if (debug)
+	    fprintf(stderr, "    Option short name (do not translate):\n");
+	  getLocalizedText(doc, cur2, &(option->name), "C", debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_shortname_false"))) {
-	  cur3 = cur2->xmlChildrenNode;
-	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "en"))) {
-	      option->name_false =
-		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-					       1));
-	      if (debug) fprintf(stderr,
-				 "    Option short name if false: %s\n",
-				 option->name_false);
-	    }
-	    cur3 = cur3->next;
-	  }
+	  if (debug)
+	    fprintf(stderr,
+		    "    Option short name if false (do not translate):\n");
+	  getLocalizedText(doc, cur2, &(option->name_false), "C", debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_longname"))) {
-	  cur3 = cur2->xmlChildrenNode;
-	  while (cur3 != NULL) {
-	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) language))) {
-	      option->comment =
-		perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-					       1));
-	      if (debug) fprintf(stderr, "    Option long name (%s): %s\n",
-				 language, option->comment);
-	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "en"))) {
-	      if (!option->comment) {
-		option->comment =
-		  perlquote(xmlNodeListGetString(doc, cur3->xmlChildrenNode,
-						 1));
-		if (debug) fprintf(stderr,
-				   "    Option long name (en): %s\n",
-				   option->comment);
-	      }
-	    }
-	    cur3 = cur3->next;
-	  }
+	  if (debug)
+	    fprintf(stderr, "    Option long name:\n");
+	  getLocalizedText(doc, cur2, &(option->comment), language, debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_execution"))) {
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
@@ -2387,30 +2430,9 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	  cur3 = cur2->xmlChildrenNode;
 	  while (cur3 != NULL) {
 	    if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
-	      cur4 = cur3->xmlChildrenNode;
-	      while (cur4 != NULL) {
-		if ((!xmlStrcmp(cur4->name, (const xmlChar *) language))) {
-		  ret->refill = 
-		    perlquote(xmlNodeListGetString(doc,
-						   cur4->xmlChildrenNode,
-						   1));
-		  if (debug) fprintf(stderr,
-				     "  Consumables (%s): %s\n",
-				     language, ret->refill);
-		  
-		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "en"))) {
-		  if (!ret->refill) {
-		    ret->refill = 
-		      perlquote(xmlNodeListGetString(doc,
-						     cur4->xmlChildrenNode,
-						     1));
-		    if (debug) fprintf(stderr,
-				       "  Consumables (en): %s\n",
-				       ret->refill);
-		  }
-		}
-		cur4 = cur4->next;
-	      }
+	      if (debug)
+		fprintf(stderr, "  Consumables:\n");
+	      getLocalizedText(doc, cur3, &(ret->refill), language, debug);
 	    }
 	    cur3 = cur3->next;
 	  }
@@ -2650,23 +2672,9 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
       if (debug) fprintf(stderr, "  Contributed URL: %s\n",
 			 ret->contriburl);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "comments"))) {
-      cur2 = cur1->xmlChildrenNode;
-      while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {
-	  ret->comment =
-	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
-	  if (debug) fprintf(stderr, "  Comment (%s):\n\n%s\n\n",
-			     language, ret->comment);
-	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
-	  if (!ret->comment) {
-	    ret->comment =
-	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
-	    if (debug) fprintf(stderr, "  Comment (en):\n\n%s\n\n",
-			     ret->comment);
-	  }
-	}
-	cur2 = cur2->next;
-      }
+      if (debug)
+	fprintf(stderr, "  Comment:\n");
+      getLocalizedText(doc, cur1, &(ret->comment), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "drivers"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -2713,27 +2721,9 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 	      if (debug) fprintf(stderr, "    Ready-made PPD: %s\n",
 				 dentry->ppd);
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
-	      cur4 = cur3->xmlChildrenNode;
-	      while (cur4 != NULL) {
-		if ((!xmlStrcmp(cur4->name, (const xmlChar *) language))) {
-		  dentry->comment =
-		    perlquote(xmlNodeListGetString(doc, 
-						   cur4->xmlChildrenNode,
-						   1));
-		  if (debug) fprintf(stderr, "    Comment (%s): \n%s\n\n",
-				     language, dentry->comment);
-		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "en"))) {
-		  if (!dentry->comment) {
-		    dentry->comment =
-		      perlquote(xmlNodeListGetString(doc, 
-						     cur4->xmlChildrenNode,
-						     1));
-		    if (debug) fprintf(stderr, "    Comment (en): \n%s\n\n",
-				       dentry->comment);
-		  }
-		}
-		cur4 = cur4->next;
-	      }
+	      if (debug)
+		fprintf(stderr, "    Comment:\n");
+	      getLocalizedText(doc, cur3, &(dentry->comment), language, debug);
 	    }
 	    cur3 = cur3->next;
 	  }
@@ -2758,7 +2748,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;   /* Full driver ID, with "driver/" */
   drvPrnEntryPtr entry; /* An entry for a printer supported by this driver*/
-  xmlChar        *url, *level;
+  xmlChar        *url, *level, *version, *scope;
 
   /* Initialization of entries */
   ret->id = NULL;
@@ -2768,12 +2758,17 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->supplier = NULL;
   ret->manufacturersupplied = NULL;
   ret->license = NULL;
+  ret->licensetext = NULL;
   ret->free = NULL;
   ret->num_supportcontacts = 0;
   ret->supportcontacts = NULL;
   ret->supportcontacturls = NULL;
   ret->supportcontactlevels = NULL;
   ret->shortdescription = NULL;
+  ret->locales = NULL;
+  ret->num_packages = 0;
+  ret->packageurls = NULL;
+  ret->packagescopes = NULL;
   ret->maxresx = NULL;
   ret->maxresy = NULL;
   ret->color = NULL;
@@ -2783,6 +2778,9 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->photo = NULL;
   ret->load = NULL;
   ret->speed = NULL;
+  ret->num_requires = 0;
+  ret->requires = NULL;
+  ret->requiresversion = NULL;
   ret->driver_type = NULL;
   ret->cmd = NULL;
   ret->driverppdentry = NULL;
@@ -2820,9 +2818,9 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
       if (debug) fprintf(stderr, "  Driver is obsolete: %s\n",
 			 ret->driver_obsolete);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supplier"))) {
-      ret->supplier = 
-	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
-      if (debug) fprintf(stderr, "  Driver supplier: %s\n", ret->supplier);
+      if (debug)
+	fprintf(stderr, "  Driver supplier:\n");
+      getLocalizedText(doc, cur1, &(ret->supplier), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "manufacturersupplied"))) {
       ret->manufacturersupplied =
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -2835,9 +2833,13 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
       ret->manufacturersupplied = (xmlChar *)"0";
       if (debug) fprintf(stderr, "  Driver supplied by a third party\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "license"))) {
-      ret->license = 
-	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
-      if (debug) fprintf(stderr, "  Driver license: %s\n", ret->license);
+      if (debug)
+	fprintf(stderr, "  Driver license:\n");
+      getLocalizedText(doc, cur1, &(ret->license), language, debug);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "licensetext"))) {
+      if (debug)
+	fprintf(stderr, "  Driver license text:\n");
+      getLocalizedText(doc, cur1, &(ret->licensetext), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
       ret->free = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Driver is free software\n");
@@ -2872,8 +2874,10 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	  url = xmlGetProp(cur2, (const xmlChar *) "url");
 	  ret->supportcontactlevels[ret->num_supportcontacts - 1] = level;
 	  ret->supportcontacturls[ret->num_supportcontacts - 1] = url;
-	  ret->supportcontacts[ret->num_supportcontacts - 1] =
-	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  getLocalizedText
+	    (doc, cur2,
+	     &(ret->supportcontacts[ret->num_supportcontacts - 1]),
+	     language, debug);
 	  if (debug)
 	    fprintf(stderr, "    %s (%s):\n      %s\n", 
 		    ret->supportcontacts[ret->num_supportcontacts - 1],
@@ -2883,24 +2887,37 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	cur2 = cur2->next;
       }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "shortdescription"))) {
+      if (debug)
+	fprintf(stderr, "  Driver short description:\n");
+      getLocalizedText(doc, cur1, &(ret->shortdescription), language, debug);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "locales"))) {
+      ret->locales = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver list of locales: %s\n", ret->locales);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "packages"))) {
       cur2 = cur1->xmlChildrenNode;
+      if (debug) fprintf(stderr, "  Driver downloadable packages:\n");
       while (cur2 != NULL) {
-	/*if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {*/
-	if ((!xmlStrcmp(cur2->name, language))) {
-	  ret->shortdescription =
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "package"))) {
+	  ret->num_packages ++;
+	  ret->packageurls =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->packageurls, 
+		    sizeof(xmlChar *) * 
+		    ret->num_packages);
+	  ret->packagescopes =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->packagescopes, 
+		    sizeof(xmlChar *) * 
+		    ret->num_packages);
+	  scope = xmlGetProp(cur2, (const xmlChar *) "scope");
+	  ret->packageurls[ret->num_packages - 1] =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  ret->packagescopes[ret->num_packages - 1] = perlquote(scope);
 	  if (debug)
-	    fprintf(stderr, "  Driver short description (%s):\n\n%s\n\n",
-		    language, ret->shortdescription);
-	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
-	  if (!ret->shortdescription) {
-	    ret->shortdescription =
-	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode,
-					     1));
-	    if (debug)
-	      fprintf(stderr, "  Driver short description (en):\n\n%s\n\n",
-		      ret->shortdescription);
-	  }
+	    fprintf(stderr, "    %s (%s)\n", 
+		    ret->packageurls[ret->num_packages - 1],
+		    ret->packagescopes[ret->num_packages - 1]);
 	}
 	cur2 = cur2->next;
       }
@@ -2967,7 +2984,31 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "execution"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
+	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "requires"))) {
+	  ret->num_requires ++;
+	  ret->requires =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->requires, 
+		    sizeof(xmlChar *) * 
+		    ret->num_requires);
+	  ret->requiresversion =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->requiresversion, 
+		    sizeof(xmlChar *) * 
+		    ret->num_requires);
+	  version = xmlGetProp(cur2, (const xmlChar *) "version");
+	  ret->requires[ret->num_requires - 1] =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  ret->requiresversion[ret->num_requires - 1] = perlquote(version);
+	  if (debug)
+	    if (!version)
+	      fprintf(stderr, "  Driver requires driver: %s\n", 
+		      ret->requires[ret->num_requires - 1]);
+	    else
+	      fprintf(stderr, "  Driver requires driver: %s (%s)\n", 
+		      ret->requires[ret->num_requires - 1],
+		      ret->requiresversion[ret->num_requires - 1]);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
 	  ret->driver_type = (xmlChar *)"C";
 	  if (debug) fprintf(stderr, "  Driver type: CUPS Raster\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ijs"))) {
@@ -3004,23 +3045,9 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	cur2 = cur2->next;
       }
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "comments"))) {
-      cur2 = cur1->xmlChildrenNode;
-      while (cur2 != NULL) {
-	if ((!xmlStrcmp(cur2->name, (const xmlChar *) language))) {
-	  ret->comment =
-	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
-	  if (debug) fprintf(stderr, "  Comment (%s):\n\n%s\n\n",
-			     language, ret->comment);
-	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "en"))) {
-	  if (!ret->comment) {
-	    ret->comment =
-	      perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
-	    if (debug) fprintf(stderr, "  Comment (en):\n\n%s\n\n",
-			       ret->comment);
-	  }
-	}
-	cur2 = cur2->next;
-      }
+      if (debug)
+	fprintf(stderr, "  Comment:\n");
+      getLocalizedText(doc, cur1, &(ret->comment), language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "printers"))) {
       cur2 = cur1->xmlChildrenNode;
       while (cur2 != NULL) {
@@ -3059,27 +3086,9 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	      if (debug) fprintf(stderr, "    ID: %s\n",
 				 entry->id);
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "comments"))) {
-	      cur4 = cur3->xmlChildrenNode;
-	      while (cur4 != NULL) {
-		if ((!xmlStrcmp(cur4->name, (const xmlChar *) language))) {
-		  entry->comment =
-		    perlquote(xmlNodeListGetString(doc, 
-						   cur4->xmlChildrenNode,
-						   1));
-		  if (debug) fprintf(stderr, "    Comment (%s): \n%s\n\n",
-				     language, entry->comment);
-		} else if ((!xmlStrcmp(cur4->name, (const xmlChar *) "en"))) {
-		  if (!entry->comment) {
-		    entry->comment =
-		      perlquote(xmlNodeListGetString(doc, 
-						     cur4->xmlChildrenNode,
-						     1));
-		    if (debug) fprintf(stderr, "    Comment (en): \n%s\n\n",
-				       entry->comment);
-		  }
-		}
-		cur4 = cur4->next;
-	      }
+	      if (debug)
+		fprintf(stderr, "    Comment:\n");
+	      getLocalizedText(doc, cur3, &(entry->comment), language, debug);
 	    } else if ((!xmlStrcmp(cur3->name, (const xmlChar *) "functionality"))) {
 	      cur4 = cur3->xmlChildrenNode;
 	      while (cur4 != NULL) {
@@ -3658,6 +3667,10 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	    printf("                'license' => '%s',\n",
 		   overview->overviewDrivers[k]->license);
 	  }
+	  if (overview->overviewDrivers[k]->licensetext != NULL) {
+	    printf("                'licensetext' => '%s',\n",
+		   overview->overviewDrivers[k]->licensetext);
+	  }
 	  if (overview->overviewDrivers[k]->free != NULL) {
 	    printf("                'free' => '%s',\n",
 		   overview->overviewDrivers[k]->free);
@@ -3685,6 +3698,46 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	  if (overview->overviewDrivers[k]->shortdescription != NULL) {
 	    printf("                'shortdescription' => '%s',\n",
 		   overview->overviewDrivers[k]->shortdescription);
+	  }
+	  if (overview->overviewDrivers[k]->locales != NULL) {
+	    printf("                'locales' => '%s',\n",
+		   overview->overviewDrivers[k]->locales);
+	  }
+	  if (overview->overviewDrivers[k]->num_packages != 0) {
+	    printf("                'packages' => [\n");
+	    for (l = 0;
+		 l < overview->overviewDrivers[k]->num_packages; l ++) {
+	      if (overview->overviewDrivers[k]->packageurls[l] != 
+		  NULL) {
+		printf("                  {\n");
+		printf("                    'url' => '%s',\n",
+		       overview->overviewDrivers[k]->packageurls[l]);
+		if (overview->overviewDrivers[k]->packagescopes[l]
+		    != NULL)
+		  printf("                    'scope' => '%s',\n",
+			 overview->overviewDrivers[k]->packagescopes[l]);
+		printf("                  },\n");
+	      }
+	    }
+	    printf("                ],\n");
+	  }
+	  if (overview->overviewDrivers[k]->num_requires != 0) {
+	    printf("                'requires' => [\n");
+	    for (l = 0;
+		 l < overview->overviewDrivers[k]->num_requires; l ++) {
+	      if (overview->overviewDrivers[k]->requires[l] != 
+		  NULL) {
+		printf("                  {\n");
+		printf("                    'driver' => '%s',\n",
+		       overview->overviewDrivers[k]->requires[l]);
+		if (overview->overviewDrivers[k]->requiresversion[l]
+		    != NULL)
+		  printf("                    'version' => '%s',\n",
+			 overview->overviewDrivers[k]->requiresversion[l]);
+		printf("                  },\n");
+	      }
+	    }
+	    printf("                ],\n");
 	  }
 	  if (overview->overviewDrivers[k]->driver_type != NULL) {
 	    printf("                'type' => '%s',\n",
@@ -4031,6 +4084,10 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'license' => '%s',\n",
 	   combo->license);
   }
+  if (combo->licensetext != NULL) {
+    printf("  'licensetext' => '%s',\n",
+	   combo->licensetext);
+  }
   if (combo->free != NULL) {
     printf("  'free' => '%s',\n",
 	   combo->free);
@@ -4058,6 +4115,28 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   if (combo->shortdescription != NULL) {
     printf("  'shortdescription' => '%s',\n",
 	   combo->shortdescription);
+  }
+  if (combo->locales != NULL) {
+    printf("  'locales' => '%s',\n",
+	   combo->locales);
+  }
+  if (combo->num_packages != 0) {
+    printf("  'packages' => [\n");
+    for (i = 0;
+	 i < combo->num_packages; i ++) {
+      if (combo->packageurls[i] != 
+	  NULL) {
+	printf("    {\n");
+	printf("      'url' => '%s',\n",
+	       combo->packageurls[i]);
+	if (combo->packagescopes[i]
+	    != NULL)
+	  printf("      'scope' => '%s',\n",
+		 combo->packagescopes[i]);
+	printf("    },\n");
+      }
+    }
+    printf("  ],\n");
   }
   if (combo->excmaxresx != NULL) {
     printf("  'drvmaxresx' => '%s',\n",
@@ -4121,6 +4200,24 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   } else if (combo->speed != NULL) {
     printf("  'speed' => '%s',\n",
 	   combo->speed);
+  }
+  if (combo->num_requires != 0) {
+    printf("  'requires' => [\n");
+    for (i = 0;
+	 i < combo->num_requires; i ++) {
+      if (combo->requires[i] != 
+	  NULL) {
+	printf("    {\n");
+	printf("      'driver' => '%s',\n",
+	       combo->requires[i]);
+	if (combo->requiresversion[i]
+	    != NULL)
+	  printf("      'version' => '%s',\n",
+		 combo->requiresversion[i]);
+	printf("    },\n");
+      }
+    }
+    printf("  ],\n");
   }
   if (combo->cmd) {
     printf("  'cmd' => '%s',\n", combo->cmd);
@@ -4475,6 +4572,10 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
     printf("  'license' => '%s',\n",
 	   driver->license);
   }
+  if (driver->licensetext != NULL) {
+    printf("  'licensetext' => '%s',\n",
+	   driver->licensetext);
+  }
   if (driver->free != NULL) {
     printf("  'free' => '%s',\n",
 	   driver->free);
@@ -4502,6 +4603,28 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   if (driver->shortdescription != NULL) {
     printf("  'shortdescription' => '%s',\n",
 	   driver->shortdescription);
+  }
+  if (driver->locales != NULL) {
+    printf("  'locales' => '%s',\n",
+	   driver->locales);
+  }
+  if (driver->num_packages != 0) {
+    printf("  'packages' => [\n");
+    for (i = 0;
+	 i < driver->num_packages; i ++) {
+      if (driver->packageurls[i] != 
+	  NULL) {
+	printf("    {\n");
+	printf("      'url' => '%s',\n",
+	       driver->packageurls[i]);
+	if (driver->packagescopes[i]
+	    != NULL)
+	  printf("      'scope' => '%s',\n",
+		 driver->packagescopes[i]);
+	printf("    },\n");
+      }
+    }
+    printf("  ],\n");
   }
   if (driver->maxresx != NULL) {
     printf("  'drvmaxresx' => '%s',\n",
@@ -4538,6 +4661,24 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   if (driver->speed != NULL) {
     printf("  'speed' => '%s',\n",
 	   driver->speed);
+  }
+  if (driver->num_requires != 0) {
+    printf("  'requires' => [\n");
+    for (i = 0;
+	 i < driver->num_requires; i ++) {
+      if (driver->requires[i] != 
+	  NULL) {
+	printf("    {\n");
+	printf("      'driver' => '%s',\n",
+	       driver->requires[i]);
+	if (driver->requiresversion[i]
+	    != NULL)
+	  printf("      'version' => '%s',\n",
+		 driver->requiresversion[i]);
+	printf("    },\n");
+      }
+    }
+    printf("  ],\n");
   }
   if (driver->driver_type) {
     printf("  'type' => '%s',\n", driver->driver_type);
@@ -4619,7 +4760,7 @@ main(int argc, char **argv) { /* I - Command line arguments */
   int i, j; /* loop variables */
   int           debug = 0; /* Debug output level */
   xmlChar       *setting; 
-  xmlChar       *language = "en"; 
+  xmlChar       *language = "C"; 
   xmlChar       **defaultsettings = NULL; /* User-supplied option settings*/
   int           num_defaultsettings = 0;
   char          *filename = NULL;
