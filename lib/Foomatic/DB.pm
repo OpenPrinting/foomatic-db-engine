@@ -22,6 +22,7 @@ my $ver = '$Revision$ ';
 sub new {
     my $type = shift(@_);
     my $this = bless {@_}, $type;
+    $this->{'language'} = "C";
     return $this;
 }
 
@@ -52,6 +53,12 @@ sub translate_printer_id {
     return $oldid;
 }
 
+# Set language for localized answers
+sub set_language {
+    my ($this, $language) = @_;
+    $this->{'language'} = $language;
+}
+
 # List of driver names
 sub get_driverlist {
     my ($this) = @_;
@@ -74,7 +81,7 @@ sub get_overview {
 	$otype .= ' -n' if ($cupsppds == 1);
 	# Generate overview Perl data structure from database
 	my $VAR1;
-	eval (`$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O`) ||
+	eval (`$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}`) ||
 	    die ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!");
 	$this->{'overview'} = $VAR1;
     }
@@ -121,7 +128,7 @@ sub get_printer {
     # Generate printer Perl data structure from database
     my $VAR1;
     if (-r "$libdir/db/source/printer/$poid.xml") {
-	eval (`$bindir/foomatic-perl-data -P '$libdir/db/source/printer/$poid.xml'`) ||
+	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) ||
 	    die ("Could not run \"foomatic-perl-data\"!");
     } else {
 	return undef;
@@ -139,7 +146,7 @@ sub get_driver {
     # Generate driver Perl data structure from database
     my $VAR1;
     if (-r "$libdir/db/source/driver/$drv.xml") {
-	eval (`$bindir/foomatic-perl-data -D '$libdir/db/source/driver/$drv.xml'`) ||
+	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$libdir/db/source/driver/$drv.xml'`) ||
 	    die ("Could not run \"foomatic-perl-data\"!");
     } else {
 	return undef;
@@ -974,7 +981,7 @@ sub getdat ($ $ $) {
     # Generate Perl data structure from database
     my %dat;			# Our purpose in life...
     my $VAR1;
-    eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C`) ||
+    eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C -l $this->{'language'}`) ||
 	die ("Could not run \"foomatic-combo-xml\"/" .
 	     "\"foomatic-perl-data\"!");
     %dat = %{$VAR1};

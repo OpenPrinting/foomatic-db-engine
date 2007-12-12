@@ -4811,6 +4811,7 @@ main(int argc, char **argv) { /* I - Command line arguments */
 	  i ++;
 	  language = (xmlChar *)(argv[i]);
 	}
+	break;
       case 'v' : /* verbose */
 	debug++;
 	j = 2;
