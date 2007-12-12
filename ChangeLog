@@ -1,3 +1,12 @@
+2007-12-12  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Allow localized queries by adding a "language"
+	  field to the data structure and calling foomatic-perl-data with
+	  an appropriate "-l" option.
+
+	* foomatic-perl-data.c: Fixed "-l" option, with "-l" the debug mode
+	  was always activated.
+
 2007-12-11  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Added new XML tags "<licensetext>" (full
