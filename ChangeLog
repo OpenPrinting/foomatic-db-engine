@@ -1,3 +1,10 @@
+2007-12-13  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: Added "<group>" tag to driver entries. Drivers
+	  which differ only by their locales ("<locales>" tag) should have the
+	  same "<group>" tags. If the user queries a driver giving a locale
+	  he gets only the best matching from each group.
+
 2007-12-12  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Allow localized queries by adding a "language"
