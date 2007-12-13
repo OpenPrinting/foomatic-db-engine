@@ -188,6 +188,7 @@ typedef struct comboData {
   printerDrvEntryPtr  *drivers;
   /* Driver */
   xmlChar *driver;
+  xmlChar *driver_group;
   xmlChar *pcdriver;
   xmlChar *driver_type;
   xmlChar *driver_comment;
@@ -324,6 +325,7 @@ typedef struct drvPrnEntry {
 typedef struct driverEntry {
   xmlChar *id;
   xmlChar *name;
+  xmlChar *group;
   xmlChar *url;
   xmlChar *driver_obsolete;
   xmlChar *supplier;
@@ -1567,6 +1569,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 
   /* Initialization of entries */
   ret->driver = NULL;
+  ret->driver_group = NULL;
   ret->driver_type = NULL;
   ret->driver_comment = NULL;
   ret->url = NULL;
@@ -1630,10 +1633,16 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       ret->driver = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver name: %s\n", ret->driver);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "group"))) {
+      ret->driver_group = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver group (for localization): %s\n", 
+			 ret->driver_group);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "pcdriver"))) {
       ret->pcdriver = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
-      if (debug) fprintf(stderr, "  Driver part of PC file name in PPD: %s\n", ret->pcdriver);
+      if (debug) fprintf(stderr, "  Driver part of PC file name in PPD: %s\n",
+			 ret->pcdriver);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "url"))) {
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -2753,6 +2762,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   /* Initialization of entries */
   ret->id = NULL;
   ret->name = NULL;
+  ret->group = NULL;
   ret->url = NULL;
   ret->driver_obsolete = NULL;
   ret->supplier = NULL;
@@ -2805,6 +2815,11 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
       ret->name = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
       if (debug) fprintf(stderr, "  Driver name: %s\n", ret->name);
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "group"))) {
+      ret->group = 
+	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
+      if (debug) fprintf(stderr, "  Driver group (for localization): %s\n",
+			 ret->group);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "url"))) {
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -3647,6 +3662,10 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 			printer->drivers[j]->name))) {
 	  printf("              '%s' => {\n",
 		 printer->drivers[j]->name);
+	  if (overview->overviewDrivers[k]->group != NULL) {
+	    printf("                'group' => '%s',\n",
+		   overview->overviewDrivers[k]->group);
+	  }
 	  if (overview->overviewDrivers[k]->url != NULL) {
 	    printf("                'url' => '%s',\n",
 		   overview->overviewDrivers[k]->url);
@@ -4053,6 +4072,9 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     printf("  'snmp_cmd' => undef,\n");
   }
   printf("  'driver' => '%s',\n", combo->driver);
+  if (combo->driver_group) {
+    printf("  'group' => '%s',\n", combo->driver_group);
+  }
   if (combo->pcdriver) {
     printf("  'pcdriver' => '%s',\n", combo->pcdriver);
   } else {
@@ -4554,6 +4576,9 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   xmlChar **printers;
   printf("$VAR1 = {\n");
   printf("  'name' => '%s',\n", driver->name);
+  if (driver->group) {
+    printf("  'group' => '%s',\n", driver->group);
+  }
   if (driver->url) {
     printf("  'url' => '%s',\n", driver->url);
   }
