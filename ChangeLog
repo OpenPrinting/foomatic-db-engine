@@ -1,3 +1,10 @@
+2008-01-29  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: Added "<patents>" tag to driver entries. Drivers
+	  which are free software but contain (possibly) patented algorithms
+	  (like JBIG compression) should be marked with this tag to warn users
+	  about the patent issues when auto-downloading the driver.
+
 2007-12-13  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Added "<group>" tag to driver entries. Drivers
