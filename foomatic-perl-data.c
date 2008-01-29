@@ -199,6 +199,7 @@ typedef struct comboData {
   xmlChar *license;
   xmlChar *licensetext;
   xmlChar *free;
+  xmlChar *patents;
   int num_supportcontacts;
   xmlChar **supportcontacts;
   xmlChar **supportcontacturls;
@@ -333,6 +334,7 @@ typedef struct driverEntry {
   xmlChar *license;
   xmlChar *licensetext;
   xmlChar *free;
+  xmlChar *patents;
   int num_supportcontacts;
   xmlChar **supportcontacts;
   xmlChar **supportcontacturls;
@@ -1579,6 +1581,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->license = NULL;
   ret->licensetext = NULL;
   ret->free = NULL;
+  ret->patents = NULL;
   ret->num_supportcontacts = 0;
   ret->supportcontacts = NULL;
   ret->supportcontacturls = NULL;
@@ -1683,7 +1686,13 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
       if (debug) fprintf(stderr, "  Driver is free software\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "nonfreesoftware"))) {
       ret->free = (xmlChar *)"0";
-      if (debug) fprintf(stderr, "  Driver is not free software:\n");
+      if (debug) fprintf(stderr, "  Driver is not free software\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "patents"))) {
+      ret->patents = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  There are patents applying to this driver's code\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "nopatents"))) {
+      ret->patents = (xmlChar *)"0";
+      if (debug) fprintf(stderr, "  There are no patents applying to this driver's code\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supportcontacts"))) {
       cur2 = cur1->xmlChildrenNode;
       if (debug) fprintf(stderr, "  Driver support contacts:\n");
@@ -2770,6 +2779,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->license = NULL;
   ret->licensetext = NULL;
   ret->free = NULL;
+  ret->patents = NULL;
   ret->num_supportcontacts = 0;
   ret->supportcontacts = NULL;
   ret->supportcontacturls = NULL;
@@ -2861,6 +2871,12 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "nonfreesoftware"))) {
       ret->free = (xmlChar *)"0";
       if (debug) fprintf(stderr, "  Driver is not free software\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "patents"))) {
+      ret->patents = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  There are patents applying to this driver's code\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "nopatents"))) {
+      ret->patents = (xmlChar *)"0";
+      if (debug) fprintf(stderr, "  There are no patents applying to this driver's code\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "supportcontacts"))) {
       cur2 = cur1->xmlChildrenNode;
       if (debug) fprintf(stderr, "  Driver support contacts:\n");
@@ -3694,6 +3710,10 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	    printf("                'free' => '%s',\n",
 		   overview->overviewDrivers[k]->free);
 	  }
+	  if (overview->overviewDrivers[k]->patents != NULL) {
+	    printf("                'patents' => '%s',\n",
+		   overview->overviewDrivers[k]->patents);
+	  }
 	  if (overview->overviewDrivers[k]->num_supportcontacts != 0) {
 	    printf("                'supportcontacts' => [\n");
 	    for (l = 0;
@@ -4113,6 +4133,10 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   if (combo->free != NULL) {
     printf("  'free' => '%s',\n",
 	   combo->free);
+  }
+  if (combo->patents != NULL) {
+    printf("  'patents' => '%s',\n",
+	   combo->patents);
   }
   if (combo->num_supportcontacts != 0) {
     printf("  'supportcontacts' => [\n");
@@ -4604,6 +4628,10 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   if (driver->free != NULL) {
     printf("  'free' => '%s',\n",
 	   driver->free);
+  }
+  if (driver->patents != NULL) {
+    printf("  'patents' => '%s',\n",
+	   driver->patents);
   }
   if (driver->num_supportcontacts != 0) {
     printf("  'supportcontacts' => [\n");
