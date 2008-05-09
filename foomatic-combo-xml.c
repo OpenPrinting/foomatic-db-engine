@@ -1721,9 +1721,12 @@ parse(char **data, /* I/O - Data to process */
 	strcat((char *)(*data), cautodetectentry);
       }
       plistpointer = *printerlist;
+      plistpreventry = NULL;
       while ((plistpointer) &&
-             (strcmp(plistpointer->id, cprinter) != 0))
+             (strcmp(plistpointer->id, cprinter) != 0)) {
+	plistpreventry = plistpointer;
 	plistpointer = (printerlist_t *)(plistpointer->next);
+      }
       if (plistpointer) {
 	strcat((char *)(*data), "\n    <drivers>\n");
 	dlistpointer = plistpointer->drivers;
@@ -1740,7 +1743,8 @@ parse(char **data, /* I/O - Data to process */
 	  strcat((char *)(*data), "    <driverfunctionalityexceptions>\n");
 	  dlistpointer = plistpointer->drivers;
 	  while (dlistpointer) {
-	    if (dlistpointer->functionality != NULL) {
+	    if ((dlistpointer->name != NULL) &&
+		(dlistpointer->functionality != NULL)) {
 	      strcat((char *)(*data),
 		     "      <driverfunctionalityexception>\n");
 	      strcat((char *)(*data), "        <driver>");
@@ -1754,6 +1758,22 @@ parse(char **data, /* I/O - Data to process */
 	  }
 	  strcat((char *)(*data), "    </driverfunctionalityexceptions>\n");
 	}
+	/* We remove every printer entry in the list for which we have found
+	   a printer XML file in the database, so all remaining entries are
+	   of printers which are only mentioned in a driver's printer list
+	   but do not have an XML file in the database. We will treat these
+	   printers later */
+	dlistpointer = plistpointer->drivers;
+	while (dlistpointer) {
+	  dlistpreventry = dlistpointer;
+	  dlistpointer = (driverlist_t *)(dlistpointer->next);
+	  free(dlistpreventry);
+	}
+	if (plistpreventry == NULL)
+	  *printerlist = (printerlist_t *)(plistpointer->next);
+	else
+	  plistpreventry->next = plistpointer->next;
+	free(plistpointer);
       }
       if (ppdlist != NULL) {
 	strcat((char *)(*data), "    <ppds>\n");
@@ -1794,6 +1814,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 {
   int		i,j;		/* Looping vars */
   const char    *tmpstr1;       /* Temporary string constant */
+  char          *t;
 
   const char    *pid = NULL,
                 *driver = NULL,
@@ -1825,6 +1846,7 @@ main(int  argc,     /* I - Number of command-line arguments */
   int           debug2 = 0;
   int           comboconfirmed = 0;
   int           comboconfirmed2 = 0;
+  int           exceptionfound = 0;
   DIR           *optiondir;
   DIR           *driverdir;
   DIR           *printerdir;
@@ -1833,6 +1855,8 @@ main(int  argc,     /* I - Number of command-line arguments */
   printerlist_t *plistpointer;  /* pointers to navigate through the 
 				   printer */
   driverlist_t  *dlistpointer;  /* list for the overview */
+  printerlist_t *plistpreventry;
+  driverlist_t  *dlistpreventry;
   idlist_t      *idlist;        /* I - ID translation table */
   
   /* Show the help message whem no command line arguments are given */
@@ -1982,10 +2006,22 @@ main(int  argc,     /* I - Number of command-line arguments */
 	      libdir, pid);
       printerbuffer = loadfile(printerfilename);
       if (printerbuffer == NULL) {
-	fprintf(stderr, 
-		"Printer file %s corrupted, missing, or not readable!\n",
-		printerfilename);
-	exit(1);
+	printerbuffer = malloc(1024);
+	make = strdup(pid);
+	model = strchr(make, '-');
+	if (model) {
+	  t = (char *)model;
+	  *t = '\0';
+	  model ++;
+	} else { 
+	  model = "Unknown model";
+	}
+	t = (char *)model;
+	while (*t) {
+	  if (*t == '_') *t = ' ';
+	  t ++;
+	}
+	sprintf((char *)printerbuffer, "<printer id=\"printer/%s\">\n <make>%s</make>\n <model>%s</model>\n <noxmlentry />\n<printer>\n", pid, make, model);
       } else {
 	fprintf(stderr, 
 		"WARNING: Obsolete printer ID used, using %s instead!\n",
@@ -2079,7 +2115,7 @@ main(int  argc,     /* I - Number of command-line arguments */
     
     /* Output the result on STDOUT */
     if (debug) fprintf(stderr, "Putting out result!\n");
-    printf("<foomatic>%s%s\n<options>\n", printerbuffer, driverbuffer);
+    printf("<foomatic>\n%s%s\n<options>\n", printerbuffer, driverbuffer);
     for (i = 0; i < num_optbuffers; i++) {
       printf("%s", optbuffers[i]);
     }
@@ -2214,10 +2250,99 @@ main(int  argc,     /* I - Number of command-line arguments */
       }
     }
 
-    printf("</overview>\n");
-
     closedir(printerdir);
 
+    if (debug) {
+      plistpointer = printerlist;
+      while (plistpointer) {
+	fprintf(stderr, "Printer: %s\n", plistpointer->id);
+	dlistpointer = plistpointer->drivers;
+	while (dlistpointer) {
+	  fprintf(stderr, "   Driver: %s\n", dlistpointer->name);
+	  if (dlistpointer->functionality != NULL)
+	    fprintf(stderr, "    %s\n", dlistpointer->functionality);
+	  dlistpointer = (driverlist_t *)(dlistpointer->next);
+	}
+	plistpointer = (printerlist_t *)(plistpointer->next);
+      }
+    }
+
+    /* Now show all printers which are only mentioned in the lists of
+       supported prnters of the drivers and which not have a Foomatic
+       printer XML entry */
+    while (printerlist) {
+      if (printerlist->id && strcmp(printerlist->id, "noproto")) {
+	if (debug) fprintf(stderr, "    Printer only mentioned in driver XML files:\n      Printer ID: |%s|\n",
+			   printerlist->id);
+	/*strcpy(printerlist->id, translateid(printerlist->id, idlist));*/
+	printf("  <printer>\n    <id>");
+	printf(printerlist->id);
+	make = printerlist->id;
+	model = strchr(make, '-');
+	if (model) {
+	  t = (char *)model;
+	  *t = '\0';
+	  model ++;
+	} else { 
+	  model = "Unknown model";
+	}
+	t = (char *)model;
+	while (*t) {
+	  if (*t == '_') *t = ' ';
+	  t ++;
+	}
+	printf("</id>\n    <make>");
+	printf(make);
+	printf("</make>\n    <model>");
+	printf(model);
+	printf("</model>\n    <noxmlentry />\n");
+	dlistpointer = printerlist->drivers;
+	exceptionfound = 0;
+	if (dlistpointer) {
+	  printf("    <drivers>\n");
+	  while (dlistpointer) {
+	    if (dlistpointer->name) {
+	      printf("      <driver>");
+	      printf(dlistpointer->name);
+	      printf("</driver>\n");
+	      if (dlistpointer->functionality != NULL) exceptionfound = 1;
+	    }
+	    dlistpointer = (driverlist_t *)(dlistpointer->next);
+	  }
+	  printf("    </drivers>\n");
+	}
+	if (exceptionfound) {
+	  printf("    <driverfunctionalityexceptions>\n");
+	  dlistpointer = printerlist->drivers;
+	  while (dlistpointer) {
+	    if ((dlistpointer->functionality != NULL) &&
+	      	(dlistpointer->name != NULL)) {
+	      printf("      <driverfunctionalityexception>\n");
+	      printf("        <driver>");
+	      printf(dlistpointer->name);
+	      printf("</driver>\n");
+	      printf(dlistpointer->functionality);
+	      printf("\n      </driverfunctionalityexception>\n");
+	    }
+	    dlistpointer = (driverlist_t *)(dlistpointer->next);
+	  }
+	  printf("    </driverfunctionalityexceptions>\n");
+	}
+	printf("  </printer>\n");
+      }
+      dlistpointer = printerlist->drivers;
+      while (dlistpointer) {
+	dlistpreventry = dlistpointer;
+	dlistpointer = (driverlist_t *)(dlistpointer->next);
+	free(dlistpreventry);
+      }
+      plistpreventry = printerlist;
+      printerlist = (printerlist_t *)(printerlist->next);
+      free(plistpreventry);
+    }
+
+    printf("</overview>\n");
+      
   }
     
   /* Done */

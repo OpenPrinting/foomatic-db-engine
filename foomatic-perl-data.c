@@ -291,6 +291,7 @@ typedef struct printerEntry {
   xmlChar *functionality;
   xmlChar *driver;
   xmlChar *unverified;
+  xmlChar *noxmlentry;
   xmlChar *url;
   xmlChar *contriburl;
   xmlChar *ppdurl;
@@ -381,6 +382,7 @@ typedef struct overviewPrinter {
   xmlChar *model;
   xmlChar *functionality;
   xmlChar *unverified;
+  xmlChar *noxmlentry;
   /* Printer auto-detection */
   xmlChar *general_ieee;
   xmlChar *general_mfg;
@@ -693,6 +695,7 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   printer->model = NULL;
   printer->functionality = NULL;
   printer->unverified = NULL;
+  printer->noxmlentry = NULL;
   printer->general_ieee = NULL;
   printer->general_mfg = NULL;
   printer->general_mdl = NULL;
@@ -743,6 +746,9 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "unverified"))) {
       printer->unverified = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Printer entry is unverified\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "noxmlentry"))) {
+      printer->noxmlentry = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Printer XML entry does not exist in the database\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "driver"))) {
       printer->driver = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -2353,6 +2359,7 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   ret->functionality = NULL;
   ret->driver = NULL;
   ret->unverified = (xmlChar *)"0";
+  ret->noxmlentry = (xmlChar *)"0";
   ret->url = NULL;
   ret->contriburl = NULL;
   ret->comment = NULL;
@@ -2680,6 +2687,9 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "unverified"))) {
       ret->unverified = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Printer entry is unverified\n");
+    } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "noxmlentry"))) {
+      ret->noxmlentry = (xmlChar *)"1";
+      if (debug) fprintf(stderr, "  Printer XML entry does not exist in the database\n");
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "url"))) {
       ret->url = 
 	perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1));
@@ -3657,6 +3667,11 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
     } else {
       printf("            'unverified' => 0,\n");
     }
+    if (printer->noxmlentry) {
+      printf("            'noxmlentry' => 1,\n");
+    } else {
+      printf("            'noxmlentry' => 0,\n");
+    }
     if (printer->driver) {
       printf("            'driver' => '%s',\n", printer->driver);
     }
@@ -4568,6 +4583,9 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
   }
   if (printer->unverified) {
     printf("  'unverified' => '%s',\n", printer->unverified);
+  }
+  if (printer->noxmlentry) {
+    printf("  'noxmlentry' => '%s',\n", printer->noxmlentry);
   }
   if (printer->url) {
     printf("  'url' => '%s',\n", printer->url);

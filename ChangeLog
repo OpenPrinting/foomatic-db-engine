@@ -1,3 +1,12 @@
+2008-05-09  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c, foomatic-perl-data.c, lib/Foomatic/DB.pm:
+	  If a printer is in the list of supported printers of a driver
+	  XML file but there is no printer XML file for the printer,
+	  behave as the printer XML was there, generating a minimalistic
+	  pseudo entry. Mark the pseudo entries with the "<noxmlentry />"
+	  tag to distinguish them from real or user-contributed entries.
+
 2008-01-29  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Added "<patents>" tag to driver entries. Drivers
