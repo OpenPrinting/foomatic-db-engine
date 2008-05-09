@@ -2016,6 +2016,11 @@ main(int  argc,     /* I - Number of command-line arguments */
 	} else { 
 	  model = "Unknown model";
 	}
+	t = (char *)make;
+	while (*t) {
+	  if (*t == '_') *t = ' ';
+	  t ++;
+	}
 	t = (char *)model;
 	while (*t) {
 	  if (*t == '_') *t = ' ';
@@ -2285,6 +2290,11 @@ main(int  argc,     /* I - Number of command-line arguments */
 	  model ++;
 	} else { 
 	  model = "Unknown model";
+	}
+	t = (char *)make;
+	while (*t) {
+	  if (*t == '_') *t = ' ';
+	  t ++;
 	}
 	t = (char *)model;
 	while (*t) {

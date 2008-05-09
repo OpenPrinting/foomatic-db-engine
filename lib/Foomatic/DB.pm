@@ -135,8 +135,11 @@ sub get_printer {
 	if ($poid =~ /^([^\-]+)\-(.*)$/) {
 	    $make = $1;
 	    $model = $2;
+	    $make =~ s/_/ /g;
+	    $model =~ s/_/ /g;
 	} else {
 	    $make = $poid;
+	    $make =~ s/_/ /g;
 	    $model = "Unknown model";
 	}
 	$VAR1 = {
