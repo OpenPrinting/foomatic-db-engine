@@ -131,7 +131,20 @@ sub get_printer {
 	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) ||
 	    die ("Could not run \"foomatic-perl-data\"!");
     } else {
-	return undef;
+	my ($make, $model);
+	if ($poid =~ /^([^\-]+)\-(.*)$/) {
+	    $make = $1;
+	    $model = $2;
+	} else {
+	    $make = $poid;
+	    $model = "Unknown model";
+	}
+	$VAR1 = {
+	    'id' => $poid,
+	    'make' => $make,
+	    'model' => $model,
+	    'noxmlentry' => 1
+	}
     }
     return $VAR1;
 }
