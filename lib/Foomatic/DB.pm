@@ -152,6 +152,13 @@ sub get_printer {
     return $VAR1;
 }
 
+sub printer_exists {
+    my ($this, $poid) = @_;
+    # Check whether a printer XML file exists in the database
+    return 1 if (-r "$libdir/db/source/printer/$poid.xml");
+    return undef;
+}
+
 sub get_printer_xml {
     my ($this, $poid) = @_;
     return $this->_get_object_xml("source/printer/$poid", 1);
