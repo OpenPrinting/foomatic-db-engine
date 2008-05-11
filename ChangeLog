@@ -1,3 +1,10 @@
+2008-05-10  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Add "printer_exists()" function to check
+	  whether a printer XML file exists for a given printer ID. The
+	  "get_printer()" function is not suitable for this purpose
+	  any more.
+
 2008-05-09  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-combo-xml.c, foomatic-perl-data.c, lib/Foomatic/DB.pm:
