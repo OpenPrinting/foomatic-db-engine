@@ -1,3 +1,7 @@
+2008-05-19  Dafydd Crosby <dcrosby@userful.com>
+	* ppdtoxml: Moved to foomatic-db-engine. Now handles special 
+	characters properly, made configuration more intuitive.
+
 2008-05-10  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Add "printer_exists()" function to check
