@@ -62,7 +62,7 @@ print STDERR "\nStoring files in directory $destdir.\n";
 mkdir $destdir, 0777 or $force or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
 
 # Compute the overview
-$db->get_overview();
+$db->get_overview(1, ($filetype eq "ppd" ? 2 : 0));
 
 # Which drivers should be processed?
 my @driverlist;
@@ -74,21 +74,13 @@ if (@ARGV) {
 
 # Subprocess to compute all p/d combinations
 my @combos;
-if (open COMB, '-|') {
-    while(<COMB>) {
-	push (@combos, $_);
-    }
-    close COMB;			# wait for child end
-} else {
-    my $driver;
-    for $driver (@driverlist) {
-	my $printer;
-	for $printer ($db->get_printers_for_driver($driver)) {
-	    # Note this combo...
-	    print STDOUT "$printer,$driver\n";
+for my $printer (@{$db->{"overview"}}) {
+    my $poid = $printer->{'id'};
+    for my $driver (@{$printer->{'drivers'}}) {
+	if (Foomatic::DB::member($driver, @driverlist)) {
+	    push (@combos, "$poid,$driver\n");
 	}
     }
-    exit 0;			# end of subprocessing
 }
 
 # OK, spawn n manager processes
