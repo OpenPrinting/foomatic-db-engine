@@ -1089,6 +1089,8 @@ sub ppdfromvartoperl ($) {
 	    $dat->{'encoding'} = $1;
 	    if ($dat->{'encoding'} eq 'MacStandard') {
 		$dat->{'encoding'} = 'MacCentralEurRoman'; 
+	    } elsif ($dat->{'encoding'} eq 'WindowsANSI') {
+		$dat->{'encoding'} = 'cp1252'; 
 	    } elsif ($dat->{'encoding'} eq 'JIS83-RKSJ') {
 		$dat->{'encoding'} = 'shiftjis';
 	    }
