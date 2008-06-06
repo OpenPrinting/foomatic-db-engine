@@ -23,6 +23,9 @@ print "DB " . Dumper($db ) if $debug;
 
 my $printer;
 for $printer (@{$db->{'overview'}}) {
+    # Skip printers without XML file. Here we cannot set a recommended
+    # driver
+    next if $printer->{'noxmlentry'};
     print "$printer->{'make'} $printer->{'model'} ($printer->{'id'})";
     if ($printer->{'driver'}) { # We have already a default driver
 	# Check whether this driver is one which supports the printer

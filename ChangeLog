@@ -1,3 +1,77 @@
+2008-06-05  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c: When supplying the "-C" option (overview
+	  of all printer/driver combos for which a PPD file is available),
+	  do not go through the printers without printer XML
+	  entries (printers only mentioned in driver XML entries) as they
+	  never have a valid PPD.
+
+	  Consider a printer/driver combo also valid if the driver is
+	  "Postscript" and in the <lang> section there is a <postscript>
+	  section, independent whether the printer is listed in the
+	  "Postscript" driver XML file.
+
+	  In the driver XML file only copy the XML section for selected
+	  printer into the emptied driver list if the section really
+	  exists.
+
+	  If we request an overview of only the printer/driver combos
+	  which provide a valid PPD file ("-C" option for
+	  foomatic-combo-xml) we do not list combos which have the
+	  requested driver only defined in the <drivers> section of the
+	  printer XML file (printer not in the driver list of the driver
+	  XML file) and no ready-made PPD file
+
+	  Strip white space from the name of the ready-made PPD file in
+	  the printer enrty.
+
+	  Let debug output show whether the selected printer/driver combo
+	  is valid.
+
+	  Bigger buffer for pseudo driver XML file for the case that the
+	  driver is confirmed by an entry in the printer XML file and
+	  there is no suitable driver XML file.
+
+	  Corrected error message for an invalid printer/driver combo. It
+	  caused a segfault.
+
+	  Do not go through the printer/driver combos where the printer is
+	  only defined by an entry in the driver's printer list and no
+	  printer XML file exists when we request an overview for only the
+	  combos which give a PPD file ("-C"). The combos without printer
+	  XML never give PPD files.
+
+	* foomatic-compiledb.in: If we request PPDs use the overview for
+	  only the combos with a valid PPD ("foomatic-combo-xml -C").
+
+	  Improved the way to find all valid combos. Use the overview
+	  ("foomatic-combo-xml -C", to only get combos with PPDs) and
+	  do not fork for generating the list of valid combos.
+
+	* lib/Foomatic/DB.pm: Added support for the "WindowsANSI" encoding
+	  in manufacturer-supplied PPD files.
+
+2008-05-19  Dafydd Crosby <dcrosby@userful.com>
+
+	* ppdtoxml: Moved to foomatic-db-engine. Now handles special 
+	  characters properly, made configuration more intuitive.
+
+2008-05-10  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Add "printer_exists()" function to check
+	  whether a printer XML file exists for a given printer ID. The
+	  "get_printer()" function is not suitable for this purpose
+	  any more.
+
+2008-05-09  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c, foomatic-perl-data.c, lib/Foomatic/DB.pm:
+	  If a printer is in the list of supported printers of a driver
+	  XML file but there is no printer XML file for the printer,
+	  behave as the printer XML was there, generating a minimalistic
+	  pseudo entry. Mark the pseudo entries with the "<noxmlentry />"
+	  tag to distinguish them from real or user-contributed entries.
+
 2008-01-29  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Added "<patents>" tag to driver entries. Drivers
