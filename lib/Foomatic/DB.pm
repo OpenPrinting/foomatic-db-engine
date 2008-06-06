@@ -131,9 +131,32 @@ sub get_printer {
 	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) ||
 	    die ("Could not run \"foomatic-perl-data\"!");
     } else {
-	return undef;
+	my ($make, $model);
+	if ($poid =~ /^([^\-]+)\-(.*)$/) {
+	    $make = $1;
+	    $model = $2;
+	    $make =~ s/_/ /g;
+	    $model =~ s/_/ /g;
+	} else {
+	    $make = $poid;
+	    $make =~ s/_/ /g;
+	    $model = "Unknown model";
+	}
+	$VAR1 = {
+	    'id' => $poid,
+	    'make' => $make,
+	    'model' => $model,
+	    'noxmlentry' => 1
+	}
     }
     return $VAR1;
+}
+
+sub printer_exists {
+    my ($this, $poid) = @_;
+    # Check whether a printer XML file exists in the database
+    return 1 if (-r "$libdir/db/source/printer/$poid.xml");
+    return undef;
 }
 
 sub get_printer_xml {
@@ -1066,6 +1089,8 @@ sub ppdfromvartoperl ($) {
 	    $dat->{'encoding'} = $1;
 	    if ($dat->{'encoding'} eq 'MacStandard') {
 		$dat->{'encoding'} = 'MacCentralEurRoman'; 
+	    } elsif ($dat->{'encoding'} eq 'WindowsANSI') {
+		$dat->{'encoding'} = 'cp1252'; 
 	    } elsif ($dat->{'encoding'} eq 'JIS83-RKSJ') {
 		$dat->{'encoding'} = 'shiftjis';
 	    }

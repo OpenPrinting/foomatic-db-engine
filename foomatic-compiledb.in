@@ -61,34 +61,18 @@ if (($opt_t eq "ppd") || ($opt_t eq "cups") || ($opt_t eq "ppr")) {
 print STDERR "\nStoring files in directory $destdir.\n";
 mkdir $destdir, 0777 or $force or die "\nCannot make destination directory (If the directory already exists and you\nwant to proceed anyway, use the \"-f\" option)!\n";
 
-# Compute the overview
-$db->get_overview();
+# Compute the overview (only printer/driver combos which give a PPD)
+$db->get_overview(1, ($filetype eq "ppd" ? 2 : 0));
 
-# Which drivers should be processed?
-my @driverlist;
-if (@ARGV) {
-    @driverlist = grep {isdrivervalid($_)} @ARGV;
-} else {
-    @driverlist = grep {isdrivervalid($_)} $db->get_driverlist();
-}
-
-# Subprocess to compute all p/d combinations
+# Find all printer/driver combinations
 my @combos;
-if (open COMB, '-|') {
-    while(<COMB>) {
-	push (@combos, $_);
-    }
-    close COMB;			# wait for child end
-} else {
-    my $driver;
-    for $driver (@driverlist) {
-	my $printer;
-	for $printer ($db->get_printers_for_driver($driver)) {
-	    # Note this combo...
-	    print STDOUT "$printer,$driver\n";
+for my $printer (@{$db->{"overview"}}) {
+    my $poid = $printer->{'id'};
+    for my $driver (@{$printer->{'drivers'}}) {
+	if (!@ARGV || Foomatic::DB::member($driver, @ARGV)) {
+	    push (@combos, "$poid,$driver\n");
 	}
     }
-    exit 0;			# end of subprocessing
 }
 
 # OK, spawn n manager processes
@@ -203,16 +187,4 @@ sub spawn_child {
 	# No more input!
 	exit (0);
     }    
-}
-
-sub isdrivervalid {
-    my ($driver) = @_;
-    # Check whether the driver has a valid command line
-    if ($filetype ne 'xml') {
-	my $driverentry = $db->get_driver($driver);
-	if ($driverentry->{'cmd'}) {return 1;}
-	return 0;
-    } else {
-	return 1;
-    }
 }
