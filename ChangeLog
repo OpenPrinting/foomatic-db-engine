@@ -1,3 +1,11 @@
+2008-06-06  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-preferred-driver.in: Skip printers without printer
+	  XML entry, to avoid that empty printer XML files get generated.
+
+	* foomatic-compiledb.in: Simplify the generation of the list of
+	  valid printer/driver combos even more.
+
 2008-06-05  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-combo-xml.c: When supplying the "-C" option (overview
