@@ -198,6 +198,9 @@ typedef struct comboData {
   xmlChar *manufacturersupplied;
   xmlChar *license;
   xmlChar *licensetext;
+  xmlChar *origlicensetext;
+  xmlChar *licenselink;
+  xmlChar *origlicenselink;
   xmlChar *free;
   xmlChar *patents;
   int num_supportcontacts;
@@ -334,6 +337,9 @@ typedef struct driverEntry {
   xmlChar *manufacturersupplied;
   xmlChar *license;
   xmlChar *licensetext;
+  xmlChar *origlicensetext;
+  xmlChar *licenselink;
+  xmlChar *origlicenselink;
   xmlChar *free;
   xmlChar *patents;
   int num_supportcontacts;
@@ -447,10 +453,13 @@ perlquote(xmlChar *str) { /* I - Original string */
 }
 
 /*
- * Function to read out localized text, choosing the translation into the
- * desirted language. Reads also simple text without language tags, for
+ * Functions to read out localized text, choosing the translation into the
+ * desired language. Reads also simple text without language tags, for
  * backward compatibility for the case that a not yet localized database
- * field gets localized
+ * field gets localized. The second function is especially for license text.
+ * It returns always the English (original) version in addition and allows
+ * links to text files as alternative to the text itself, as often license text
+ * has to be in its own file.
  */
 
 static void
@@ -512,6 +521,121 @@ getLocalizedText(xmlDocPtr doc,   /* I - The whole data tree */
   *ret = xmlStrdup(perlquote(xmlNodeListGetString(doc, cur1, 1)));
   if (debug)
     fprintf(stderr, "    Non-localized text:\n\n%s\n\n", *ret);
+}
+
+static void
+getLocalizedLicenseText(xmlDocPtr doc,   /* I - The whole data tree */
+	 xmlNodePtr node, /* I - Node of XML tree to work on */
+		 xmlChar **text,   /* O - Text which was selected by the
+				         language */
+		 xmlChar **origtext, /* O - Original text in English */
+		 xmlChar **link,   /* O - Link which was selected by the
+				         language */
+		 xmlChar **origlink, /* O - Link to original text in English */
+		 xmlChar *language, /* I - User language */
+		 int debug) { /* I - Debug mode flag */
+  xmlNodePtr     cur1;  /* XML node currently worked on */
+  int            localizedtextfound = 0;
+
+  cur1 = node->xmlChildrenNode;
+  if (xmlStrcasecmp(cur1->name, "C") && xmlStrcasecmp(cur1->name, "POSIX")) {
+    while (cur1 != NULL) {
+      /* Exact match of locale ID */
+      if ((!xmlStrcasecmp(cur1->name, language))) {
+	*link = xmlGetProp(cur1, (const xmlChar *) "url");
+	if (*link == NULL) {
+	  *text = xmlStrdup
+	    (perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1)));
+	  if (debug)
+	    fprintf
+	      (stderr,
+	       "    Localized text with full locale ID matched (%s):\n\n%s\n\n",
+	       language, *text);
+	} else {
+	  if (debug)
+	    fprintf
+	      (stderr,
+	       "    Link to localized text with full locale ID matched (%s):\n\n%s\n\n",
+	       language, *link);
+	}
+	localizedtextfound = 1;
+	break;
+      }
+      cur1 = cur1->next;
+    }
+    if (localizedtextfound == 0) {
+      cur1 = node->xmlChildrenNode;
+      while (cur1 != NULL) {
+	/* Fall back to match only the two-character language code */
+	if ((!xmlStrncasecmp(cur1->name, language, 2))) {
+	  *link = xmlGetProp(cur1, (const xmlChar *) "url");
+	  if (*link == NULL) {
+	    *text = xmlStrdup
+	      (perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1)));
+	    if (debug)
+	      fprintf
+		(stderr,
+		 "    Localized text with only language ID matched (%s):\n\n%s\n\n",
+		 language, *text);
+	  } else {
+	    if (debug)
+	      fprintf
+		(stderr,
+		 "    Link to localized text with only language ID matched (%s):\n\n%s\n\n",
+		 language, *link);
+	  }
+	  localizedtextfound = 1;
+	  break;
+	}
+	cur1 = cur1->next;
+      }
+    }
+  }
+  cur1 = node->xmlChildrenNode;
+  while (cur1 != NULL) {
+    /* Fall back to English and/or extract original, English text/link */
+    if ((!xmlStrncasecmp(cur1->name, (const xmlChar *) "en", 2))) {
+      *origlink = xmlGetProp(cur1, (const xmlChar *) "url");
+      if (*origlink == NULL) {
+	*origtext = xmlStrdup
+	  (perlquote(xmlNodeListGetString(doc, cur1->xmlChildrenNode, 1)));
+	if (debug)
+	  fprintf(stderr, "    Original English text:\n\n%s\n\n", *origtext);
+	if (localizedtextfound == 0) {
+	  *text = *origtext;
+	  if (debug)
+	    fprintf(stderr,
+		    "      No localization, using original English text\n");
+	}
+      } else {
+	if (debug)
+	  fprintf(stderr, "    Link to original English text:\n\n%s\n\n",
+		  *origlink);
+	if (localizedtextfound == 0) {
+	  *link = *origlink;
+	  if (debug)
+	    fprintf(stderr,
+		    "      No localization, using original English link\n");
+	}
+      }
+      return;
+    }
+    cur1 = cur1->next;
+  }
+  cur1 = node->xmlChildrenNode;
+  /* Fall back to non-localized text (allows backward compatibility if
+     deciding on localizing a database item later */
+  *link = xmlGetProp(cur1, (const xmlChar *) "url");
+  if (*link == NULL) {
+    *text = xmlStrdup(perlquote(xmlNodeListGetString(doc, cur1, 1)));
+    *origtext = *text;
+    if (debug)
+      fprintf(stderr, "    Non-localized text:\n\n%s\n\n", *text);
+  } else {
+    *origlink = *link;
+    if (debug)
+      fprintf(stderr, "    Link to non-localized text:\n\n%s\n\n", *link);
+  }
 }
 
 /*
@@ -1586,6 +1710,9 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->manufacturersupplied = NULL;
   ret->license = NULL;
   ret->licensetext = NULL;
+  ret->origlicensetext = NULL;
+  ret->licenselink = NULL;
+  ret->origlicenselink = NULL;
   ret->free = NULL;
   ret->patents = NULL;
   ret->num_supportcontacts = 0;
@@ -1686,7 +1813,10 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "licensetext"))) {
       if (debug)
 	fprintf(stderr, "  Driver license text:\n");
-      getLocalizedText(doc, cur1, &(ret->licensetext), language, debug);
+      getLocalizedLicenseText(doc, cur1,
+			      &(ret->licensetext), &(ret->origlicensetext),
+			      &(ret->licenselink), &(ret->origlicenselink),
+			      language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
       ret->free = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Driver is free software\n");
@@ -2788,6 +2918,9 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->manufacturersupplied = NULL;
   ret->license = NULL;
   ret->licensetext = NULL;
+  ret->origlicensetext = NULL;
+  ret->licenselink = NULL;
+  ret->origlicenselink = NULL;
   ret->free = NULL;
   ret->patents = NULL;
   ret->num_supportcontacts = 0;
@@ -2874,7 +3007,10 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "licensetext"))) {
       if (debug)
 	fprintf(stderr, "  Driver license text:\n");
-      getLocalizedText(doc, cur1, &(ret->licensetext), language, debug);
+      getLocalizedLicenseText(doc, cur1,
+			      &(ret->licensetext), &(ret->origlicensetext),
+			      &(ret->licenselink), &(ret->origlicenselink),
+			      language, debug);
     } else if ((!xmlStrcmp(cur1->name, (const xmlChar *) "freesoftware"))) {
       ret->free = (xmlChar *)"1";
       if (debug) fprintf(stderr, "  Driver is free software\n");
@@ -3721,6 +3857,18 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 	    printf("                'licensetext' => '%s',\n",
 		   overview->overviewDrivers[k]->licensetext);
 	  }
+	  if (overview->overviewDrivers[k]->origlicensetext != NULL) {
+	    printf("                'origlicensetext' => '%s',\n",
+		   overview->overviewDrivers[k]->origlicensetext);
+	  }
+	  if (overview->overviewDrivers[k]->licenselink != NULL) {
+	    printf("                'licenselink' => '%s',\n",
+		   overview->overviewDrivers[k]->licenselink);
+	  }
+	  if (overview->overviewDrivers[k]->origlicenselink != NULL) {
+	    printf("                'origlicenselink' => '%s',\n",
+		   overview->overviewDrivers[k]->origlicenselink);
+	  }
 	  if (overview->overviewDrivers[k]->free != NULL) {
 	    printf("                'free' => '%s',\n",
 		   overview->overviewDrivers[k]->free);
@@ -4144,6 +4292,18 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   if (combo->licensetext != NULL) {
     printf("  'licensetext' => '%s',\n",
 	   combo->licensetext);
+  }
+  if (combo->origlicensetext != NULL) {
+    printf("  'origlicensetext' => '%s',\n",
+	   combo->origlicensetext);
+  }
+  if (combo->licenselink != NULL) {
+    printf("  'licenselink' => '%s',\n",
+	   combo->licenselink);
+  }
+  if (combo->origlicenselink != NULL) {
+    printf("  'origlicenselink' => '%s',\n",
+	   combo->origlicenselink);
   }
   if (combo->free != NULL) {
     printf("  'free' => '%s',\n",
@@ -4642,6 +4802,18 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   if (driver->licensetext != NULL) {
     printf("  'licensetext' => '%s',\n",
 	   driver->licensetext);
+  }
+  if (driver->origlicensetext != NULL) {
+    printf("  'origlicensetext' => '%s',\n",
+	   driver->origlicensetext);
+  }
+  if (driver->licenselink != NULL) {
+    printf("  'licenselink' => '%s',\n",
+	   driver->licenselink);
+  }
+  if (driver->origlicenselink != NULL) {
+    printf("  'origlicenselink' => '%s',\n",
+	   driver->origlicenselink);
   }
   if (driver->free != NULL) {
     printf("  'free' => '%s',\n",

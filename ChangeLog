@@ -1,3 +1,9 @@
+2008-06-18  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: Added support for output of both translated
+	  and original (English) license text and for links to external
+	  license text files.
+
 2008-06-06  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-preferred-driver.in: Skip printers without printer
