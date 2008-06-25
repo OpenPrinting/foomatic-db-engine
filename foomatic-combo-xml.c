@@ -233,6 +233,7 @@ parse(char **data, /* I/O - Data to process */
   int           linecount = 1;   /* Count the lines for error messages */
   int           nestinglevel = 0;/* How many XML environments are nested
 				    at the point where we are */
+  int           inxmlheader = 1;
   int           intag = 0;
   int           incomment = 0;
   int           tagnamefound = 0;
@@ -362,7 +363,7 @@ parse(char **data, /* I/O - Data to process */
     case '<': /* open angle bracket */
       if (!inquotes) {
 	if (intag) {
-	  if (!incomment) {
+	  if (!incomment && !inxmlheader) {
 	    /* Unless a tag is a comment, angle brackets cannot appear inside
 	       the tag. */
 	    fprintf(stderr, "XML error: Nested angle brackets in %s, line %d!\n",
@@ -378,8 +379,9 @@ parse(char **data, /* I/O - Data to process */
 	  intag = 1;
 	  if (scan + 3 < *data + datalength) {
 	    if ((*(scan + 1) == '!') && (*(scan + 2) == '-') &&
-		(*(scan + 3) == '-')) { 
+		(*(scan + 3) == '-')) {
 	      incomment = 1;
+	      tagtype = 0;
 	      if (debug) fprintf(stderr, "    Start of a comment\n");
 	    }
 	  }
@@ -433,6 +435,22 @@ parse(char **data, /* I/O - Data to process */
 		    inid = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
+		    if (tagtype == 1) {
+		      /* XML body of the file is starting here */
+		      inxmlheader = 0;
+		      nestinglevel = 1;
+		      /* Remove the whole header of the XML file */
+		      if (debug) 
+			fprintf(stderr,
+				"    Removing XML file header\n");
+		      memmove(*data, lasttag, 
+			      *data + datalength + 1 - lasttag);
+		      datalength -= lasttag - *data;
+		      scan -= lasttag - *data;
+		      tagwordstart -= lasttag - *data;
+		      lasttag = *data;
+		      lasttagend = NULL;
+		    }
 		  } else if (strcmp(currtagname, "lang") == 0) {
 		    inlang = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "postscript") == 0) {
@@ -477,6 +495,22 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
+		    if (tagtype == 1) {
+		      /* XML body of the file is starting here */
+		      inxmlheader = 0;
+		      nestinglevel = 1;
+		      /* Remove the whole header of the XML file */
+		      if (debug) 
+			fprintf(stderr,
+				"    Removing XML file header\n");
+		      memmove(*data, lasttag, 
+			      *data + datalength + 1 - lasttag);
+		      datalength -= lasttag - *data;
+		      scan -= lasttag - *data;
+		      tagwordstart -= lasttag - *data;
+		      lasttag = *data;
+		      lasttagend = NULL;
+		    }
 		  } 
 		} else if (operation == 2) { /* Option XML file */
 		  if (strcmp(currtagname, "make") == 0) {
@@ -556,7 +590,23 @@ parse(char **data, /* I/O - Data to process */
 		    /* Mark up to the end of the tag before, to insert the
 		       definition of the default option setting */
 		    if (tagtype == -1) lastoption = (char*)lasttagend + 1;
-		    if (tagtype == 1) argdefault[0] = '\0';
+		    if (tagtype == 1) {
+		      /* XML body of the file is starting here */
+		      inxmlheader = 0;
+		      nestinglevel = 1;
+		      argdefault[0] = '\0';
+		      /* Remove the whole header of the XML file */
+		      if (debug) 
+			fprintf(stderr,
+				"    Removing XML file header\n");
+		      memmove(*data, lasttag, 
+			      *data + datalength + 1 - lasttag);
+		      datalength -= lasttag - *data;
+		      scan -= lasttag - *data;
+		      tagwordstart -= lasttag - *data;
+		      lasttag = *data;
+		      lasttagend = NULL;
+		    }
 		  }
 		} else if (operation == 3) { /* Driver XML file (Overview) */
 		  if (strcmp(currtagname, "printer") == 0) {
@@ -583,6 +633,22 @@ parse(char **data, /* I/O - Data to process */
 		    if (tagtype == 1) lastcomments = (char*)lasttagend + 1;
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
+		    if (tagtype == 1) {
+		      /* XML body of the file is starting here */
+		      inxmlheader = 0;
+		      nestinglevel = 1;
+		      /* Remove the whole header of the XML file */
+		      if (debug) 
+			fprintf(stderr,
+				"    Removing XML file header\n");
+		      memmove(*data, lasttag, 
+			      *data + datalength + 1 - lasttag);
+		      datalength -= lasttag - *data;
+		      scan -= lasttag - *data;
+		      tagwordstart -= lasttag - *data;
+		      lasttag = *data;
+		      lasttagend = NULL;
+		    }
 		  } 
 		} else if (operation == 4) { /* Printer XML file (Overview)*/
 		  if (debug)
@@ -634,6 +700,20 @@ parse(char **data, /* I/O - Data to process */
 		  } else if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
 		    if (tagtype == 1) {
+		      /* XML body of the file is starting here */
+		      inxmlheader = 0;
+		      nestinglevel = 1;
+		      /* Remove the whole header of the XML file */
+		      if (debug) 
+			fprintf(stderr,
+				"    Removing XML file header\n");
+		      memmove(*data, lasttag, 
+			      *data + datalength + 1 - lasttag);
+		      datalength -= lasttag - *data;
+		      scan -= lasttag - *data;
+		      tagwordstart -= lasttag - *data;
+		      lasttag = *data;
+		      lasttagend = NULL;
 		      if (debug) fprintf(stderr, 
 					 "    Initializing PPD list.\n");
 		      while(ppdlist != NULL) {
@@ -747,7 +827,7 @@ parse(char **data, /* I/O - Data to process */
 	      }
 	    } else {
 	      intag = 0;
-	      if (tagnamefound == 0) {
+	      if (!inxmlheader && (tagnamefound == 0)) {
 		fprintf(stderr, "XML error: Tag without name %s, line %d!\n",
 			filename, linecount);
 		exit(1);
@@ -2337,7 +2417,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 			     printerlist->id);
 	  /*strcpy(printerlist->id, translateid(printerlist->id, idlist));*/
 	  printf("  <printer>\n    <id>");
-	  printf(printerlist->id);
+	  printf("%s", printerlist->id);
 	  make = printerlist->id;
 	  model = strchr(make, '-');
 	  if (model) {
@@ -2358,9 +2438,9 @@ main(int  argc,     /* I - Number of command-line arguments */
 	    t ++;
 	  }
 	  printf("</id>\n    <make>");
-	  printf(make);
+	  printf("%s", make);
 	  printf("</make>\n    <model>");
-	  printf(model);
+	  printf("%s", model);
 	  printf("</model>\n    <noxmlentry />\n");
 	  dlistpointer = printerlist->drivers;
 	  exceptionfound = 0;
@@ -2369,7 +2449,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 	    while (dlistpointer) {
 	      if (dlistpointer->name) {
 		printf("      <driver>");
-		printf(dlistpointer->name);
+		printf("%s", dlistpointer->name);
 		printf("</driver>\n");
 		if (dlistpointer->functionality != NULL) exceptionfound = 1;
 	      }
@@ -2385,9 +2465,9 @@ main(int  argc,     /* I - Number of command-line arguments */
 		  (dlistpointer->name != NULL)) {
 		printf("      <driverfunctionalityexception>\n");
 		printf("        <driver>");
-		printf(dlistpointer->name);
+		printf("%s", dlistpointer->name);
 		printf("</driver>\n");
-		printf(dlistpointer->functionality);
+		printf("%s", dlistpointer->functionality);
 		printf("\n      </driverfunctionalityexception>\n");
 	      }
 	      dlistpointer = (driverlist_t *)(dlistpointer->next);

@@ -1,3 +1,11 @@
+2008-06-25  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c: Allow XML files with header lines ("<? ... ?>",
+	  "<! ... >") in the beginning. Everything which is before the main
+	  tag of each file ("<printer>" for printer entries, "<driver>" for
+	  driver entries, and "<option>" for option entries) gets removed
+	  now.
+
 2008-06-18  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: Added support for output of both translated
