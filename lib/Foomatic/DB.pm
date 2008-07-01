@@ -73,7 +73,26 @@ sub get_printerlist {
 
 sub get_overview {
     my ($this, $rebuild, $cupsppds) = @_;
-
+ 
+    # Read on-disk cache file if we have one
+    if (defined($this->{'overviewfile'})) {
+        if (!$rebuild && (-r $this->{'overviewfile'})) {
+	    if (open CFILE, $this->{'overviewfile'}) {
+		my $output = join('', <CFILE>);
+		close CFILE;
+		# Only output the cashed page if it was really
+		# completely written Before introduction of this
+		# measure pages would not display due to an incomplete
+		# cache file until the next page rebuild (or until
+		# manually nuking the cache).
+		if ($output =~ m!\]\;\s*$!s) {
+		    $this->{'overview'} = $output;
+		    return $this->{'overview'};
+		}
+	    }
+	}
+    }
+ 
     # "$this->{'overview'}" is a memory cache only for the current process
     if ((!defined($this->{'overview'}))
 	or (defined($rebuild) and $rebuild)) {
@@ -84,6 +103,14 @@ sub get_overview {
 	eval (`$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}`) ||
 	    die ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!");
 	$this->{'overview'} = $VAR1;
+    }
+
+    # Write on-disk cache file if we have one
+    if (defined($this->{'overviewfile'})) {
+	if (open CFILE, "> $this->{'overviewfile'}") {
+	    print CFILE Dumper($this->{'overview'});
+	    close CFILE;
+	}
     }
 
     return $this->{'overview'};

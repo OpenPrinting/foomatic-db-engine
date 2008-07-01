@@ -1,4 +1,14 @@
+2008-07-01  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added on-disk cache functionality for the
+	  database overview Perl structure. To activate this functionality
+	  one does simply "use Foomatic::DB; my $db = new Foomatic::DB;
+	  $db->{'overviewfile'} = "<filename>";". The CGI scripts of the
+	  OpenPrinting web site generate overviews very frequently, so
+	  this should reduce the server load a lot.
+
 2008-06-25  Dafydd Crosby <dcrosby@userful.com>
+
 	* PPDtoXML: Now adds the <drivers> tag, inserting the preferred 
 	  driver automatically. The next release will allow the insertion
 	  of extra driver entries.
