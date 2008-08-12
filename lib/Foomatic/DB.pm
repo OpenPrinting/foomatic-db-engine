@@ -74,16 +74,48 @@ sub get_printerlist {
 sub get_overview {
     my ($this, $rebuild, $cupsppds) = @_;
 
-    # "$this->{'overview'}" is a memory cache only for the current process
-    if ((!defined($this->{'overview'}))
-	or (defined($rebuild) and $rebuild)) {
-	my $otype = ($cupsppds ? '-C' : '-O');
-	$otype .= ' -n' if ($cupsppds == 1);
-	# Generate overview Perl data structure from database
-	my $VAR1;
-	eval (`$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}`) ||
-	    die ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!");
-	$this->{'overview'} = $VAR1;
+    # In-memory cache only for this process
+    return $this->{'overview'} if defined($this->{'overview'}) &&
+	!$rebuild;
+    $this->{'overview'} = undef;
+
+    # Read on-disk cache file if we have one
+    if (defined($this->{'overviewfile'})) {
+        if (!$rebuild && (-r $this->{'overviewfile'})) {
+	    if (open CFILE, "< $this->{'overviewfile'}") {
+		my $output = join('', <CFILE>);
+		close CFILE;
+		# Only output the cashed page if it was really
+		# completely written Before introduction of this
+		# measure pages would not display due to an incomplete
+		# cache file until the next page rebuild (or until
+		# manually nuking the cache).
+		if ($output =~ m!\]\;\s*$!s) {
+		    my $VAR1;
+		    if (eval $output) {
+			$this->{'overview'} = $VAR1;
+			return $this->{'overview'};
+		    }
+		}
+	    }
+	}
+    }
+
+    # Build a new overview
+    my $otype = ($cupsppds ? '-C' : '-O');
+    $otype .= ' -n' if ($cupsppds == 1);
+    # Generate overview Perl data structure from database
+    my $VAR1;
+    eval `$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}` ||
+	die ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!");
+    $this->{'overview'} = $VAR1;
+
+    # Write on-disk cache file if we have one
+    if (defined($this->{'overviewfile'})) {
+	if (open CFILE, "> $this->{'overviewfile'}") {
+	    print CFILE Dumper($this->{'overview'});
+	    close CFILE;
+	}
     }
 
     return $this->{'overview'};

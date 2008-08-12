@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #PPD to XML translator/generator
 #Written by David Crosby
-version='0.18'
+version='0.19'
 
 import sys
 import os
@@ -286,7 +286,7 @@ class PPDtoXML:
         vbox.pack_start(p_throughput)
         p_throughput.show()
 
-        #This connect statement here so that things don't get blowed up
+     #This connect statement here so that things don't get blowed up
         ps_ppd_location_button.connect('clicked', self.grok_ppd_file_def, p_make, p_model, p_color, p_is_postscript, p_postscript_level, p_postscript_url, p_pjl, p_throughput)
 
      #And now the sexy part of the program - the action buttons
@@ -520,14 +520,15 @@ class PPDtoXML:
               if line.find('*Throughput:') != -1:
                  line = line.replace('*Throughput:', '')
                  p_throughput.set_text(self.line_cleaner(line))
-              if line.find('*Protocol:') != -1:
+              if line.find('*Protocol') != -1:
                  if line.find('PJL') != -1:
                     p_pjl.set_active(True)
-              if line.find('*ColorDevice:') != -1:
-                 if line.find('true' or 'True'):
+              if line.find('*ColorDevice') != -1:
+                 if line.find('True' or 'true'):
                     p_color.set_active(True)
-                 if line.find('false' or 'False'):
-                    p_color.set_active(False)
+                    print "color device true"
+                 #if line.find('False' or 'false'):
+                 #   p_color.set_active(False)
               if line.find('*LanguageLevel:') != -1:
                  line = line.replace('*LanguageLevel:', '')
                  line = self.line_cleaner(line)
@@ -806,6 +807,11 @@ class PPDtoXML:
 
         if recommended_driver_text is not "":
            print "   <driver>%s</driver>" %recommended_driver_text
+           print "   <drivers>"
+           print "     <driver>"
+           print "       <id>%s</id>" %recommended_driver_text
+           print "     </driver>"
+           print "   </drivers>"
 
         print "   <comments>"
         print "      <en>"
@@ -864,6 +870,7 @@ class PPDtoXML:
                       "driver XML file doesn't exist at %s - can't write information" %driver_xml_location)
               driver_xml_dialog.run()
               driver_xml_dialog.destroy()
+
 
 
 def main():
