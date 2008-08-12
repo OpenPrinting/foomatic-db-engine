@@ -234,6 +234,7 @@ typedef struct comboData {
   xmlChar **requires;
   xmlChar **requiresversion;
   xmlChar *cmd;
+  xmlChar *cmd_pdf;
   xmlChar *nopjl;
   xmlChar *nopageaccounting;
   xmlChar *driverppdentry;
@@ -365,6 +366,7 @@ typedef struct driverEntry {
   xmlChar **requiresversion;
   xmlChar *driver_type;
   xmlChar *cmd;
+  xmlChar *cmd_pdf;
   xmlChar *driverppdentry;
   marginsPtr drivermargins;
   xmlChar *comment;
@@ -1746,6 +1748,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->requires = NULL;
   ret->requiresversion = NULL;
   ret->cmd = NULL;
+  ret->cmd_pdf = NULL;
   ret->nopjl = (xmlChar *)"0";
   ret->nopageaccounting = (xmlChar *)"0";
   ret->driverppdentry = NULL;
@@ -2023,6 +2026,11 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  if (debug) fprintf(stderr, "  Driver command line:\n\n    %s\n\n",
 			     ret->cmd);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "prototype_pdf"))) {
+	  ret->cmd_pdf =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr, "  Driver PDF command line:\n\n    %s\n\n",
+			     ret->cmd_pdf);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ppdentry"))) {
 	  ret->driverppdentry = 
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
@@ -2946,6 +2954,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->requiresversion = NULL;
   ret->driver_type = NULL;
   ret->cmd = NULL;
+  ret->cmd_pdf = NULL;
   ret->driverppdentry = NULL;
   ret->drivermargins = NULL;
   ret->comment = NULL;
@@ -3211,6 +3220,11 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  if (debug) fprintf(stderr, "  Driver command line:\n\n    %s\n\n",
 			     ret->cmd);
+	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "prototype_pdf"))) {
+	  ret->cmd_pdf =
+	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
+	  if (debug) fprintf(stderr, "  Driver PDF command line:\n\n    %s\n\n",
+			     ret->cmd_pdf);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ppdentry"))) {
 	  ret->driverppdentry = 
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
@@ -4445,6 +4459,11 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
   } else {
     printf("  'cmd' => undef,\n");
   }
+  if (combo->cmd_pdf) {
+    printf("  'cmd_pdf' => '%s',\n", combo->cmd_pdf);
+  } else {
+    printf("  'cmd_pdf' => undef,\n");
+  }
   if (combo->nopjl) {
     printf("  'drivernopjl' => %s,\n", combo->nopjl);
   } else {
@@ -4928,6 +4947,9 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
   }
   if (driver->cmd) {
     printf("  'cmd' => '%s',\n", driver->cmd);
+  }
+  if (driver->cmd_pdf) {
+    printf("  'cmd_cmd' => '%s',\n", driver->cmd_pdf);
   }
   if (driver->driverppdentry) {
     printf("  'ppdentry' => '%s',\n", driver->driverppdentry);
