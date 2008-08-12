@@ -1084,7 +1084,7 @@ sub ppdfromvartoperl ($) {
     # search for LanguageEncoding
     for (my $i = 0; $i < @{$ppd}; $i ++) {
 	$_ = $ppd->[$i];
-	if (m!^\*LanguageEncoding:\s*(\S+)\s*$!) {
+	if (m/^\*LanguageEncoding:\s*(\S+)\s*$/) {
 	    # "*LanguageEncoding: <encoding>"	    
 	    $dat->{'encoding'} = $1;
 	    if ($dat->{'encoding'} eq 'MacStandard') {
@@ -1196,6 +1196,28 @@ sub ppdfromvartoperl ($) {
 	    $line =~ m!^([^\"]*)\"!;
 	    $cmd .= $1;
 	    $dat->{'cmd'} = unhtmlify($cmd);
+	} elsif (m!^\*FoomaticRIPCommandLinePDF:\s*\"(.*)$!) {
+	    # "*FoomaticRIPCommandLinePDF: <code>"
+	    my $line = $1;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		if ($line =~ m!&&$!) {
+		    # line continues in next line
+		    $cmd .= substr($line, 0, -2);
+		} else {
+		    # line ends here
+		    $cmd .= "$line\n";
+		}
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ m!^([^\"]*)\"!;
+	    $cmd .= $1;
+	    $dat->{'cmd_pdf'} = unhtmlify($cmd);
 	} elsif (m!^\*FoomaticRIPNoPageAccounting:\s*(\S+)\s*$!) {
 	    # "*FoomaticRIPNoPageAccounting: <boolean value>"
 	    my $value = $1;
@@ -1722,6 +1744,9 @@ sub perltoxml {
 	    " <execution>\n" .
 	    "  <filter />\n" .
 	    "  <prototype>" . $dat->{'cmd'} . "</prototype>\n" .
+	    $dat->{'cmd_pdf'} ? 
+		"  <prototype_pdf>" . $dat->{'cmd_pdf'} . "</prototype_pdf>\n" :
+		"" .
 	    " </execution>\n" .
 	    "</driver>\n\n";
     }
@@ -2870,6 +2895,17 @@ sub getppd (  $ $ $ ) {
     my $header = "*FoomaticRIPCommandLine";
     my $cmdline = $dat->{'cmd'};
     my $cmdlinestr = ripdirective($header, $cmdline);
+    if ($cmdline) {
+	# Insert the "*FoomaticRIPCommandLine" directive, but only if
+	# the command line prototype is not empty
+	push(@optionblob, "$cmdlinestr\n");
+	if ($cmdlinestr =~ /\n/s) {
+	    push(@optionblob, "*End\n");
+	}
+    }
+    $header = "*FoomaticRIPCommandLinePDF";
+    $cmdline = $dat->{'cmd_pdf'};
+    $cmdlinestr = ripdirective($header, $cmdline);
     if ($cmdline) {
 	# Insert the "*FoomaticRIPCommandLine" directive, but only if
 	# the command line prototype is not empty
@@ -4535,7 +4571,8 @@ sub get_tmpl {
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
-*cupsFilter:	"application/vnd.cups-postscript 0 foomatic-rip"
+*cupsFilter:	"application/vnd.cups-postscript 100 foomatic-rip"
+*cupsFilter:	"application/vnd.cups-pdf 0 foomatic-rip"
 *%pprRIP:        foomatic-rip other
 *ModelName:     "\@\@MODEL\@\@"
 *ShortNickName: "\@\@SHORTNICKNAME\@\@"
