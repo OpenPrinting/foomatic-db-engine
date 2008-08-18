@@ -255,7 +255,7 @@ sub clean_manufacturer_name {
     $make =~ s/^Seiko[_\s\-]*Epson/Epson/i;
     $make =~ s/^Kyocera[_\s\-]*Mita/Kyocera/i;
     $make =~ s/^CItoh/C.Itoh/i;
-    $make =~ s/^Oki(|[_\s\-]*Data)\s*$/Okidata/i;
+    $make =~ s/^Oki(|[_\s\-]*Data)\s*$/Oki/i;
     $make =~ s/^(SilentWriter2?|ColorMate)/NEC/i;
     $make =~ s/^(XPrint|Majestix)/Xerox/i;
     $make =~ s/^QMS-PS/QMS/i;
