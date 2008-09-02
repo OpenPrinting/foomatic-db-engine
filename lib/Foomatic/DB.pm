@@ -4237,8 +4237,10 @@ EOFPGSZ
 	    # ShortNickName too long? Remove last words from model name.
 	    $parts{'model'} =~
 		s/(?<=[a-zA-Z0-9])[^a-zA-Z0-9]+[a-zA-Z0-9]*$//;
-	    $shortnickname =
+	    my $new =
 		"$parts{'make'} $parts{'model'}, $parts{'driver'}";
+	    last if ($new == $shortnickname);
+	    $shortnickname = $new;
 	}
 	if (length($shortnickname) > 31) {
 	    # If nothing else helps ...
