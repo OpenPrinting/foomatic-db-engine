@@ -1,3 +1,7 @@
+2008-09-06  Dafydd Crosby <dcrosby@userful.com>
+
+	* ppdtoxml: Can now add extra drivers to XML more easily.
+
 2008-09-03  Tim Waugh <twaugh@redhat.com>
 
 	* acinclude.m4: Fixed underquoted definitions.
