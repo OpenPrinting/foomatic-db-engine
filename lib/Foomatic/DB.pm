@@ -219,11 +219,21 @@ sub get_driver_xml {
 sub get_printers_for_driver {
     my ($this, $drv) = @_;
 
-    my $driver = $this->get_driver($drv);
+    my @printerlist = ();
 
-    if (!defined($driver)) {return undef;}
+    #my $driver = $this->get_driver($drv);
+    #if (defined($driver)) {
+	#@printerlist = map { $_->{'id'} } @{$driver->{'printers'}};
+    #}
 
-    return map { $_->{'id'} } @{$driver->{'printers'}};
+    $this->get_overview();
+    for my $p (@{$this->{'overview'}}) {
+	if (member($drv, @{$p->{'drivers'}})) {
+	    push(@printerlist, $p->{'id'});
+	}
+    }
+
+    return @printerlist;
 }
 
 # Routine lookup; just examine the overview
