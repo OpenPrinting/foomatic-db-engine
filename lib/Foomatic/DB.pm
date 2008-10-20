@@ -219,11 +219,21 @@ sub get_driver_xml {
 sub get_printers_for_driver {
     my ($this, $drv) = @_;
 
-    my $driver = $this->get_driver($drv);
+    my @printerlist = ();
 
-    if (!defined($driver)) {return undef;}
+    #my $driver = $this->get_driver($drv);
+    #if (defined($driver)) {
+	#@printerlist = map { $_->{'id'} } @{$driver->{'printers'}};
+    #}
 
-    return map { $_->{'id'} } @{$driver->{'printers'}};
+    $this->get_overview();
+    for my $p (@{$this->{'overview'}}) {
+	if (member($drv, @{$p->{'drivers'}})) {
+	    push(@printerlist, $p->{'id'});
+	}
+    }
+
+    return @printerlist;
 }
 
 # Routine lookup; just examine the overview
@@ -4273,8 +4283,10 @@ EOFPGSZ
 	    # ShortNickName too long? Remove last words from model name.
 	    $parts{'model'} =~
 		s/(?<=[a-zA-Z0-9])[^a-zA-Z0-9]+[a-zA-Z0-9]*$//;
-	    $shortnickname =
+	    my $new =
 		"$parts{'make'} $parts{'model'}, $parts{'driver'}";
+	    last if ($new == $shortnickname);
+	    $shortnickname = $new;
 	}
 	if (length($shortnickname) > 31) {
 	    # If nothing else helps ...
