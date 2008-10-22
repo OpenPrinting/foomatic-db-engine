@@ -298,7 +298,7 @@ foomatic-getpjloptions foomatic-addpjloptions
 foomatic-compiledb foomatic-fix-xml
 foomatic-nonumericalids foomatic-replaceoldprinterids
 foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
-foomatic-extract-text foomatic-searchprinter
+foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml
 )
 
 dnl Finished
