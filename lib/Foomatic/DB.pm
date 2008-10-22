@@ -256,16 +256,16 @@ sub get_drivers_for_printer {
 
 
 # Clean some manufacturer's names (for printer search function, taken
-# from printerdrake, printer setup tool of Mandriva Linux)
+# from printerdrake, former printer setup tool of Mandriva Linux)
 sub clean_manufacturer_name {
     my ($make) = @_;
-    $make =~ s/^Canon\W.*$/Canon/i;
-    $make =~ s/^Lexmark.*$/Lexmark/i;
+    #$make =~ s/^Canon\W.*$/Canon/i;
+    #$make =~ s/^Lexmark.*$/Lexmark/i;
     $make =~ s/^Hewlett?[_\s\-]*Packard/HP/i;
     $make =~ s/^Seiko[_\s\-]*Epson/Epson/i;
     $make =~ s/^Kyocera[_\s\-]*Mita/Kyocera/i;
     $make =~ s/^CItoh/C.Itoh/i;
-    $make =~ s/^Oki(|[_\s\-]*Data)\s*$/Oki/i;
+    $make =~ s/^Oki(|[_\s\-]*Data)$/Oki/i;
     $make =~ s/^(SilentWriter2?|ColorMate)/NEC/i;
     $make =~ s/^(XPrint|Majestix)/Xerox/i;
     $make =~ s/^QMS-PS/QMS/i;
@@ -281,6 +281,27 @@ sub clean_manufacturer_name {
     $make =~ s/\s+Int\.//i;
     return $make;
 }    
+
+
+# Clean some model names (taken from system-config-printer, printer setup
+# tool of Fedora/Red Hat, Ubuntu, and Mandriva
+sub clean_model_name {
+    my ($model) = @_;
+    $model =~ s/\s*\(recommended\)//i;
+    $model =~ s/\s*-\s*PostScript\b//i;
+    $model =~ s/\s*\bseries\b//i;
+    $model =~ s/\s*\bPS[123]?\b//i;
+    $model =~ s/\s*\bPXL//i;
+    $model =~ s/[\s_-]+BT\b//i;
+    $model =~ s/\s*\(Bluetooth\)//i;
+    $model =~ s/\s*-\s*(RC|Ver(|sion))\s*-*\s*[0-9\.]+//i;
+    $model =~ s/\s*-\s*(RC|Ver(|sion))\b//i;
+    $model =~ s/\s*PostScript\s*$//i;
+    $model =~ s/\s*\(\s*\)//i;
+    $model =~ s/\s*[\-\/]\s*$//i;
+    return $model;
+}
+
 
 # Guess manufacturer by description with only model name (for printer
 # search function, taken from printerdrake, printer setup tool of
@@ -379,25 +400,25 @@ sub find_printer {
     my $deviceid = 0;
 
     # Do we have a device ID?
-    if ($searchterm =~ /(MFG|MANUFACTURER):([^;]+);/) {
+    if ($searchterm =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/) {
 	$automake = $2;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(MDL|MODEL):([^;]+);/) {
+    if ($searchterm =~ /(MDL|MODEL):\s*([^:;]+);?/) {
 	$automodel = $2;
 	$automodel =~ s/\s+$//;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(DES|DESCRIPTION):([^;]+);/) {
+    if ($searchterm =~ /(DES|DESCRIPTION):\s*([^:;]+);?/) {
 	$autodescr = $2;
 	$autodescr =~ s/\s+$//;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(CMD|COMMAND\s?SET):([^;]+);/) {
+    if ($searchterm =~ /(CMD|COMMANDS?\s?SET):\s*([^:;]+);?/) {
 	$autocmdset = $2;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(SKU):([^;]+);/) {
+    if ($searchterm =~ /(SKU):\s*([^:;]+);?/) {
 	$autosku = $2;
 	$autosku =~ s/\s+$//;
 	$deviceid = 1;
@@ -492,7 +513,7 @@ sub find_printer {
 	    } elsif ($p->{model} =~ m!(PostScript)!i) {
 		# Generic PostScript Printer
 		if ($autocmdset =~
-		    /(^|[:,])(PS|POSTSCRIPT)[^:;,]*($|[,;])/i) {
+		    /(^|[:,\s])(PS|POSTSCRIPT)[^:;,]*($|[,;])/i) {
 		    $matchlength = 90;
 		    $bestmatchlength = $matchlength if
 			$bestmatchlength < $matchlength;
@@ -509,18 +530,18 @@ sub find_printer {
 	    my $matched = 1;
 	    my ($mfg, $mdl, $des, $sku);
 	    my $ieee1284 = deviceIDfromDBEntry($p);
-	    if ($ieee1284 =~ /(MFG|MANUFACTURER):([^;]+);/) {
+	    if ($ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/) {
 		$mfg = $2;
 	    }
-	    if ($ieee1284 =~ /(MDL|MODEL):([^;]+);/) {
+	    if ($ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/) {
 		$mdl = $2;
 		$mdl =~ s/\s+$//;
 	    }
-	    if ($ieee1284 =~ /(DES|DESCRIPTION):([^;]+);/) {
+	    if ($ieee1284 =~ /(DES|DESCRIPTION):\s*([^:;]+);?/) {
 		$des = $2;
 		$des =~ s/\s+$//;
 	    }
-	    if ($ieee1284 =~ /(SKU):([^;]+);/) {
+	    if ($ieee1284 =~ /(SKU):\s*([^:;]+);?/) {
 		$sku = $2;
 		$sku =~ s/\s+$//;
 	    }
@@ -1145,6 +1166,8 @@ sub ppdfromvartoperl ($) {
 	$ppd->[$i] = decode($encoding, $ppd->[$i]);
     }
 
+    $dat->{'maxpaperwidth'} = 0;
+
     # Parse the PPD file
     for (my $i = 0; $i < @{$ppd}; $i ++) {
 	$_ = $ppd->[$i];
@@ -1153,39 +1176,183 @@ sub ppdfromvartoperl ($) {
 	$_ = undossify($_);
 	# Parse keywords
 	if (m!^\*NickName:\s*\"(.*)$!) {
-	    # "*ShortNickName: <code>"
+	    # "*NickName: <code>"
 	    my $line = $1;
 	    # Store the value
 	    # Code string can have multiple lines, read all of them
 	    my $cmd = "";
 	    while ($line !~ m!\"!) {
-		if ($line =~ m!&&$!) {
-		    # line continues in next line
-		    $cmd .= substr($line, 0, -2);
-		} else {
-		    # line ends here
-		    $cmd .= "$line\n";
-		}
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= " $line";
 		# Read next line
 		$i ++;
 		$line = $ppd->[$i];
 		chomp $line;
 	    }
-	    $line =~ m!^([^\"]*)\"!;
-	    $cmd .= $1;
-	    $dat->{'makemodel'} = unhtmlify($cmd);
+	    $line =~ s/^\s*//;
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= " $1";
+	    $cmd =~ s/^\s*//;
+	    $dat->{'makemodel'} = unhexify($cmd);
 	    $dat->{'makemodel'} =~ s/^([^,]+),.*$/$1/;
-	    # The following fields are only valid for Foomatic PPDs
-	    # they will be deleted when it turns out that this PPD
-	    # is not a Foomatic PPD.
-	    if ($dat->{'makemodel'} =~ /^(\S+)\s+(\S.*)$/) {
-		$dat->{'make'} = $1;
-		$dat->{'model'} = $2;
-		$dat->{'model'} =~ s/\s+Foomatic.*$//i;
+	} elsif (m!^\*ModelName:\s*\"(.*)$!) {
+	    # "*ModelName: <code>"
+	    my $line = $1;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= " $line";
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
 	    }
+	    $line =~ s/^\s*//;
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= " $1";
+	    $cmd =~ s/^\s*//;
+	    $dat->{'ppdmodelname'} = unhexify($cmd);
+	} elsif (m!^\*Product:\s*\"(.*)$!) {
+	    # "*Product: <code>"
+	    my $line = $1;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= " $line";
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ s/^\s*//;
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= " $1";
+	    $cmd =~ s/^\s*//;
+	    $dat->{'ppdproduct'} = unhexify($cmd);
+	    $dat->{'ppdproduct'} =~ s/^\s*\(\s*//;
+	    $dat->{'ppdproduct'} =~ s/\s*\)\s*$//;
+	} elsif (m!^\*Manufacturer:\s*\"(.*)$!) {
+	    # "*Manufacturer: <code>"
+	    my $line = $1;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= " $line";
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ s/^\s*//;
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= " $1";
+	    $cmd =~ s/^\s*//;
+	    $dat->{'ppdmanufacturer'} = unhexify($cmd);
 	} elsif (m!^\*LanguageVersion:\s*(\S+)\s*$!) {
 	    # "*LanguageVersion: <language>"
 	    $dat->{'language'} = $1;
+	} elsif (m!^\*ColorDevice:\s*(\S+)\s*$!) {
+	    # "*ColorDevice: <boolean>"
+	    my $col = $1;
+	    if ($col =~ /true/i) { 
+		$dat->{'color'} = 1;
+	    } elsif ($col =~ /false/i) { 
+		$dat->{'color'} = 0;
+	    }
+	} elsif (m!^\*LanguageLevel:\s*\"?(\S+?)\"?\s*$!) {
+	    # "*LanguageLevel: "<level>""
+	    $dat->{'ppdpslevel'} = $1;
+	} elsif (m!^\*Throughput:\s*\"?(\S+?)\"?\s*$!) {
+	    # "*Throughput: "<pages/min>""
+	    $dat->{'throughput'} = $1;
+	} elsif (m!^\*1284DeviceID:\s*\"(.*)$!) {
+	    # "*1284DeviceID: <code>"
+	    my $line = $1;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= $line;
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= $1;
+	    $cmd =~ s/^\s*//;
+	    if (!defined($dat->{'general_ieee'}) ||
+		(length($dat->{'general_ieee'}) <
+		 length($cmd))) {
+		$dat->{'general_ieee'} = unhexify($cmd);
+		if ($dat->{'general_ieee'} =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/i) {
+		    $dat->{'general_mfg'} = $2;
+		}
+		if ($dat->{'general_ieee'} =~ /(MDL|MODEL):\s*([^:;]+);?/i) {
+		    $dat->{'general_mdl'} = $2;
+		}
+		if ($dat->{'general_ieee'} =~ /(CMD|COMMANDS?\s*SET):\s*([^:;]+);?/i) {
+		    $dat->{'general_cmd'} = $2;
+		}
+		if ($dat->{'general_ieee'} =~ /(DES|DESCRIPTION):\s*([^:;]+);?/i) {
+		    $dat->{'general_des'} = $2;
+		}
+	    }
+	} elsif (m!^\*PaperDimension\s+([^:]+):\s*\"(.*)$!) {
+	    # "*PaperDimension <format>: <code>"
+	    my $line = $2;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= " $line";
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ s/^\s*//;
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= " $1";
+	    $cmd =~ s/^\s*//;
+	    $cmd =~ /^(\d+)/;
+	    my $width = $1;
+	    $dat->{'maxpaperwidth'} = $width if 
+		$width && ($width > $dat->{'maxpaperwidth'});
+	} elsif (m!^\*cupsFilter\s+([^:]+):\s*\"(.*)$!) {
+	    # "*cupsFilter: <code>"
+	    my $line = $2;
+	    # Store the value
+	    # Code string can have multiple lines, read all of them
+	    my $cmd = "";
+	    while ($line !~ m!\"!) {
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$cmd .= " $line";
+		# Read next line
+		$i ++;
+		$line = $ppd->[$i];
+		chomp $line;
+	    }
+	    $line =~ s/^\s*//;
+	    $line =~ m!^([^\"]*?)\s*\"!;
+	    $cmd .= " $1";
+	    $cmd =~ s/^\s*//;
+	    push(@{$dat->{'cupsfilterlines'}}, $cmd);
 	} elsif (m!^\*FoomaticIDs:\s*(\S+)\s+(\S+)\s*$!) {
 	    # "*FoomaticIDs: <printer ID> <driver ID>"
 	    my $id = $1;
@@ -1323,7 +1490,7 @@ sub ppdfromvartoperl ($) {
 	    $currentgroup .= $group;
 	    push(@currentgrouptrans, 
 		 unhexify($grouptrans, $dat->{"encoding"}));
-	} elsif (m!^\*Close(Sub|)Group:\s*\*?([^/]+?)$!) {
+	} elsif (m!^\*Close(Sub|)Group:?\s*\*?([^/]+?)$!) {
 	    # "*Close[Sub]Group: <group>"
 	    my $group = $2;
 	    chomp($group) if $group;
@@ -1373,9 +1540,9 @@ sub ppdfromvartoperl ($) {
 	    # Mark in which argument we are currently, so that we can find
 	    # the entries for the choices
 	    $currentargument = $argname;
-	} elsif (m!^\*(JCL|)CloseUI:\s+\*([^:/\s]+)\s*$!) {
+	} elsif (m!^\*(JCL|)CloseUI:?\s+\*([^:/\s]+)\s*$!) {
 	    next if !$currentargument;
-	    # "*[JCL]CloseUI *<option>"
+	    # "*[JCL]CloseUI: *<option>"
 	    my $argname = $2;
 	    # Unmark the current argument to do not mis-interpret any 
 	    # keywords as choices
@@ -1525,15 +1692,11 @@ sub ppdfromvartoperl ($) {
 	    $dat->{'args_byname'}{$argname}{'order'} = $order;
 	    $dat->{'args_byname'}{$argname}{'section'} = $section;
 	} elsif (m!^\*Default([^/:\s]+):\s*([^/:\s]+)\s*$!) {
-	    next if !$currentargument;
 	    # "*Default<option>: <value>"
 	    my $argname = $1;
 	    my $default = $2;
 	    # Make sure that the argument is in the data structure
 	    checkarg ($dat, $argname);
-	    # This option has a non-Foomatic keyword, so this is not
-	    # a hidden option
-	    undef $dat->{'args_byname'}{$argname}{'hidden'};
 	    # Store the value
 	    $dat->{'args_byname'}{$argname}{'default'} = $default;
 	} elsif (m!^\*FoomaticRIPDefault([^/:\s]+):\s*([^/:\s]+)\s*$!) {
@@ -1705,6 +1868,10 @@ sub ppdfromvartoperl ($) {
 	    # If we have an old Foomatic 2.0.x PPD file, collect its Perl 
 	    # data
 	    push (@datablob, $1);
+	#} elsif (m!(laser|toner)!i) {
+	#    $dat->{'type'} = "laser";
+	#} elsif (m!(ink|nozzle)!i) {
+	#    $dat->{'type'} ||= "inkjet";
 	}
     }
 
@@ -1731,6 +1898,244 @@ sub ppdfromvartoperl ($) {
 	}
     }
 
+    # Set manufacturer and model fields
+    if (defined($dat->{'ppdmanufacturer'})) {
+	$dat->{'make'} = $dat->{'ppdmanufacturer'};
+    } elsif (defined($dat->{'general_mfg'})) {
+	$dat->{'make'} = $dat->{'general_mfg'};
+    } elsif (defined($dat->{'makemodel'})) {
+	($dat->{'make'}, $dat->{'model'}) = guessmake($dat->{'makemodel'});
+	$dat->{'model'} =~ s/^(.*?)\s*(,|Foomatic|CUPS|\(?\d+\.\d+\)?)/$1/i;
+    }
+    if (defined($dat->{'general_mdl'})) {
+	$dat->{'model'} = $dat->{'general_mdl'};
+    } elsif (!$dat->{'model'} && defined($dat->{'ppdproduct'})) {
+	$dat->{'model'} = $dat->{'ppdproduct'};
+    } elsif (defined($dat->{'ppdmodelname'})) {
+	$dat->{'model'} = guessmake($dat->{'ppdmodelname'});
+    }
+    $dat->{'make'} = clean_manufacturer_name($dat->{'make'});
+    $dat->{'model'} = clean_manufacturer_name($dat->{'model'});
+    ($dat->{'make'}, $dat->{'model'}) = guessmake($dat->{'model'})
+	if !$dat->{'make'};
+    $dat->{'model'} =~ s/^\s*$dat->{'make'}\s+//;
+    $dat->{'model'} = clean_model_name($dat->{'model'});
+
+    # Generate a device ID if none was supplied. The PPD specs
+    # expect the make and model of the device ID in the *Manufacturer
+    # and *Product fields of the PPD.
+    $dat->{'general_mfg'} = $dat->{'ppdmanufacturer'} if 
+	$dat->{'ppdmanufacturer'} && !$dat->{'general_mfg'};
+    $dat->{'general_mdl'} = $dat->{'ppdproduct'} if 
+	$dat->{'ppdproduct'} && !$dat->{'general_mdl'};
+    $dat->{'general_ieee'} = "MFG:" . $dat->{'general_mfg'} .
+	";MDL:" . $dat->{'general_mdl'} . ";" if 
+	$dat->{'general_mfg'} && $dat->{'general_mdl'} &&
+	!$dat->{'general_ieee'};
+
+    # Generate the Foomatic printer ID
+    if (!$dat->{'id'}) {
+	my $mk = $dat->{'make'};
+	$mk =~ s/\s+/_/g;
+	$mk =~ s/\+/plus/g;
+	$mk =~ s/[^A-Za-z0-9\._]/_/g;
+	$mk =~ s/_+/_/g;
+	$mk =~ s/^_//;
+	$mk =~ s/_$//;
+	my $md = $dat->{'model'};
+	$md =~ s/\s+/_/g;
+	$md =~ s/\+/plus/g;
+	$md =~ s/[^A-Za-z0-9\.\-]/_/g;
+	$md =~ s/_+/_/g;
+	$md =~ s/^_//;
+	$md =~ s/_$//;
+	$dat->{'id'} = "$mk-$md";
+    }
+
+    # Find out printer's page description languages and suitable drivers
+    $dat->{'driver'} = "Postscript" if
+	(!defined($dat->{'driver'}) && !defined($dat->{'cupsfilterlines'}));
+    my ($driverlang, $driverlanglevel);
+    if ($dat->{'driver'} =~ /Postscript/i) {
+	$driverlang = "postscript";
+	$driverlanglevel = $dat->{'ppdpslevel'};
+    } elsif ($dat->{'driver'} =~ /pxl/i) {
+	$driverlang = "pcl";
+	$driverlanglevel = "6";
+    } elsif ($dat->{'driver'} =~ /(ljet4|lj4)/i) {
+	$driverlang = "pcl";
+	$driverlanglevel = "5e";
+    } elsif (($dat->{'driver'} =~ /clj/i) && $dat->{'color'}) {
+	$driverlang = "pcl";
+	$driverlanglevel = "5c";
+    } elsif ($dat->{'driver'} =~ /(ljet3|lj3)/i) {
+	$driverlang = "pcl";
+	$driverlanglevel = "5";
+    } elsif ($dat->{'driver'} =~ /(laserjet|ljet|lj)/i) {
+	$driverlang = "pcl";
+	$driverlanglevel = "4";
+    }
+    if ($driverlang) {
+	if (!defined($dat->{'languages'})) {
+	    $dat->{'languages'} = [];
+	}
+	my $found = 0;
+	foreach my $ll (@{$dat->{'languages'}}) {
+	    if ($ll->{'name'} =~ /^$driverlang$/i) {
+		$ll->{'level'} = $driverlanglevel if $driverlanglevel && 
+		    ($driverlanglevel gt $ll->{'level'});
+		$found = 1;
+	    }
+	}
+	push(@{$dat->{'languages'}},
+	     {
+		 'name' => $driverlang,
+		 'level' => $driverlanglevel
+	     }) if !$found;
+    }
+    if (defined($dat->{'general_cmd'})) {
+	for my $l (split(',', $dat->{'general_cmd'})) {
+	    my ($lang, $level) = ('', '');
+	    if ($l =~ /\b(PostScript|PS|BR-?Script)(\d?)\b/i) {
+		$lang = "postscript";
+		$level = $2;
+	    } elsif ($l =~ /\b(PDF)\b/i) {
+		$lang = "pdf";
+	    } elsif ($l =~ /\b(PCLXL)\b/i) {
+		$lang = "pcl";
+		$level = "6";
+	    } elsif ($l =~ /\b(PCL)(\d\S|)\b/i) {
+		$lang = "pcl";
+		$level = $2;
+		if (!$level) {
+		    if ($dat->{'color'}) { 
+			$level = "5c";
+		    } else {
+			$level = "5e";
+		    }
+		}
+	    } elsif ($l =~ /\b(PJL)\b/i) {
+		$dat->{'pjl'} = 1;
+		$dat->{'jcl'} = 1;
+	    }
+	    if ($lang) {
+		if (!defined($dat->{'languages'})) {
+		    $dat->{'languages'} = [];
+		}
+		my $found = 0;
+		foreach my $ll (@{$dat->{'languages'}}) {
+		    if ($ll->{'name'} =~ /^$lang$/i) {
+			$ll->{'level'} = $level if $level && 
+			                           ($level gt $ll->{'level'});
+			$found = 1;
+		    }
+		}
+		push(@{$dat->{'languages'}},
+		     {
+			 'name' => $lang,
+			 'level' => $level
+		     }) if !$found;
+	    }
+	}
+    }
+    my %drivers;
+    $drivers{$dat->{'driver'}} = 1;
+    for my $ll (@{$dat->{'languages'}}) {
+	my $lang = $ll->{'name'};
+	my $level = $ll->{'level'};
+	if ($lang =~ /^postscript$/i) {
+	    if ($level eq "1") {
+		$drivers{'Postscript1'} = 1;
+	    } else {
+		$drivers{'Postscript'} = 1;
+	    }
+	} elsif ($lang =~ /^pcl$/i) {
+	    if ($level eq "6") {
+		if ($dat->{'color'}) {
+		    $drivers{'pxlcolor'} = 1;
+		} else {
+		    $drivers{'pxlmono'} = 1;
+		    $drivers{'lj5gray'} = 1;
+		}
+	    } elsif ($level eq "5e") {
+		$drivers{'ljet4d'} = 1;
+		$drivers{'ljet4'} = 1;
+		$drivers{'lj4dith'} = 1;
+		$drivers{'hpijs'} = 1;
+		$drivers{'gutenprint'} = 1;
+	    } elsif ($level eq "5c") {
+		$drivers{'cljet5'} = 1;
+		$drivers{'hpijs'} = 1;
+	    } elsif ($level eq "5") {
+		$drivers{'ljet3d'} = 1;
+		$drivers{'ljet3'} = 1;
+	    } elsif ($level eq "4") {
+		$drivers{'laserjet'} = 1;
+		$drivers{'ljetplus'} = 1;
+		$drivers{'ljet2p'} = 1;
+	    }
+	    # PCL printers print also plain text
+	    $dat->{'ascii'} = 'us-ascii';
+	}
+    }
+    for my $drv (keys %drivers) {
+	if (!defined($dat->{'drivers'})) {
+	    $dat->{'drivers'} = [];
+	}
+	my $found = 0;
+	foreach my $dd (@{$dat->{'drivers'}}) {
+	    if (($dd->{'name'} =~ /^$drv$/i) ||
+		($dd->{'id'} =~ /^$drv$/i)) {
+		$found = 1;
+	    }
+	}
+	push(@{$dat->{'drivers'}},
+	     {
+		 'name' => $drv,
+		 'id' => $drv
+	     }) if !$found;
+    }
+
+    # Find the maximum resolution
+    if (defined($dat->{'args_byname'}{'Resolution'})) {
+	my $maxres = 0;
+	my $maxxres = 0;
+	my $maxyres = 0;
+	for my $reschoice (keys(%{$dat->{'args_byname'}{'Resolution'}{'vals_byname'}})) {
+	    my $r;
+	    my $x;
+	    my $y;
+	    if ($reschoice =~ /^(\d+)x(\d+)dpi$/i) {
+		$x = $1;
+		$y = $2;
+	    } elsif ($reschoice =~ /^(\d+)dpi$/i) {
+		$x = $1;
+		$y = $x;
+	    }
+	    $r = $x * $y;
+	    if ($r >= $maxres) {
+		$maxres = $r;
+		$maxxres = $x;
+		$maxyres = $y
+	    }
+	}
+	if ($maxres == 0) {
+	    if (defined($dat->{'args_byname'}{'Resolution'}{'default'})) {
+		my $res = $dat->{'args_byname'}{'Resolution'}{'default'};
+		if ($res =~ /^(\d+)x(\d+)dpi$/i) {
+		    $dat->{'maxxres'} = $1;
+		    $dat->{'maxyres'} = $2;
+		} elsif ($res =~ /^(\d+)dpi$/i) {
+		    $dat->{'maxxres'} = $1;
+		    $dat->{'maxyres'} = $dat->{'maxxres'};
+		}
+	    }
+	} else {
+	    $dat->{'maxxres'} = $maxxres;
+	    $dat->{'maxyres'} = $maxyres;
+	}
+    }
+
     # Set the defaults for the numerical options, taking into account
     # the "*FoomaticRIPDefault<option>: <value>" if they apply
     numericaldefaults($dat);
@@ -1739,20 +2144,13 @@ sub ppdfromvartoperl ($) {
     checklongnames($dat);
     generalentries($dat);
 
-    # Remove make and model fields and sort the options if we don't have 
-    # a Foomatic PPD file
-    if (!$isfoomatic) {
-	$dat->{'make'} = undef;
-	$dat->{'model'} = undef;
-	#sortoptions($dat, 1);
-    }
-
     return $dat;
 }
 
 sub perltoxml {
-    my ($this, $dat, $mode) = @_;
+    my ($this, $mode) = @_;
 
+    my $dat = $this->{'dat'};
     my $xml = "";
 
     $xml .= "<foomatic>\n" if !$mode || ($mode =~ /^c/i); 
@@ -1774,9 +2172,94 @@ sub perltoxml {
 	      "    <y>" . $dat->{'maxyres'} . "</y>\n" : ()) .
 	     "   </dpi>\n" .
 	     "  </resolution>\n" : ()) .
-
-	    " <comments><en /></comments>\n" .
-	    "</printer>\n\n\n";
+	     " </mechanism>\n";
+	if (defined($dat->{'languages'}) ||
+	    defined($dat->{'pjl'}) ||
+	    defined($dat->{'ascii'})) {
+	    $xml .= " <lang>\n";
+	    if (defined($dat->{'languages'})) {
+		for  my $lang (@{$dat->{'languages'}}) {
+		    $xml .= "  <" . $lang->{'name'};
+		    if ($lang->{'level'}) {
+			$xml .= " level=\"" . $lang->{'level'} . "\" ";
+		    }
+		    $xml .= "/>\n";
+		}
+	    }
+	    if (defined($dat->{'pjl'})) {
+		$xml .= "  <pjl />\n";
+	    }
+	    if (defined($dat->{'ascii'})) {
+		$xml .= "  <text>\n";
+		$xml .= "   <charset>us-ascii</charset>\n";
+		$xml .= "  </text>\n";
+	    }
+	    $xml .= " </lang>\n";
+	}
+	if (defined($dat->{'general_ieee'}) ||
+	    defined($dat->{'general_mfg'}) ||
+	    defined($dat->{'general_mdl'}) ||
+	    defined($dat->{'general_des'}) ||
+	    defined($dat->{'general_cmd'})) {
+	    $xml .= " <autodetect>\n";
+	    $xml .= "  <general>\n";
+	    $xml .= "   <ieee1284>" . $dat->{'general_ieee'} .
+		"</ieee1284>\n" if defined($dat->{'general_ieee'});
+	    $xml .= "   <manufacturer>" . $dat->{'general_mfg'} .
+		"</manufacturer>\n" if defined($dat->{'general_mfg'});
+	    $xml .= "   <model>" . $dat->{'general_mdl'} .
+		"</model>\n" if defined($dat->{'general_mdl'});
+	    $xml .= "   <description>" . $dat->{'general_des'} .
+		"</description>\n" if defined($dat->{'general_des'});
+	    $xml .= "   <commandset>" . $dat->{'general_cmd'} .
+		"</commandset>\n" if defined($dat->{'general_cmd'});
+	    $xml .= "  </general>\n";
+	    $xml .= " </autodetect>\n";
+	}
+	$xml .= " <functionality>" . $dat->{'functionality'} .
+	    "</functionality>\n" if defined($dat->{'functionality'});
+	$xml .= " <driver>" . $dat->{'driver'} .
+	    "</driver>\n" if defined($dat->{'driver'});
+	if (defined($dat->{'drivers'})) {
+	    $xml .= " <drivers>\n";
+	    for  my $drv (@{$dat->{'drivers'}}) {
+		$xml .= "  <driver>\n";
+		$xml .= "   <id>" . $drv->{'id'} . "</id>\n"
+		    if defined($drv->{'id'});
+		$xml .= "   <ppd>" . $drv->{'ppd'} . "</ppd>\n"
+		    if defined($drv->{'ppd'});
+		$xml .= "  </driver>\n";
+	    }
+	    $xml .= " </drivers>\n";
+	}
+	$xml .= " <unverified />\n" if $dat->{'unverified'};
+	$xml .=
+	    " <comments>\n" .
+	    "  <en>\n";
+	$xml .= "   This database entry was automatically generated\n" .
+	    "   from the PPD file&lt;p&gt;\n\n";
+	if ($dat->{'maxpaperwidth'}) {
+	    my $wi = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72);
+	    my $wc = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72 * 2.54);
+	    my $wcomm = ($dat->{'maxpaperwidth'} < 280 ?
+			 "Label/Card printer" :
+			 ($dat->{'maxpaperwidth'} < 600 ?
+			  "Photo printer" :
+			  ($dat->{'maxpaperwidth'} < 800 ?
+			   "Standard format printer" :
+			   ($dat->{'maxpaperwidth'} < 1500 ?
+			    "Wide format printer" :
+			    "Large format printer"))));
+	    $xml .= "   Maximum paper width: " . $wi . " inches / " . $wc .
+		" cm (" . $wcomm . ")&lt;p&gt;\n\n" if $dat->{'maxpaperwidth'};
+	}
+	$xml .= "   Printing engine speed: " . $dat->{'throughput'} .
+	    " pages/min&lt;p&gt;\n\n" if
+	    defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1);
+	$xml .=
+	    "  </en>\n" .
+	    " </comments>\n" .
+	    "</printer>\n";
     }
 
     if (!$mode || ($mode =~ /^[cd]/i)) { 
@@ -2625,13 +3108,13 @@ sub deviceIDfromDBEntry {
     my $ieeecmd;
     my $ieeedes;
     if ($ieee1284) {
-	$ieee1284 =~ /(MFG|MANUFACTURER):([^:;]+);/;
+	$ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/i;
 	$ieeemake = $2;
-	$ieee1284 =~ /(MDL|MODEL):([^:;]+);/;
+	$ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/i;
 	$ieeemodel = $2;
-	$ieee1284 =~ /(CMD|COMMANDS\s+SET):([^:;]+);/;
+	$ieee1284 =~ /(CMD|COMMANDS?\s*SET):\s*([^:;]+);?/i;
 	$ieeecmd = $2;
-	$ieee1284 =~ /(DES|DESCRIPTION):([^:;]+);/;
+	$ieee1284 =~ /(DES|DESCRIPTION):\s*([^:;]+);?/i;
 	$ieeedes = $2;
     }
     # Auto-detection data listed field by field in the printer XML file?
@@ -2673,8 +3156,8 @@ sub ppd1284DeviceID {
     my ($id) = @_;
     my $ppdid = "";
     
-    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMAND SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
-	if ($id =~ m/(\b$field:[^:;]+;)/is) {
+    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMANDS?\s*SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
+	if ($id =~ m/(\b$field:\s*[^:;]+;?)/is) {
 	    $ppdid .= $1;
 	}
     }
@@ -2695,6 +3178,7 @@ sub getppdheaderdata {
 	[["manufacturersupplied", "M"],
 	 ["obsolete", "O"],
 	 ["free", "F"],
+	 ["patents", "P"],
 	 ["supportcontacts", "S"],
 	 ["type", "T"],
 	 ["drvmaxresx", "X"],
@@ -2761,10 +3245,10 @@ sub getppdheaderdata {
     my $make = $dat->{'make'};
     my $model = $dat->{'model'};
 
-    $ieee1284 =~ /(MFG|MANUFACTURER):([^;]+);/;
+    $ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/;
     my $pnpmake = $2;
     $pnpmake = $make if !$pnpmake;
-    $ieee1284 =~ /(MDL|MODEL):([^;]+);/;
+    $ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/;
     my $pnpmodel = $2;
     $pnpmodel = $model if !$pnpmodel;
 
@@ -3020,7 +3504,7 @@ sub getppd (  $ $ $ ) {
 	}
 
 	# Add the member list to the data structure of the composite
-	# option. We nned it for the recursive setting of group names
+	# option. We need it for the recursive setting of group names
 	# and order numbers
 	$arg->{'members'} = \@members;
 
@@ -3125,6 +3609,8 @@ sub getppd (  $ $ $ ) {
 	@group = split("/", $arg->{'group'}) if defined($arg->{'group'});
 	my $idx = $arg->{'idx'};
 
+	my $jcl = ($section eq 'JCLSetup' ? "JCL" : "");
+
 	# What is the execution style of the current option? Skip options
         # of unknown execution style
 	my $optstyle = ($arg->{'style'} eq 'G' ? "PS" :
@@ -3203,7 +3689,7 @@ sub getppd (  $ $ $ ) {
 	if ((($type !~ /^(enum|string|password)$/) ||
 	     ($#{$arg->{'vals'}} > 0) || ($name eq "PageSize") ||
 	     ($arg->{'style'} eq 'G')) &&
-	    (!$arg->{'hidden'})){
+	    (!$arg->{'hidden'})) {
 	    # Find the level on which the group path of the current option
 	    # (@group) differs from the group path of the last option
 	    # (@groupstack).
@@ -3298,10 +3784,11 @@ sub getppd (  $ $ $ ) {
 	    if (((1 < scalar(@{$arg->{'vals'}})) ||
 		 ($name eq "PageSize") ||
 		 ($arg->{'style'} eq 'G')) &&
-		(!$arg->{'hidden'})) {
+		(!$arg->{'hidden'}) &&
+		(0 < scalar(@{$arg->{'vals'}}))) {
 
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, 
+		     sprintf("\n*${jcl}OpenUI *%s/%s: PickOne\n", $name, 
 			     cutguiname($com, $shortgui)));
 
 		if ($arg->{'style'} ne 'G') {
@@ -3348,7 +3835,7 @@ sub getppd (  $ $ $ ) {
 		# definition.
 		my $hascustompagesize = 0;
 
-		# We take very big numbers now, to not impose linits.
+		# We take very big numbers now, to not impose limits.
 		# Later, when we will have physical demensions of the
 		# printers in the database.
 		my $maxpagewidth = 100000;
@@ -3359,7 +3846,7 @@ sub getppd (  $ $ $ ) {
 		if ($name eq "PageSize") {
 		    
 		    push(@pageregion,
-			 "*OpenUI *PageRegion: PickOne
+			 "*${jcl}OpenUI *PageRegion: PickOne
 *OrderDependency: $order $section *PageRegion
 *DefaultPageRegion: $dat->{'args_byname'}{'PageSize'}{'default'}");
 		    push(@imageablearea, 
@@ -3538,13 +4025,13 @@ sub getppd (  $ $ $ ) {
 		}
 		
 		push(@optionblob,
-		     sprintf("*CloseUI: *%s\n", $name));
+		     sprintf("*${jcl}CloseUI: *%s\n", $name));
 
 		if ($name eq "PageSize") {
 		    # Close the PageRegion, ImageableArea, and 
 		    # PaperDimension clauses
 		    push(@pageregion,
-			 "*CloseUI: *PageRegion");
+			 "*${jcl}CloseUI: *PageRegion");
 
 		    my $paperdim = join("\n", 
 					("", @pageregion, "", 
@@ -3665,12 +4152,14 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    my $psstrf = "";
 
 	    push(@optionblob,
-		 sprintf("\n*OpenUI *%s/%s: Boolean\n", $name, 
+		 sprintf("\n*${jcl}OpenUI *%s/%s: Boolean\n", $name, 
 			 cutguiname($com, $shortgui)));
 
 	    if ($arg->{'style'} eq 'G') {
 		# Ghostscript argument
 		$psstr = $cmd;
+		# Boolean options should not use the "%s" default for $cmd
+		$psstr =~ s/^%s$//;
 	    } else {
 		# Option setting directive for Foomatic filter
 		# 4 "%" because of the "sprintf" applied to it
@@ -3701,7 +4190,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		 sprintf("*%s False/%s: \"%s\"\n", $name,
 			 cutguiname($namef, $shortgui), $psstrf),
 		 ($psstrf =~ /\n/s ? "*End\n" : ""),
-		 sprintf("*CloseUI: *%s\n", $name));
+		 sprintf("*${jcl}CloseUI: *%s\n", $name));
 	    
 	} elsif ($type eq 'int') {
 
@@ -3781,7 +4270,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    # Skip zero or one choice arguments
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name,
+		     sprintf("\n*${jcl}OpenUI *%s/%s: PickOne\n", $name,
 			     cutguiname($com, $shortgui)));
 
 		# Insert lines with the special properties of a
@@ -3854,7 +4343,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		}
 		
 		push(@optionblob,
-		     sprintf("*CloseUI: *%s\n", $name));
+		     sprintf("*${jcl}CloseUI: *%s\n", $name));
 	    }
 	    
 	} elsif ($type eq 'float') {
@@ -3962,7 +4451,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    # Skip zero or one choice arguments
 	    if (1 < scalar(@choicelist)) {
 		push(@optionblob,
-		     sprintf("\n*OpenUI *%s/%s: PickOne\n", $name, 
+		     sprintf("\n*${jcl}OpenUI *%s/%s: PickOne\n", $name, 
 			     cutguiname($com, $shortgui)));
 
 		# Insert lines with the special properties of a
@@ -4036,7 +4525,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		}
 		
 		push(@optionblob,
-		     sprintf("*CloseUI: *%s\n", $name));
+		     sprintf("*${jcl}CloseUI: *%s\n", $name));
 	    }
         }
     }
@@ -5353,12 +5842,14 @@ sub valbyname {
     return undef;
 }
 
-# replace numbers with fixed 6-digit number for ease of sorting
+# replace numbers with fixed 6-digit number, set to lower case, replace
+# non-alphanumeric characters by single spaces for ease of sorting
 # ie: sort { normalizename($a) cmp normalizename($b) } @foo;
 sub normalizename {
     my $n = $_[0];
 
     $n =~ s/[\d\.]+/sprintf("%013.6f", $&)/eg;
+    $n = normalize($n);
     return $n;
 }
 
@@ -5490,9 +5981,9 @@ sub get_javascript2 {
     my %oidhash;
     if ($models) {
 	%modelhash = %{$models};
-	@makes = sort(keys %modelhash);
+	@makes = sort {normalizename($a) cmp normalizename($b) } (keys %modelhash);
     } else {
-	@makes = ($this->get_makes());
+	@makes = sort {normalizename($a) cmp normalizename($b) } ($this->get_makes());
     }
     if ($oids) {
 	%oidhash = %{$oids};

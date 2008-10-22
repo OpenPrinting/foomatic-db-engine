@@ -1,0 +1,110 @@
+#!@PERL@
+# -*- perl -*-
+
+# Foomatic printer XML file generator to get XML files corresponding
+# to manufacturer-supplied PostScript PPDs (or also PPDs from driver
+# packages).
+
+use Foomatic::Defaults;
+use Foomatic::DB;
+use Getopt::Std;
+use Data::Dumper;
+#use strict;
+
+my $debug = 0;
+
+# Program name
+$0 =~ m!/([^/]+)\s*$!;
+my $progname = ($1 || $0);
+
+help() if !@ARGV;
+#my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
+getopts("hd:b:l");
+help() if $opt_h;
+my $drivers = $opt_d;
+my $basedir = $opt_b;
+my $ppdlink = $opt_l;
+
+$ppdfile = $ARGV[0];
+
+my $ppddlpath;
+if ($basedir) {
+    $basedir =~ s:/+$::;
+    if (! -d $basedir) {
+	die ("PPD base directory $basedir does not exist!\n");
+    }
+    if (! -r $ppdfile) {
+	$ppddlpath = $ppdfile;
+	$ppdfile = $basedir . "/" . $ppdfile;
+	if (! -r $ppdfile) {
+	    die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
+	}
+    } else {
+	$ppdfile =~ m:$basedir/(.*)$:;
+	$ppddlpath = $1;
+    }
+} else {
+    if (! -r $ppdfile) {
+	die ("Given PPD file $ppdfile not found!\n");
+    }
+    $ppddlpath = $ppdfile;
+}
+
+my $db = Foomatic::DB->new();
+
+$db->getdatfromppd($ppdfile);
+my $driver;
+if ($drivers) {
+    $drivers =~ m/^,*([^,]+)/;
+    $driver = $1;
+    $db->{'dat'}{'driver'} = $driver;
+}
+$driver = $db->{'dat'}{'driver'} if !$driver;
+if ($driver) {
+    foreach my $dd (@{$db->{'dat'}{'drivers'}}) {
+	if ($drivers =~ /(^|,)$dd->{'id'}(,|$)/) {
+	    $drivers =~ s/(^|(?<=,))$dd->{'id'}(,|$)//;
+	    $drivers =~ s/,$//;
+	}
+	if ($ppdlink && ($dd->{'id'} eq $driver)) {
+	    $dd->{'ppd'} = $ppddlpath;
+	}
+    }
+    foreach my $d (split(',', $drivers)) {
+	next if !$d;
+	push(@{$db->{'dat'}{'drivers'}},
+	     {
+		 'name' => $d,
+		 'id' => $d,
+		 ($ppdlink && ($d eq $driver) ? ('ppd' => $ppddlpath) : ())
+	     });
+    }
+}
+
+print $db->perltoxml('p');
+
+exit 0;
+
+sub help {
+    print <<HELP;
+
+$progname <options> <ppdfile>
+$progname -h
+
+ <ppdfile>      : PPD file for which a printer XML file should be created
+ -d <drivers>   : Comma-separated list of drivers with which the printer
+                  works. First driver is the for which the PPD file is.
+ -l             : Add a link to the PPD file to the driver entry in the
+                  XML file.
+ -b <directory> : Base directory for a relative link to the PPD. If the
+                  base directory is given, the link set via the -l option 
+		  is relative to this directory (and not relative to the
+		  current directory). With a base directory given the 
+                  <ppdfile> can also be given relative to this directory.
+ -h             : show help information
+
+
+HELP
+	exit 1;
+
+}

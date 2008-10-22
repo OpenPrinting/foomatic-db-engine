@@ -1,3 +1,12 @@
+2008-10-22  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in, Makefile.in, configure.ac,
+	  lib/Foomatic/DB.pm: Added new "foomatic-ppd-to-xml" to generate
+	  Foomatic XML files corresponding to a given PPD file.
+
+	* lib/Foomatic/DB.pm: Improved "normalizename()" function for
+	  sorting printer, manufacturer, or driver lists.
+
 2008-10-02  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Changed method to find all printers
