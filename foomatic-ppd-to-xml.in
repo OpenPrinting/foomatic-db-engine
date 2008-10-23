@@ -19,11 +19,13 @@ my $progname = ($1 || $0);
 
 help() if !@ARGV;
 #my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
-getopts("hd:b:l");
+getopts("hd:r:p:lb:");
 help() if $opt_h;
 my $drivers = $opt_d;
-my $basedir = $opt_b;
+my $rdriver = $opt_r;
+my $pdls = $opt_p;
 my $ppdlink = $opt_l;
+my $basedir = $opt_b;
 
 $ppdfile = $ARGV[0];
 
@@ -50,37 +52,16 @@ if ($basedir) {
     $ppddlpath = $ppdfile;
 }
 
+my $parameters = {
+    ($drivers ? ('drivers' => [split(',', $drivers)]) : ()),
+    ($rdriver ? ('recommendeddriver' => $rdriver) : ()),
+    ($pdls ? ('pdls' => [split(',', $pdls)]) : ()),
+    ($ppdlink ? ('ppdlink' => 1) : ()),
+    ($basedir ? ('basedir' => $basedir) : ()),
+};
+
 my $db = Foomatic::DB->new();
-
-$db->getdatfromppd($ppdfile);
-my $driver;
-if ($drivers) {
-    $drivers =~ m/^,*([^,]+)/;
-    $driver = $1;
-    $db->{'dat'}{'driver'} = $driver;
-}
-$driver = $db->{'dat'}{'driver'} if !$driver;
-if ($driver) {
-    foreach my $dd (@{$db->{'dat'}{'drivers'}}) {
-	if ($drivers =~ /(^|,)$dd->{'id'}(,|$)/) {
-	    $drivers =~ s/(^|(?<=,))$dd->{'id'}(,|$)//;
-	    $drivers =~ s/,$//;
-	}
-	if ($ppdlink && ($dd->{'id'} eq $driver)) {
-	    $dd->{'ppd'} = $ppddlpath;
-	}
-    }
-    foreach my $d (split(',', $drivers)) {
-	next if !$d;
-	push(@{$db->{'dat'}{'drivers'}},
-	     {
-		 'name' => $d,
-		 'id' => $d,
-		 ($ppdlink && ($d eq $driver) ? ('ppd' => $ppddlpath) : ())
-	     });
-    }
-}
-
+$db->getdatfromppd($ppdfile, $parameters);
 print $db->perltoxml('p');
 
 exit 0;
@@ -93,7 +74,16 @@ $progname -h
 
  <ppdfile>      : PPD file for which a printer XML file should be created
  -d <drivers>   : Comma-separated list of drivers with which the printer
-                  works. First driver is the for which the PPD file is.
+                  works. First driver is the one for which the PPD file is.
+		  If not otherwise stated by the "-r" options, this is also
+		  the recommended driver.
+ -r <driver>    : Recommended driver. Supply this option to specify another
+                  driver than the driver from the PPD/the first one from the
+		  "-d" argument as the recommended driver.
+ -p <pdls>      : Comma-separated list of known Page Description Languages
+                  (PDLs) which the printer supports. This will add all 
+                  suitable drivers to the XML entry. Currently supported are:
+		  Postscript, PCLXL, PCL6, PCL5e, PCL5c, PCL5, and PCL4.
  -l             : Add a link to the PPD file to the driver entry in the
                   XML file.
  -b <directory> : Base directory for a relative link to the PPD. If the
