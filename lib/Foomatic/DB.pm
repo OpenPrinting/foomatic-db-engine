@@ -1090,11 +1090,11 @@ sub getdat ($ $ $) {
     return \%dat;
 }
 
-sub getdatfromppd ($ $) {
+sub getdatfromppd {
 
-    my ($this, $ppdfile) = @_;
+    my ($this, $ppdfile, $parameters) = @_;
 
-    my $dat = ppdtoperl($ppdfile);
+    my $dat = ppdtoperl($ppdfile, $parameters);
     
     if (!defined($dat)) {
 	die ("Unable to open PPD file \'$ppdfile\'\n");
@@ -1104,27 +1104,24 @@ sub getdatfromppd ($ $) {
 
 }
 
-sub ppdfromvartoperl ($);
-sub ppdtoperl($);
-sub perltoxml;
-
-sub ppdtoperl($) {
+sub ppdtoperl {
 
     # Build a Perl data structure of the printer/driver options
 
-    my ($ppdfile) = @_;
+    my ($ppdfile, $parameters) = @_;
 
     # Load the PPD file and send it to the parser
     open PPD, ($ppdfile !~ /\.gz$/i ? "< $ppdfile" : 
 	       "$sysdeps->{'gzip'} -cd \'$ppdfile\' |") or return undef;
     my @ppd = <PPD>;
     close PPD;
-    return ppdfromvartoperl(\@ppd);
+    $parameters->{'ppdfile'} = $ppdfile if $parameters;
+    return ppdfromvartoperl(\@ppd, $parameters);
 }
 
-sub ppdfromvartoperl ($) {
+sub ppdfromvartoperl {
 
-    my ($ppd) = @_;
+    my ($ppd, $parameters) = @_;
 
     # Build a data structure for the renderer's command line and the
     # options
@@ -1953,48 +1950,70 @@ sub ppdfromvartoperl ($) {
     }
 
     # Find out printer's page description languages and suitable drivers
+    my %drivers;
+    my $pdls;
+    my $ppddlpath;
+    my $ppddrv = $dat->{'driver'};
     $dat->{'driver'} = "Postscript" if
 	(!defined($dat->{'driver'}) && !defined($dat->{'cupsfilterlines'}));
-    my ($driverlang, $driverlanglevel);
-    if ($dat->{'driver'} =~ /Postscript/i) {
-	$driverlang = "postscript";
-	$driverlanglevel = $dat->{'ppdpslevel'};
-    } elsif ($dat->{'driver'} =~ /pxl/i) {
-	$driverlang = "pcl";
-	$driverlanglevel = "6";
-    } elsif ($dat->{'driver'} =~ /(ljet4|lj4)/i) {
-	$driverlang = "pcl";
-	$driverlanglevel = "5e";
-    } elsif (($dat->{'driver'} =~ /clj/i) && $dat->{'color'}) {
-	$driverlang = "pcl";
-	$driverlanglevel = "5c";
-    } elsif ($dat->{'driver'} =~ /(ljet3|lj3)/i) {
-	$driverlang = "pcl";
-	$driverlanglevel = "5";
-    } elsif ($dat->{'driver'} =~ /(laserjet|ljet|lj)/i) {
-	$driverlang = "pcl";
-	$driverlanglevel = "4";
-    }
-    if ($driverlang) {
-	if (!defined($dat->{'languages'})) {
-	    $dat->{'languages'} = [];
+    if ($parameters) {
+	if (defined($parameters->{'drivers'})) {
+	    foreach my $d (@{$parameters->{'drivers'}}) {
+		$drivers{$d} = 1;
+	    }
+	    $dat->{'driver'} = $parameters->{'drivers'}[0];
 	}
-	my $found = 0;
-	foreach my $ll (@{$dat->{'languages'}}) {
-	    if ($ll->{'name'} =~ /^$driverlang$/i) {
-		$ll->{'level'} = $driverlanglevel if $driverlanglevel && 
-		    ($driverlanglevel gt $ll->{'level'});
-		$found = 1;
+	$ppddrv = $dat->{'driver'};
+	if ($parameters->{'recommendeddriver'}) {
+	    $dat->{'driver'} = $parameters->{'recommendeddriver'};
+	}
+	if (defined($parameters->{'pdls'})) {
+	    $pdls = join(",", @{$parameters->{'pdls'}});
+	}
+	if ($parameters->{'ppdfile'} && $parameters->{'ppdlink'}) {
+	    my $ppdfile = $parameters->{'ppdfile'};
+	    if ($parameters->{'basedir'}) {
+		my $basedir = $parameters->{'basedir'};
+		$basedir =~ s:/+$::;
+		if (! -d $basedir) {
+		    die ("PPD base directory $basedir does not exist!\n");
+		}
+		if (! -r $ppdfile) {
+		    $ppddlpath = $ppdfile;
+		    $ppdfile = $basedir . "/" . $ppdfile;
+		    if (! -r $ppdfile) {
+			die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
+		    }
+		} else {
+		    $ppdfile =~ m:$basedir/(.*)$:;
+		    $ppddlpath = $1;
+		}
+	    } else {
+		if (! -r $ppdfile) {
+		    die ("Given PPD file $ppdfile not found!\n");
+		}
+		$ppddlpath = $ppdfile;
 	    }
 	}
-	push(@{$dat->{'languages'}},
-	     {
-		 'name' => $driverlang,
-		 'level' => $driverlanglevel
-	     }) if !$found;
     }
-    if (defined($dat->{'general_cmd'})) {
-	for my $l (split(',', $dat->{'general_cmd'})) {
+			      
+    if ($dat->{'driver'} =~ /Postscript/i) {
+	$pdls = join(',', ($pdls, "POSTSCRIPT$dat->{'ppdpslevel'}"));
+    } elsif ($dat->{'driver'} =~ /(pxl|pcl[\s\-]?xl)/i) {
+	$pdls = join(',', ($pdls, "PCLXL"));
+    } elsif ($dat->{'driver'} =~ /(ljet4|lj4)/i) {
+	$pdls = join(',', ($pdls, "PCL5e"));
+    } elsif (($dat->{'driver'} =~ /clj/i) && $dat->{'color'}) {
+	$pdls = join(',', ($pdls, "PCL5c"));
+    } elsif ($dat->{'driver'} =~ /(ljet3|lj3)/i) {
+	$pdls = join(',', ($pdls, "PCL5"));
+    } elsif ($dat->{'driver'} =~ /(laserjet|ljet|lj)/i) {
+	$pdls = join(',', ($pdls, "PCL4"));
+    }
+    $pdls = join(',', ($dat->{'general_cmd'}, $pdls)) if 
+	defined($dat->{'general_cmd'});
+    if ($pdls) {
+	for my $l (split(',', $pdls)) {
 	    my ($lang, $level) = ('', '');
 	    if ($l =~ /\b(PostScript|PS|BR-?Script)(\d?)\b/i) {
 		$lang = "postscript";
@@ -2004,7 +2023,7 @@ sub ppdfromvartoperl ($) {
 	    } elsif ($l =~ /\b(PCLXL)\b/i) {
 		$lang = "pcl";
 		$level = "6";
-	    } elsif ($l =~ /\b(PCL)(\d\S|)\b/i) {
+	    } elsif ($l =~ /\b(PCL)(\d\S?|)\b/i) {
 		$lang = "pcl";
 		$level = $2;
 		if (!$level) {
@@ -2038,7 +2057,6 @@ sub ppdfromvartoperl ($) {
 	    }
 	}
     }
-    my %drivers;
     $drivers{$dat->{'driver'}} = 1;
     for my $ll (@{$dat->{'languages'}}) {
 	my $lang = $ll->{'name'};
@@ -2088,11 +2106,16 @@ sub ppdfromvartoperl ($) {
 		($dd->{'id'} =~ /^$drv$/i)) {
 		$found = 1;
 	    }
+	    if ($ppddlpath && ($dd->{'id'} =~ /^$ppddrv$/i)) {
+		$dd->{'ppd'} = $ppddlpath;
+	    }
 	}
 	push(@{$dat->{'drivers'}},
 	     {
 		 'name' => $drv,
-		 'id' => $drv
+		 'id' => $drv,
+		 ($ppddlpath && ($drv =~ /^$ppddrv$/i) ?
+		  ('ppd' => $ppddlpath) : ())
 	     }) if !$found;
     }
 
@@ -2158,28 +2181,28 @@ sub perltoxml {
     if (!$mode || ($mode =~ /^[cp]/i)) { 
 	$xml .=
 	    "<printer id=\"printer/" . $dat->{'id'} . "\">\n" .
-	    " <make>" . $dat->{'make'} . "</make>\n" .
-	    " <model>" . $dat->{'model'} . "</model>\n" .
-	    " <mechanism>\n" .
-	    ($dat->{'type'} ? "  <" . $dat->{'type'} . "/>\n" : ()) .
-	    ($dat->{'color'} ? "  <color/>\n" : ()) .
+	    "  <make>" . $dat->{'make'} . "</make>\n" .
+	    "  <model>" . $dat->{'model'} . "</model>\n" .
+	    "  <mechanism>\n" .
+	    ($dat->{'type'} ? "    <" . $dat->{'type'} . "/>\n" : ()) .
+	    ($dat->{'color'} ? "    <color/>\n" : ()) .
 	    ($dat->{'maxxres'} || $dat->{'maxyres'} ?
-	     "  <resolution>\n" .
-	     "   <dpi>\n" .
+	     "    <resolution>\n" .
+	     "      <dpi>\n" .
 	     ($dat->{'maxxres'} ?
-	      "    <x>" . $dat->{'maxxres'} . "</x>\n" : ()) .
+	      "        <x>" . $dat->{'maxxres'} . "</x>\n" : ()) .
 	     ($dat->{'maxyres'} ?
-	      "    <y>" . $dat->{'maxyres'} . "</y>\n" : ()) .
-	     "   </dpi>\n" .
-	     "  </resolution>\n" : ()) .
-	     " </mechanism>\n";
+	      "        <y>" . $dat->{'maxyres'} . "</y>\n" : ()) .
+	     "      </dpi>\n" .
+	     "    </resolution>\n" : ()) .
+	     "  </mechanism>\n";
 	if (defined($dat->{'languages'}) ||
 	    defined($dat->{'pjl'}) ||
 	    defined($dat->{'ascii'})) {
-	    $xml .= " <lang>\n";
+	    $xml .= "  <lang>\n";
 	    if (defined($dat->{'languages'})) {
 		for  my $lang (@{$dat->{'languages'}}) {
-		    $xml .= "  <" . $lang->{'name'};
+		    $xml .= "    <" . $lang->{'name'};
 		    if ($lang->{'level'}) {
 			$xml .= " level=\"" . $lang->{'level'} . "\" ";
 		    }
@@ -2187,57 +2210,57 @@ sub perltoxml {
 		}
 	    }
 	    if (defined($dat->{'pjl'})) {
-		$xml .= "  <pjl />\n";
+		$xml .= "    <pjl />\n";
 	    }
 	    if (defined($dat->{'ascii'})) {
-		$xml .= "  <text>\n";
-		$xml .= "   <charset>us-ascii</charset>\n";
-		$xml .= "  </text>\n";
+		$xml .= "    <text>\n";
+		$xml .= "      <charset>us-ascii</charset>\n";
+		$xml .= "    </text>\n";
 	    }
-	    $xml .= " </lang>\n";
+	    $xml .= "  </lang>\n";
 	}
 	if (defined($dat->{'general_ieee'}) ||
 	    defined($dat->{'general_mfg'}) ||
 	    defined($dat->{'general_mdl'}) ||
 	    defined($dat->{'general_des'}) ||
 	    defined($dat->{'general_cmd'})) {
-	    $xml .= " <autodetect>\n";
-	    $xml .= "  <general>\n";
-	    $xml .= "   <ieee1284>" . $dat->{'general_ieee'} .
+	    $xml .= "  <autodetect>\n";
+	    $xml .= "    <general>\n";
+	    $xml .= "      <ieee1284>" . $dat->{'general_ieee'} .
 		"</ieee1284>\n" if defined($dat->{'general_ieee'});
-	    $xml .= "   <manufacturer>" . $dat->{'general_mfg'} .
+	    $xml .= "      <manufacturer>" . $dat->{'general_mfg'} .
 		"</manufacturer>\n" if defined($dat->{'general_mfg'});
-	    $xml .= "   <model>" . $dat->{'general_mdl'} .
+	    $xml .= "      <model>" . $dat->{'general_mdl'} .
 		"</model>\n" if defined($dat->{'general_mdl'});
-	    $xml .= "   <description>" . $dat->{'general_des'} .
+	    $xml .= "      <description>" . $dat->{'general_des'} .
 		"</description>\n" if defined($dat->{'general_des'});
-	    $xml .= "   <commandset>" . $dat->{'general_cmd'} .
+	    $xml .= "      <commandset>" . $dat->{'general_cmd'} .
 		"</commandset>\n" if defined($dat->{'general_cmd'});
-	    $xml .= "  </general>\n";
-	    $xml .= " </autodetect>\n";
+	    $xml .= "    </general>\n";
+	    $xml .= "  </autodetect>\n";
 	}
-	$xml .= " <functionality>" . $dat->{'functionality'} .
+	$xml .= "  <functionality>" . $dat->{'functionality'} .
 	    "</functionality>\n" if defined($dat->{'functionality'});
-	$xml .= " <driver>" . $dat->{'driver'} .
+	$xml .= "  <driver>" . $dat->{'driver'} .
 	    "</driver>\n" if defined($dat->{'driver'});
 	if (defined($dat->{'drivers'})) {
-	    $xml .= " <drivers>\n";
+	    $xml .= "  <drivers>\n";
 	    for  my $drv (@{$dat->{'drivers'}}) {
-		$xml .= "  <driver>\n";
-		$xml .= "   <id>" . $drv->{'id'} . "</id>\n"
+		$xml .= "    <driver>\n";
+		$xml .= "      <id>" . $drv->{'id'} . "</id>\n"
 		    if defined($drv->{'id'});
-		$xml .= "   <ppd>" . $drv->{'ppd'} . "</ppd>\n"
+		$xml .= "      <ppd>" . $drv->{'ppd'} . "</ppd>\n"
 		    if defined($drv->{'ppd'});
-		$xml .= "  </driver>\n";
+		$xml .= "    </driver>\n";
 	    }
-	    $xml .= " </drivers>\n";
+	    $xml .= "  </drivers>\n";
 	}
-	$xml .= " <unverified />\n" if $dat->{'unverified'};
+	$xml .= "  <unverified />\n" if $dat->{'unverified'};
 	$xml .=
-	    " <comments>\n" .
-	    "  <en>\n";
-	$xml .= "   This database entry was automatically generated\n" .
-	    "   from the PPD file&lt;p&gt;\n\n";
+	    "  <comments>\n" .
+	    "    <en>\n";
+	$xml .= "      This database entry was automatically generated\n" .
+	    "      from the PPD file&lt;p&gt;\n\n";
 	if ($dat->{'maxpaperwidth'}) {
 	    my $wi = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72);
 	    my $wc = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72 * 2.54);
@@ -2250,29 +2273,29 @@ sub perltoxml {
 			   ($dat->{'maxpaperwidth'} < 1500 ?
 			    "Wide format printer" :
 			    "Large format printer"))));
-	    $xml .= "   Maximum paper width: " . $wi . " inches / " . $wc .
+	    $xml .= "      Maximum paper width: " . $wi . " inches / " . $wc .
 		" cm (" . $wcomm . ")&lt;p&gt;\n\n" if $dat->{'maxpaperwidth'};
 	}
-	$xml .= "   Printing engine speed: " . $dat->{'throughput'} .
+	$xml .= "      Printing engine speed: " . $dat->{'throughput'} .
 	    " pages/min&lt;p&gt;\n\n" if
 	    defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1);
 	$xml .=
-	    "  </en>\n" .
-	    " </comments>\n" .
+	    "    </en>\n" .
+	    "  </comments>\n" .
 	    "</printer>\n";
     }
 
     if (!$mode || ($mode =~ /^[cd]/i)) { 
 	$xml .=
 	    "<driver id=\"driver/" . $dat->{'driver'} . "\">\n" .
-	    " <name>" . $dat->{'driver'} . "</name>\n" .
-	    " <execution>\n" .
-	    "  <filter />\n" .
-	    "  <prototype>" . $dat->{'cmd'} . "</prototype>\n" .
+	    "  <name>" . $dat->{'driver'} . "</name>\n" .
+	    "  <execution>\n" .
+	    "    <filter />\n" .
+	    "    <prototype>" . $dat->{'cmd'} . "</prototype>\n" .
 	    $dat->{'cmd_pdf'} ? 
-		"  <prototype_pdf>" . $dat->{'cmd_pdf'} . "</prototype_pdf>\n" :
+		"    <prototype_pdf>" . $dat->{'cmd_pdf'} . "</prototype_pdf>\n" :
 		"" .
-	    " </execution>\n" .
+	    "  </execution>\n" .
 	    "</driver>\n\n";
     }
 
@@ -2282,52 +2305,53 @@ sub perltoxml {
 	foreach (@{$dat->{'args'}}) {
 	    my $type = $_->{'type'};
 	    my $optname = $_->{'name'};
-	    $xml .= " <option type=\"$type\" " .
+	    $xml .= "  <option type=\"$type\" " .
 		"id=\"opt/" . $dat->{'driver'} . "-" . $optname . "\">\n";
 	    $xml .=
-		"  <arg_longname>\n" .
-		"   <en>" . $_->{'comment'} . "</en>\n" .
-		"  </arg_longname>\n" .
-		"  <arg_shortname>\n" .
-		"   <en>" . $_->{'name'} . "</en>\n" .
-		"  </arg_shortname>\n" .
-		"  <arg_execution>\n";
-	    $xml .= "   <arg_group>" . $_->{'group'} . "</arg_group>\n"
+		"    <arg_longname>\n" .
+		"      <en>" . $_->{'comment'} . "</en>\n" .
+		"    </arg_longname>\n" .
+		"    <arg_shortname>\n" .
+		"      <en>" . $_->{'name'} . "</en>\n" .
+		"    </arg_shortname>\n" .
+		"    <arg_execution>\n";
+	    $xml .= "      <arg_group>" . $_->{'group'} . "</arg_group>\n"
 		if $_->{'group'};
-	    $xml .= "   <arg_order>" . $_->{'order'} . "</arg_order>\n"
+	    $xml .= "      <arg_order>" . $_->{'order'} . "</arg_order>\n"
 		if $_->{'order'};
-	    $xml .= "   <arg_spot>" . $_->{'spot'} . "</arg_spot>\n"
+	    $xml .= "      <arg_spot>" . $_->{'spot'} . "</arg_spot>\n"
 		if $_->{'spot'};
-	    $xml .= "   <arg_proto>" . $_->{'proto'} . "</arg_proto>\n"
+	    $xml .= "      <arg_proto>" . $_->{'proto'} . "</arg_proto>\n"
 		if $_->{'proto'};
-	    $xml .= "  </arg_execution>\n";
+	    $xml .= "    </arg_execution>\n";
 	    
 	    if ($type eq 'enum') {
-		$xml .= "  <enum_vals>\n";
+		$xml .= "    <enum_vals>\n";
 		my $vals_byname = $_->{'vals_byname'};
 		foreach (keys(%{$vals_byname})) {
 		    my $val = $vals_byname->{$_};
 		    $xml .=
-			"   <enum_val id=\"ev/" . $dat->{'driver'} . "-" .
+			"      <enum_val id=\"ev/" . $dat->{'driver'} . "-" .
 			$optname . "-" . $_ . "\">\n";
 		    $xml .=
-			"    <ev_longname>\n" .
-			"     <en>" . $val->{'comment'} . "</en>\n" .
-			"    </ev_longname>\n" .
-			"    <ev_shortname>\n" .
-			"     <en>$_</en>\n" .
-			"    </ev_shortname>\n";
+			"        <ev_longname>\n" .
+			"          <en>" . $val->{'comment'} . "</en>\n" .
+			"        </ev_longname>\n" .
+			"        <ev_shortname>\n" .
+			"          <en>$_</en>\n" .
+			"        </ev_shortname>\n";
 
 		    $xml .=
-			"    <ev_driverval>" .
+			"        <ev_driverval>" .
 			$val->{'driverval'} .
 			"</ev_driverval>\n" if $val->{'driverval'};
 
-		    $xml .= "   </enum_val>\n";
+		    $xml .= "      </enum_val>\n";
 		}
+		$xml .= "    </enum_vals>\n";
 	    }
 
-	    $xml .= " </option>\n";
+	    $xml .= "  </option>\n";
 	}
 
 	$xml .= "</options>\n";

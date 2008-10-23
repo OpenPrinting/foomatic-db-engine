@@ -1,3 +1,8 @@
+2008-10-23  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in, lib/Foomatic/DB.pm: Moved driver and PDL
+	  magic of the XML file generation into lib/Foomatic/DB.pm.
+
 2008-10-22  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppd-to-xml.in, Makefile.in, configure.ac,
