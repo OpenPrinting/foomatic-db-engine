@@ -1,3 +1,14 @@
+2008-10-24  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in, lib/Foomatic/DB.pm: Let
+	  foomatic-ppd-to-xml find already existing printer entries and
+	  merge the reference to the PPD file into them instead of
+	  creating a new XML file. Let all XML files get created in a
+	  user-specified directory.
+
+	* lib/Foomatic/DB.pm: Let the perltoxml() function not put
+	  hard-coded comments into printer entries.
+
 2008-10-23  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppd-to-xml.in, lib/Foomatic/DB.pm: Moved driver and PDL

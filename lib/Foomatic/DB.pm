@@ -1119,6 +1119,181 @@ sub ppdtoperl {
     return ppdfromvartoperl(\@ppd, $parameters);
 }
 
+sub apply_driver_and_pdl_info {
+
+    # Find out printer's page description languages and suitable drivers
+
+    my ($dat, $parameters) = @_;
+
+    my %drivers;
+    my $pdls;
+    my $ppddlpath;
+    my $ppddrv = $dat->{'driver'};
+    if ($parameters) {
+	if (defined($parameters->{'drivers'})) {
+	    foreach my $d (@{$parameters->{'drivers'}}) {
+		$drivers{$d} = 1;
+	    }
+	    $ppddrv = $parameters->{'drivers'}[0];
+	    $dat->{'driver'} = $parameters->{'drivers'}[0] if
+		$parameters->{'drivers'}[0] =~ /^$dat->{'driver'}/;
+	}
+	if ($parameters->{'recommendeddriver'}) {
+	    $dat->{'driver'} = $parameters->{'recommendeddriver'};
+	}
+	if (defined($parameters->{'pdls'})) {
+	    $pdls = join(",", @{$parameters->{'pdls'}});
+	}
+	if ($parameters->{'ppdfile'} && $parameters->{'ppdlink'}) {
+	    my $ppdfile = $parameters->{'ppdfile'};
+	    if ($parameters->{'basedir'}) {
+		my $basedir = $parameters->{'basedir'};
+		$basedir =~ s:/+$::;
+		if (! -d $basedir) {
+		    die ("PPD base directory $basedir does not exist!\n");
+		}
+		if (! -r $ppdfile) {
+		    $ppddlpath = $ppdfile;
+		    $ppdfile = $basedir . "/" . $ppdfile;
+		    if (! -r $ppdfile) {
+			die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
+		    }
+		} else {
+		    $ppdfile =~ m:$basedir/(.*)$:;
+		    $ppddlpath = $1;
+		}
+	    } else {
+		if (! -r $ppdfile) {
+		    die ("Given PPD file $ppdfile not found!\n");
+		}
+		$ppddlpath = $ppdfile;
+	    }
+	}
+    }
+			      
+    if ($dat->{'driver'} =~ /Postscript/i) {
+	$pdls = join(',', ($pdls, "POSTSCRIPT$dat->{'ppdpslevel'}"));
+    } elsif ($dat->{'driver'} =~ /(pxl|pcl[\s\-]?xl)/i) {
+	$pdls = join(',', ($pdls, "PCLXL"));
+    } elsif ($dat->{'driver'} =~ /(ljet4|lj4)/i) {
+	$pdls = join(',', ($pdls, "PCL5e"));
+    } elsif (($dat->{'driver'} =~ /clj/i) && $dat->{'color'}) {
+	$pdls = join(',', ($pdls, "PCL5c"));
+    } elsif ($dat->{'driver'} =~ /(ljet3|lj3)/i) {
+	$pdls = join(',', ($pdls, "PCL5"));
+    } elsif ($dat->{'driver'} =~ /(laserjet|ljet|lj)/i) {
+	$pdls = join(',', ($pdls, "PCL4"));
+    }
+    $pdls = join(',', ($dat->{'general_cmd'}, $pdls)) if 
+	defined($dat->{'general_cmd'});
+    if ($pdls) {
+	for my $l (split(',', $pdls)) {
+	    my ($lang, $level) = ('', '');
+	    if ($l =~ /\b(PostScript|PS|BR-?Script)(\d?)\b/i) {
+		$lang = "postscript";
+		$level = $2;
+	    } elsif ($l =~ /\b(PDF)\b/i) {
+		$lang = "pdf";
+	    } elsif ($l =~ /\b(PCLXL)\b/i) {
+		$lang = "pcl";
+		$level = "6";
+	    } elsif ($l =~ /\b(PCL)(\d\S?|)\b/i) {
+		$lang = "pcl";
+		$level = $2;
+		if (!$level) {
+		    if ($dat->{'color'}) { 
+			$level = "5c";
+		    } else {
+			$level = "5e";
+		    }
+		}
+	    } elsif ($l =~ /\b(PJL)\b/i) {
+		$dat->{'pjl'} = 1;
+		$dat->{'jcl'} = 1;
+	    }
+	    if ($lang) {
+		if (!defined($dat->{'languages'})) {
+		    $dat->{'languages'} = [];
+		}
+		my $found = 0;
+		foreach my $ll (@{$dat->{'languages'}}) {
+		    if ($ll->{'name'} =~ /^$lang$/i) {
+			$ll->{'level'} = $level if $level && 
+			                           ($level gt $ll->{'level'});
+			$found = 1;
+		    }
+		}
+		push(@{$dat->{'languages'}},
+		     {
+			 'name' => $lang,
+			 'level' => $level
+		     }) if !$found;
+	    }
+	}
+    }
+    $drivers{$dat->{'driver'}} = 1;
+    for my $ll (@{$dat->{'languages'}}) {
+	my $lang = $ll->{'name'};
+	my $level = $ll->{'level'};
+	if ($lang =~ /^postscript$/i) {
+	    if ($level eq "1") {
+		$drivers{'Postscript1'} = 1;
+	    } else {
+		$drivers{'Postscript'} = 1;
+	    }
+	} elsif ($lang =~ /^pcl$/i) {
+	    if ($level eq "6") {
+		if ($dat->{'color'}) {
+		    $drivers{'pxlcolor'} = 1;
+		} else {
+		    $drivers{'pxlmono'} = 1;
+		    $drivers{'lj5gray'} = 1;
+		}
+	    } elsif ($level eq "5e") {
+		$drivers{'ljet4d'} = 1;
+		$drivers{'ljet4'} = 1;
+		$drivers{'lj4dith'} = 1;
+		$drivers{'hpijs'} = 1;
+		$drivers{'gutenprint'} = 1;
+	    } elsif ($level eq "5c") {
+		$drivers{'cljet5'} = 1;
+		$drivers{'hpijs'} = 1;
+	    } elsif ($level eq "5") {
+		$drivers{'ljet3d'} = 1;
+		$drivers{'ljet3'} = 1;
+	    } elsif ($level eq "4") {
+		$drivers{'laserjet'} = 1;
+		$drivers{'ljetplus'} = 1;
+		$drivers{'ljet2p'} = 1;
+	    }
+	    # PCL printers print also plain text
+	    $dat->{'ascii'} = 'us-ascii';
+	}
+    }
+    for my $drv (keys %drivers) {
+	if (!defined($dat->{'drivers'})) {
+	    $dat->{'drivers'} = [];
+	}
+	my $found = 0;
+	foreach my $dd (@{$dat->{'drivers'}}) {
+	    if (($dd->{'name'} =~ /^$drv$/i) ||
+		($dd->{'id'} =~ /^$drv$/i)) {
+		$found = 1;
+	    }
+	    if ($ppddlpath && ($dd->{'id'} =~ /^$ppddrv$/i)) {
+		$dd->{'ppd'} = $ppddlpath;
+	    }
+	}
+	push(@{$dat->{'drivers'}},
+	     {
+		 'name' => $drv,
+		 'id' => $drv,
+		 ($ppddlpath && ($drv =~ /^$ppddrv$/i) ?
+		  ('ppd' => $ppddlpath) : ())
+	     }) if !$found;
+    }
+}
+
 sub ppdfromvartoperl {
 
     my ($ppd, $parameters) = @_;
@@ -1915,7 +2090,7 @@ sub ppdfromvartoperl {
     $dat->{'model'} = clean_manufacturer_name($dat->{'model'});
     ($dat->{'make'}, $dat->{'model'}) = guessmake($dat->{'model'})
 	if !$dat->{'make'};
-    $dat->{'model'} =~ s/^\s*$dat->{'make'}\s+//;
+    $dat->{'model'} =~ s/^\s*$dat->{'make'}\s+//i;
     $dat->{'model'} = clean_model_name($dat->{'model'});
 
     # Generate a device ID if none was supplied. The PPD specs
@@ -1950,174 +2125,7 @@ sub ppdfromvartoperl {
     }
 
     # Find out printer's page description languages and suitable drivers
-    my %drivers;
-    my $pdls;
-    my $ppddlpath;
-    my $ppddrv = $dat->{'driver'};
-    $dat->{'driver'} = "Postscript" if
-	(!defined($dat->{'driver'}) && !defined($dat->{'cupsfilterlines'}));
-    if ($parameters) {
-	if (defined($parameters->{'drivers'})) {
-	    foreach my $d (@{$parameters->{'drivers'}}) {
-		$drivers{$d} = 1;
-	    }
-	    $dat->{'driver'} = $parameters->{'drivers'}[0];
-	}
-	$ppddrv = $dat->{'driver'};
-	if ($parameters->{'recommendeddriver'}) {
-	    $dat->{'driver'} = $parameters->{'recommendeddriver'};
-	}
-	if (defined($parameters->{'pdls'})) {
-	    $pdls = join(",", @{$parameters->{'pdls'}});
-	}
-	if ($parameters->{'ppdfile'} && $parameters->{'ppdlink'}) {
-	    my $ppdfile = $parameters->{'ppdfile'};
-	    if ($parameters->{'basedir'}) {
-		my $basedir = $parameters->{'basedir'};
-		$basedir =~ s:/+$::;
-		if (! -d $basedir) {
-		    die ("PPD base directory $basedir does not exist!\n");
-		}
-		if (! -r $ppdfile) {
-		    $ppddlpath = $ppdfile;
-		    $ppdfile = $basedir . "/" . $ppdfile;
-		    if (! -r $ppdfile) {
-			die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
-		    }
-		} else {
-		    $ppdfile =~ m:$basedir/(.*)$:;
-		    $ppddlpath = $1;
-		}
-	    } else {
-		if (! -r $ppdfile) {
-		    die ("Given PPD file $ppdfile not found!\n");
-		}
-		$ppddlpath = $ppdfile;
-	    }
-	}
-    }
-			      
-    if ($dat->{'driver'} =~ /Postscript/i) {
-	$pdls = join(',', ($pdls, "POSTSCRIPT$dat->{'ppdpslevel'}"));
-    } elsif ($dat->{'driver'} =~ /(pxl|pcl[\s\-]?xl)/i) {
-	$pdls = join(',', ($pdls, "PCLXL"));
-    } elsif ($dat->{'driver'} =~ /(ljet4|lj4)/i) {
-	$pdls = join(',', ($pdls, "PCL5e"));
-    } elsif (($dat->{'driver'} =~ /clj/i) && $dat->{'color'}) {
-	$pdls = join(',', ($pdls, "PCL5c"));
-    } elsif ($dat->{'driver'} =~ /(ljet3|lj3)/i) {
-	$pdls = join(',', ($pdls, "PCL5"));
-    } elsif ($dat->{'driver'} =~ /(laserjet|ljet|lj)/i) {
-	$pdls = join(',', ($pdls, "PCL4"));
-    }
-    $pdls = join(',', ($dat->{'general_cmd'}, $pdls)) if 
-	defined($dat->{'general_cmd'});
-    if ($pdls) {
-	for my $l (split(',', $pdls)) {
-	    my ($lang, $level) = ('', '');
-	    if ($l =~ /\b(PostScript|PS|BR-?Script)(\d?)\b/i) {
-		$lang = "postscript";
-		$level = $2;
-	    } elsif ($l =~ /\b(PDF)\b/i) {
-		$lang = "pdf";
-	    } elsif ($l =~ /\b(PCLXL)\b/i) {
-		$lang = "pcl";
-		$level = "6";
-	    } elsif ($l =~ /\b(PCL)(\d\S?|)\b/i) {
-		$lang = "pcl";
-		$level = $2;
-		if (!$level) {
-		    if ($dat->{'color'}) { 
-			$level = "5c";
-		    } else {
-			$level = "5e";
-		    }
-		}
-	    } elsif ($l =~ /\b(PJL)\b/i) {
-		$dat->{'pjl'} = 1;
-		$dat->{'jcl'} = 1;
-	    }
-	    if ($lang) {
-		if (!defined($dat->{'languages'})) {
-		    $dat->{'languages'} = [];
-		}
-		my $found = 0;
-		foreach my $ll (@{$dat->{'languages'}}) {
-		    if ($ll->{'name'} =~ /^$lang$/i) {
-			$ll->{'level'} = $level if $level && 
-			                           ($level gt $ll->{'level'});
-			$found = 1;
-		    }
-		}
-		push(@{$dat->{'languages'}},
-		     {
-			 'name' => $lang,
-			 'level' => $level
-		     }) if !$found;
-	    }
-	}
-    }
-    $drivers{$dat->{'driver'}} = 1;
-    for my $ll (@{$dat->{'languages'}}) {
-	my $lang = $ll->{'name'};
-	my $level = $ll->{'level'};
-	if ($lang =~ /^postscript$/i) {
-	    if ($level eq "1") {
-		$drivers{'Postscript1'} = 1;
-	    } else {
-		$drivers{'Postscript'} = 1;
-	    }
-	} elsif ($lang =~ /^pcl$/i) {
-	    if ($level eq "6") {
-		if ($dat->{'color'}) {
-		    $drivers{'pxlcolor'} = 1;
-		} else {
-		    $drivers{'pxlmono'} = 1;
-		    $drivers{'lj5gray'} = 1;
-		}
-	    } elsif ($level eq "5e") {
-		$drivers{'ljet4d'} = 1;
-		$drivers{'ljet4'} = 1;
-		$drivers{'lj4dith'} = 1;
-		$drivers{'hpijs'} = 1;
-		$drivers{'gutenprint'} = 1;
-	    } elsif ($level eq "5c") {
-		$drivers{'cljet5'} = 1;
-		$drivers{'hpijs'} = 1;
-	    } elsif ($level eq "5") {
-		$drivers{'ljet3d'} = 1;
-		$drivers{'ljet3'} = 1;
-	    } elsif ($level eq "4") {
-		$drivers{'laserjet'} = 1;
-		$drivers{'ljetplus'} = 1;
-		$drivers{'ljet2p'} = 1;
-	    }
-	    # PCL printers print also plain text
-	    $dat->{'ascii'} = 'us-ascii';
-	}
-    }
-    for my $drv (keys %drivers) {
-	if (!defined($dat->{'drivers'})) {
-	    $dat->{'drivers'} = [];
-	}
-	my $found = 0;
-	foreach my $dd (@{$dat->{'drivers'}}) {
-	    if (($dd->{'name'} =~ /^$drv$/i) ||
-		($dd->{'id'} =~ /^$drv$/i)) {
-		$found = 1;
-	    }
-	    if ($ppddlpath && ($dd->{'id'} =~ /^$ppddrv$/i)) {
-		$dd->{'ppd'} = $ppddlpath;
-	    }
-	}
-	push(@{$dat->{'drivers'}},
-	     {
-		 'name' => $drv,
-		 'id' => $drv,
-		 ($ppddlpath && ($drv =~ /^$ppddrv$/i) ?
-		  ('ppd' => $ppddlpath) : ())
-	     }) if !$found;
-    }
+    apply_driver_and_pdl_info($dat, $parameters);
 
     # Find the maximum resolution
     if (defined($dat->{'args_byname'}{'Resolution'})) {
@@ -2158,6 +2166,28 @@ sub ppdfromvartoperl {
 	    $dat->{'maxyres'} = $maxyres;
 	}
     }
+
+    if ($dat->{'maxpaperwidth'}) {
+	my $wi = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72);
+	my $wc = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72 * 2.54);
+	my $wcomm = ($dat->{'maxpaperwidth'} < 280 ?
+		     "Label/Card printer" :
+		     ($dat->{'maxpaperwidth'} < 600 ?
+		      "Photo printer" :
+		      ($dat->{'maxpaperwidth'} < 800 ?
+		       "Standard format printer" :
+		       ($dat->{'maxpaperwidth'} < 1500 ?
+			"Wide format printer" :
+			"Large format printer"))));
+	$dat->{'comment'} .=
+	    "      Maximum paper width: " . $wi . " inches / " . $wc .
+	    " cm\n" .
+	    "      (" . $wcomm . ")<p>\n\n" if $dat->{'maxpaperwidth'};
+    }
+    $dat->{'comment'} .=
+	"      Printing engine speed: " . $dat->{'throughput'} .
+	" pages/min<p>\n\n" if
+	defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1);
 
     # Set the defaults for the numerical options, taking into account
     # the "*FoomaticRIPDefault<option>: <value>" if they apply
@@ -2259,26 +2289,7 @@ sub perltoxml {
 	$xml .=
 	    "  <comments>\n" .
 	    "    <en>\n";
-	$xml .= "      This database entry was automatically generated\n" .
-	    "      from the PPD file&lt;p&gt;\n\n";
-	if ($dat->{'maxpaperwidth'}) {
-	    my $wi = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72);
-	    my $wc = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72 * 2.54);
-	    my $wcomm = ($dat->{'maxpaperwidth'} < 280 ?
-			 "Label/Card printer" :
-			 ($dat->{'maxpaperwidth'} < 600 ?
-			  "Photo printer" :
-			  ($dat->{'maxpaperwidth'} < 800 ?
-			   "Standard format printer" :
-			   ($dat->{'maxpaperwidth'} < 1500 ?
-			    "Wide format printer" :
-			    "Large format printer"))));
-	    $xml .= "      Maximum paper width: " . $wi . " inches / " . $wc .
-		" cm (" . $wcomm . ")&lt;p&gt;\n\n" if $dat->{'maxpaperwidth'};
-	}
-	$xml .= "      Printing engine speed: " . $dat->{'throughput'} .
-	    " pages/min&lt;p&gt;\n\n" if
-	    defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1);
+	$xml .= htmlify($dat->{'comment'}) . "\n" if $dat->{'comment'};
 	$xml .=
 	    "    </en>\n" .
 	    "  </comments>\n" .
