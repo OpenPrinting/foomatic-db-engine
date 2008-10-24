@@ -19,13 +19,14 @@ my $progname = ($1 || $0);
 
 help() if !@ARGV;
 #my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
-getopts("hd:r:p:lb:");
+getopts("d:r:p:lb:f:h");
 help() if $opt_h;
 my $drivers = $opt_d;
 my $rdriver = $opt_r;
 my $pdls = $opt_p;
 my $ppdlink = $opt_l;
 my $basedir = $opt_b;
+my $destdir = $opt_f;
 
 $ppdfile = $ARGV[0];
 
@@ -61,10 +62,90 @@ my $parameters = {
 };
 
 my $db = Foomatic::DB->new();
-$db->getdatfromppd($ppdfile, $parameters);
-print $db->perltoxml('p');
+my $dat = ppdtoperl($ppdfile, $parameters);
+my $existing = ($db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1))[0];
+my $result;
+if ($existing) {
+    $db->{'dat'} = $db->get_printer($existing);
+    if (!defined($parameters->{'drivers'})) {
+	$parameters->{'drivers'} = [$dat->{'driver'}];
+    }
+    if (!defined($parameters->{'pdls'})) {
+	$parameters->{'pdls'} = [split(',', $dat->{'general_cmd'})];
+    } else {
+	push(@{$parameters->{'pdls'}}, split(',', $dat->{'general_cmd'}));
+    }
+    Foomatic::DB::apply_driver_and_pdl_info($db->{'dat'}, $parameters);
+    $db->{'dat'}{'general_ieee'} = $dat->{'general_ieee'} if
+	defined($dat->{'general_ieee'});
+    $db->{'dat'}{'general_mfg'} = $dat->{'general_mfg'} if
+	defined($dat->{'general_mfg'});
+    $db->{'dat'}{'general_mdl'} = $dat->{'general_mdl'} if
+	defined($dat->{'general_mdl'});
+    $db->{'dat'}{'general_des'} = $dat->{'general_des'} if
+	defined($dat->{'general_des'});
+    $db->{'dat'}{'general_cmd'} = $dat->{'general_cmd'} if
+	defined($dat->{'general_cmd'});
+    $db->{'dat'}{'comment'} .= "\n      <p>\n\n" . $dat->{'comment'};
+    my $xml1 = $db->perltoxml('p');
+    my $xml2 = $db->get_printer_xml($existing);
+    $xml2 =~ s/(<\/functionality>)/$1\n  <driver><\/driver>/s if 
+	$xml2 !~ /<driver>/;
+    $xml2 = transferregexp($xml1, $xml2,
+	'<driver>\S*<\/driver>');
+    $xml2 =~ s/(<\/driver>)/$1\n  <drivers>\n  <\/drivers>/s if 
+	$xml2 !~ /<drivers>/;
+    $xml2 = transferregexp($xml1, $xml2,
+	'<drivers>.*<\/drivers>');
+    $xml2 =~ s/(<\/(mechanism|url)>)/$1\n  <lang>\n  <\/lang>/s if 
+	$xml2 !~ /<lang>/;
+    $xml2 = transferregexp($xml1, $xml2,
+	'<lang>.*<\/lang>');
+    $xml2 =~ s/(<\/lang>)/$1\n  <autodetect>\n  <\/autodetect>/s if 
+	$xml2 !~ /<autodetect>/;
+    $xml2 =~ s/(<autodetect>)/$1\n    <general>\n    <\/general>/s if 
+	$xml2 !~ /<general>/;
+    $xml2 = transferregexp($xml1, $xml2,
+	'<general>.*<\/general>');
+    $xml2 = transferregexp($xml1, $xml2,
+	'<comments>.*<\/comments>[\s\n\r]*<\/printer>');
+    $result = $xml2;
+    print "Modifying printer entry $db->{'dat'}{'id'}.xml ...\n";
+} else {
+    $db->{'dat'} = $dat;
+    $db->{'dat'}{'comment'} =
+	"      This database entry was automatically generated\n" .
+	"      from the PPD file for this printer<p>\n\n" .
+	$db->{'dat'}{'comment'};
+    $db->{'dat'}{'functionality'} = "A";
+    $result = $db->perltoxml('p');
+    print "Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
+}
+open FILE, "> " . ($destdir ? $destdir . "/" : ()) . 
+    $db->{'dat'}{'id'} . ".xml" or
+    die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
+print FILE $result;
+close FILE;
 
 exit 0;
+
+sub transferregexp {
+
+    my ($src, $dest, $regexp) = @_;
+
+    # This function copies the text fraction matching $regexp out of
+    # the first string, cuts the piece of the second matching $regexp
+    # out of the second string and replaces it by the piece copied
+    # from the first string. This is mainly for transfering XML
+    # sections from one XML file to another (strings can be
+    # multi-line) without needing to rewrite the unaffected parts of
+    # the XML file.
+
+    $src =~ m/($regexp)/s;
+    my $totransfer = $1;
+    $dest =~ s/$regexp/$totransfer/s if $totransfer;
+    return $dest;
+}
 
 sub help {
     print <<HELP;
@@ -75,26 +156,29 @@ $progname -h
  <ppdfile>      : PPD file for which a printer XML file should be created
  -d <drivers>   : Comma-separated list of drivers with which the printer
                   works. First driver is the one for which the PPD file is.
-		  If not otherwise stated by the "-r" options, this is also
-		  the recommended driver.
+                  If not otherwise stated by the "-r" options, this is also
+                  the recommended driver.
  -r <driver>    : Recommended driver. Supply this option to specify another
                   driver than the driver from the PPD/the first one from the
-		  "-d" argument as the recommended driver.
+                  "-d" argument as the recommended driver.
  -p <pdls>      : Comma-separated list of known Page Description Languages
                   (PDLs) which the printer supports. This will add all 
                   suitable drivers to the XML entry. Currently supported are:
-		  Postscript, PCLXL, PCL6, PCL5e, PCL5c, PCL5, and PCL4.
+                  Postscript, PCLXL, PCL6, PCL5e, PCL5c, PCL5, and PCL4.
  -l             : Add a link to the PPD file to the driver entry in the
                   XML file.
  -b <directory> : Base directory for a relative link to the PPD. If the
                   base directory is given, the link set via the -l option 
-		  is relative to this directory (and not relative to the
-		  current directory). With a base directory given the 
+                  is relative to this directory (and not relative to the
+                  current directory). With a base directory given the 
                   <ppdfile> can also be given relative to this directory.
+ -f <directory> : Directory where the resulting XML file to write to. The
+                  name of the file will be the printer ID with the ".xml"
+                  extension.  
  -h             : show help information
 
 
 HELP
-	exit 1;
+    exit 1;
 
 }
