@@ -64,9 +64,10 @@ my $parameters = {
 my $db = Foomatic::DB->new();
 my $dat = ppdtoperl($ppdfile, $parameters);
 my $existing = ($db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1))[0];
+my $d = $db->get_printer($existing) if $existing;
 my $result;
-if ($existing) {
-    $db->{'dat'} = $db->get_printer($existing);
+if ($existing && !$d->{'noxmlentry'}) {
+    $db->{'dat'} = $d;
     if (!defined($parameters->{'drivers'})) {
 	$parameters->{'drivers'} = [$dat->{'driver'}];
     }
@@ -104,18 +105,18 @@ if ($existing) {
     $xml2 =~ s/(<\/lang>)/$1\n  <autodetect>\n  <\/autodetect>/s if 
 	$xml2 !~ /<autodetect>/;
     $xml2 =~ s/(<autodetect>)/$1\n    <general>\n    <\/general>/s if 
-	$xml2 !~ /<general>/;
+	$xml2 !~ /<autodetect>[\s\n\r]*<general>/s;
     $xml2 = transferregexp($xml1, $xml2,
-	'<general>.*<\/general>');
+	'<autodetect>[\s\n\r]*<general>.*<\/general>');
     $xml2 = transferregexp($xml1, $xml2,
-	'<comments>.*<\/comments>[\s\n\r]*<\/printer>');
+	'<\/drivers>[\s\n\r]*<comments>.*<\/comments>[\s\n\r]*<\/printer>');
     $result = $xml2;
     print "Modifying printer entry $db->{'dat'}{'id'}.xml ...\n";
 } else {
     $db->{'dat'} = $dat;
     $db->{'dat'}{'comment'} =
 	"      This database entry was automatically generated\n" .
-	"      from the PPD file for this printer<p>\n\n" .
+	"      from the PPD file for this printer.<p>\n\n" .
 	$db->{'dat'}{'comment'};
     $db->{'dat'}{'functionality'} = "A";
     $result = $db->perltoxml('p');

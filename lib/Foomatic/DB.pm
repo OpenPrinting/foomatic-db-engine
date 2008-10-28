@@ -287,16 +287,21 @@ sub clean_manufacturer_name {
 # tool of Fedora/Red Hat, Ubuntu, and Mandriva
 sub clean_model_name {
     my ($model) = @_;
+    $model =~ s/^Mita[_\s\-]+//i;
+    $model =~ s/^AL-(([CM][A-Z]?|)\d+)/AcuLaser $1PS/;
     $model =~ s/\s*\(recommended\)//i;
     $model =~ s/\s*-\s*PostScript\b//i;
+    $model =~ s/\s*-\s*BR-Script[123]?\b//i;
     $model =~ s/\s*\bseries\b//i;
     $model =~ s/\s*\bPS[123]?\b//i;
+    $model =~ s/\s*PS[123]?$//;
     $model =~ s/\s*\bPXL//i;
     $model =~ s/[\s_-]+BT\b//i;
     $model =~ s/\s*\(Bluetooth\)//i;
     $model =~ s/\s*-\s*(RC|Ver(|sion))\s*-*\s*[0-9\.]+//i;
     $model =~ s/\s*-\s*(RC|Ver(|sion))\b//i;
     $model =~ s/\s*PostScript\s*$//i;
+    $model =~ s/\s*BR-Script[123]?\s*$//i;
     $model =~ s/\s*\(\s*\)//i;
     $model =~ s/\s*[\-\/]\s*$//i;
     return $model;
@@ -2081,10 +2086,10 @@ sub ppdfromvartoperl {
     }
     if (defined($dat->{'general_mdl'})) {
 	$dat->{'model'} = $dat->{'general_mdl'};
-    } elsif (!$dat->{'model'} && defined($dat->{'ppdproduct'})) {
-	$dat->{'model'} = $dat->{'ppdproduct'};
     } elsif (defined($dat->{'ppdmodelname'})) {
 	$dat->{'model'} = guessmake($dat->{'ppdmodelname'});
+    } elsif (!$dat->{'model'} && defined($dat->{'ppdproduct'})) {
+	$dat->{'model'} = $dat->{'ppdproduct'};
     }
     $dat->{'make'} = clean_manufacturer_name($dat->{'make'});
     $dat->{'model'} = clean_manufacturer_name($dat->{'model'});

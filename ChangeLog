@@ -1,3 +1,9 @@
+2008-10-28  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in, lib/Foomatic/DB.pm: Several fixes to
+	  find existing XMLs and to let merging changes into existing
+	  XMLs work correctly.
+
 2008-10-24  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppd-to-xml.in, lib/Foomatic/DB.pm: Let
