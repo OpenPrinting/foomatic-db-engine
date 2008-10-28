@@ -405,25 +405,25 @@ sub find_printer {
     my $deviceid = 0;
 
     # Do we have a device ID?
-    if ($searchterm =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/) {
+    if ($searchterm =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/i) {
 	$automake = $2;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(MDL|MODEL):\s*([^:;]+);?/) {
+    if ($searchterm =~ /(MDL|MODEL):\s*([^:;]+);?/i) {
 	$automodel = $2;
 	$automodel =~ s/\s+$//;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(DES|DESCRIPTION):\s*([^:;]+);?/) {
+    if ($searchterm =~ /(DES|DESCRIPTION):\s*([^:;]+);?/i) {
 	$autodescr = $2;
 	$autodescr =~ s/\s+$//;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(CMD|COMMANDS?\s?SET):\s*([^:;]+);?/) {
+    if ($searchterm =~ /(CMD|COMMANDS?\s?SET):\s*([^:;]+);?/i) {
 	$autocmdset = $2;
 	$deviceid = 1;
     }
-    if ($searchterm =~ /(SKU):\s*([^:;]+);?/) {
+    if ($searchterm =~ /(SKU):\s*([^:;]+);?/i) {
 	$autosku = $2;
 	$autosku =~ s/\s+$//;
 	$deviceid = 1;
@@ -535,18 +535,18 @@ sub find_printer {
 	    my $matched = 1;
 	    my ($mfg, $mdl, $des, $sku);
 	    my $ieee1284 = deviceIDfromDBEntry($p);
-	    if ($ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/) {
+	    if ($ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/i) {
 		$mfg = $2;
 	    }
-	    if ($ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/) {
+	    if ($ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/i) {
 		$mdl = $2;
 		$mdl =~ s/\s+$//;
 	    }
-	    if ($ieee1284 =~ /(DES|DESCRIPTION):\s*([^:;]+);?/) {
+	    if ($ieee1284 =~ /(DES|DESCRIPTION):\s*([^:;]+);?/i) {
 		$des = $2;
 		$des =~ s/\s+$//;
 	    }
-	    if ($ieee1284 =~ /(SKU):\s*([^:;]+);?/) {
+	    if ($ieee1284 =~ /(SKU):\s*([^:;]+);?/i) {
 		$sku = $2;
 		$sku =~ s/\s+$//;
 	    }
@@ -3285,12 +3285,12 @@ sub getppdheaderdata {
     my $make = $dat->{'make'};
     my $model = $dat->{'model'};
 
-    $ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/;
+    $ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/i;
     my $pnpmake = $2;
     $pnpmake = $make if !$pnpmake;
-    $ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/;
+    $ieee1284 =~ /(MDL|MODEL):\s*([^:;]+);?/i;
     my $pnpmodel = $2;
-    $pnpmodel = $model if !$pnpmodel;
+    $pnpmodel = $model if (!$pnpmodel) || ($pnpmodel eq $pnpmake);
 
     # File name for the PPD file
     my $filename = join('-',($dat->{'make'},
@@ -4088,7 +4088,7 @@ sub getppd (  $ $ $ ) {
 			# of Adobe's PPD V4.3 specification
 			# http://partners.adobe.com/asn/developer/pdfs/tn/5003.PPD_Spec_v4.3.pdf
 			# If the page size is an option for the command line
-			# of GhostScript, let the values which where put
+			# of Ghostscript, let the values which where put
 			# on the stack being popped and inserta comment
 			# to advise the filter
 			
@@ -4585,7 +4585,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	# a default PageSize set.  Indeed, the PPD spec requires a
 	# PageSize clause.
 	
-	# GhostScript does not understand "/PageRegion[...]", therefore
+	# Ghostscript does not understand "/PageRegion[...]", therefore
 	# we use "/PageSize[...]" in the "*PageRegion" option here, in
 	# addition, for most modern PostScript interpreters "PageRegion"
 	# is the same as "PageSize".
@@ -4634,13 +4634,13 @@ EOFPGSZ
 *%
 *% This file is published under the GNU General Public License
 *%
-*% PPD-O-MATIC (3.0.0 or newer) generated this PPD file. It is for use with 
+*% PPD-O-MATIC (4.0.0 or newer) generated this PPD file. It is for use with 
 *% all programs and environments which use PPD files for dealing with
 *% printer capability information. The printer must be configured with the
-*% \"foomatic-rip\" backend filter script of Foomatic 3.0.0 or newer. This 
+*% \"foomatic-rip\" backend filter script of Foomatic 4.0.0 or newer. This 
 *% file and \"foomatic-rip\" work together to support PPD-controlled printer
-*% driver option access with arbitrary free software printer drivers and
-*% printing spoolers.
+*% driver option access with all supported printer drivers and printing
+*% spoolers.
 *%
 *% To save this file on your disk, wait until the download has completed
 *% (the animation of the browser logo must stop) and then use the
@@ -4685,8 +4685,8 @@ EOFPGSZ
 	 " - $dat->{'shortdescription'}" : "") . 
 	 ": \"\"\n" if defined($dat->{'driver'});
     $drvproperties .= "*driverType $dat->{'type'}" .
-	($dat->{'type'} eq "G" ? "/GhostScript built-in" :
-	 ($dat->{'type'} eq "U" ? "/GhostScript Uniprint" :
+	($dat->{'type'} eq "G" ? "/Ghostscript built-in" :
+	 ($dat->{'type'} eq "U" ? "/Ghostscript Uniprint" :
 	  ($dat->{'type'} eq "F" ? "/Filter" :
 	   ($dat->{'type'} eq "C" ? "/CUPS Raster" :
 	    ($dat->{'type'} eq "V" ? "/OpenPrinting Vector" :
@@ -5157,6 +5157,12 @@ sub get_tmpl {
 *PSVersion:	"(3010.000) 704"
 *PSVersion:	"(3010.000) 705"
 *PSVersion:	"(3010.000) 800"
+*PSVersion:	"(3010.000) 815"
+*PSVersion:	"(3010.000) 850"
+*PSVersion:	"(3010.000) 860"
+*PSVersion:	"(3010.000) 861"
+*PSVersion:	"(3010.000) 862"
+*PSVersion:	"(3010.000) 863"
 *LanguageLevel:	"3"
 \@\@COLOR\@\@
 *FileSystem:	False
@@ -5216,7 +5222,7 @@ ENDTMPL
 # name. Used for the "PaperDimension" and "ImageableArea" entries in PPD
 # files.
 #
-# The paper sizes in the list are all sizes known to GhostScript, all
+# The paper sizes in the list are all sizes known to Ghostscript, all
 # of Gutenprint, all sizes of HPIJS, and some others found in the data
 # of printer drivers.
 

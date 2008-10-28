@@ -2005,13 +2005,13 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	  if (debug) fprintf(stderr, "  Driver type: OpenPrinting Vector\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ghostscript"))) {
 	  ret->driver_type = (xmlChar *)"G";
-	  if (debug) fprintf(stderr, "  Driver type: GhostScript built-in\n");
+	  if (debug) fprintf(stderr, "  Driver type: Ghostscript built-in\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "filter"))) {
 	  ret->driver_type = (xmlChar *)"F";
 	  if (debug) fprintf(stderr, "  Driver type: Filter\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "uniprint"))) {
 	  ret->driver_type = (xmlChar *)"U";
-	  if (debug) fprintf(stderr, "  Driver type: GhostScript Uniprint\n");
+	  if (debug) fprintf(stderr, "  Driver type: Ghostscript Uniprint\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "postscript"))) {
 	  ret->driver_type = (xmlChar *)"P";
 	  if (debug) fprintf(stderr, "  Driver type: PostScript\n");
@@ -3205,13 +3205,13 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	  if (debug) fprintf(stderr, "  Driver type: OpenPrinting Vector\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ghostscript"))) {
 	  ret->driver_type = (xmlChar *)"G";
-	  if (debug) fprintf(stderr, "  Driver type: GhostScript built-in\n");
+	  if (debug) fprintf(stderr, "  Driver type: Ghostscript built-in\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "filter"))) {
 	  ret->driver_type = (xmlChar *)"F";
 	  if (debug) fprintf(stderr, "  Driver type: Filter\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "uniprint"))) {
 	  ret->driver_type = (xmlChar *)"U";
-	  if (debug) fprintf(stderr, "  Driver type: GhostScript Uniprint\n");
+	  if (debug) fprintf(stderr, "  Driver type: Ghostscript Uniprint\n");
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "postscript"))) {
 	  ret->driver_type = (xmlChar *)"P";
 	  if (debug) fprintf(stderr, "  Driver type: PostScript\n");
