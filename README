@@ -95,7 +95,7 @@ Implemented in 3.0.0:
    PostScript data stream. Settings in the PostScript data stream have
    the highest priority to assure that what one sets in an application
    is used. Depending on the option type the settings are applied to
-   the renderer's (usually GhostScript's) command line, to the JCL
+   the renderer's (usually Ghostscript's) command line, to the JCL
    header, or stuffed in at the right place of the PostScript data
    stream.
 
@@ -107,7 +107,7 @@ Implemented in 3.0.0:
    PostScript input file. They can also be specified on the command
    line by specifying a page range before the option name (ex: "lpr -o
    1,5-8:ColorMode=CMYK file.ps"). If necessary, the renderer (usually
-   GhostScript) is stopped and restarted in the middle of the job,
+   Ghostscript) is stopped and restarted in the middle of the job,
    when certain pages need a different command line for the
    renderer. The bug of Star Office/OpenOffice.org inserting the
    "%%BeginSetup...%%EndSetup" section after the first "%%Page:"
@@ -221,10 +221,10 @@ Implemented in 3.0.0:
    composite option (the user is forced to use the composite
    option). This allows options acting at two or more places, for
    example a "PageSize" option for a driver which is a filter
-   translating GhostScript bitmap output to the printer's
+   translating Ghostscript bitmap output to the printer's
    language. One lets one member option be an option inserting
    PostScript code for the page size into the PostScript input data
-   stream for GhostScript, and another member option insert the
+   stream for Ghostscript, and another member option insert the
    correct bitmap size into the filter's command line. The user sees
    only the composite option and sets the paper size with it as usual.
 
@@ -307,8 +307,8 @@ Implemented in 3.0.1:
  - CUPS raster drivers can now be used with any spooler. This makes a
    lot of newer commercial or manufacturer-supplied printer drivers
    available for non-CUPS environments. To use a CUPS raster driver
-   with a spooler other than CUPS, you need to install GhostScript
-   (preferrably ESP GhostScript) with CUPS raster support, the
+   with a spooler other than CUPS, you need to install Ghostscript
+   (preferrably ESP Ghostscript) with CUPS raster support, the
    appropriate CUPS raster driver. You do not need to install the
    complete CUPS package, the CUPS libraries are enough (libcups and
    libcupsimage, usually in the "libcups" package of your
@@ -778,7 +778,7 @@ foomatic-preferred-driver
   driver entry or has one pointing to a driver which does not exist in
   the local Foomatic database (for example when you have removed a driver
   entry from the database which belongs to a driver which is not built
-  into your GhostScript).
+  into your Ghostscript).
 
 foomatic-nonumericalids
 
@@ -819,7 +819,7 @@ foomatic-rip
   to the print queue, either a Foomatic-generated one or a 
   manufacturer-supplied PPD file of a PostScript printer, uses the
   information to find the default option settings and to build the
-  renderer's (usually GhostScript, "cat" for PostScript printers)
+  renderer's (usually Ghostscript, "cat" for PostScript printers)
   command line, and applies the user-supplied options. Then it builds
   the renderer's command line and passes the data through it. If the
   data is not PostScript, a pre-filter ("a2ps", "enscript", "mpage",
@@ -1634,20 +1634,20 @@ things, but the two biggies are the prototype and the printers list
 
 # Driver types are 
 #
-#  <ghostscript /> : The driver code is compiled into GhostScript
+#  <ghostscript /> : The driver code is compiled into Ghostscript
 #
 #  <filter /> :      The driver code is a separate executable, either a
 #                    filter which converts generic bitmap output of
-#                    GhostScript to the printer's language, a wrapper 
-#                    around GhostScript, or an IJS plug-in.
+#                    Ghostscript to the printer's language, a wrapper 
+#                    around Ghostscript, or an IJS plug-in.
 #
 #  <uniprint /> :    A uniprint driver, consisting of one or more .upp
-#                    files for GhostScript.
+#                    files for Ghostscript.
 #
 #  <postscript /> :  A driver which has PostScript also as output (for 
 #                    PostScript printers). It usually does not call
-#                    GhostScript but only applies the user's option
-#                    settings to the data stream. But GhostScript can
+#                    Ghostscript but only applies the user's option
+#                    settings to the data stream. But Ghostscript can
 #                    be called here, too, as for downgrading to a lower
 #                    PostScript level.
 #
@@ -1934,14 +1934,14 @@ option (the user is forced to use the composite option). This allows
 options acting at two or more places.
 
 Example: A printer driver is a filter which converts a generic bitmap
-produced by GhostScript to the printer's native format. The command
+produced by Ghostscript to the printer's native format. The command
 line for converting PostScript to the printer's language could look like this
 
 gs -q -dBATCH -dSAFER -dNOPAUSE -sDEVICE=bitcmyk -r600 -sOutputFile=-
 - | filter -size=<width>x<height>
 
 where <width> and <height> is the page size in points (1/72
-inches). In addition, GhostScript needs to know the page size. For
+inches). In addition, Ghostscript needs to know the page size. For
 this one usually puts the following PostScript code into the
 PostScript input file:
 
@@ -1949,7 +1949,7 @@ PostScript input file:
 
 where <width> and <height> is again the page size in points. So we
 need two options for setting the page size, one PostScript option to
-set the page size for GhostScript and one command line option to set
+set the page size for Ghostscript and one command line option to set
 the page size for the filter. The user would have to change both when
 he wants to print on another paper size, and it does not make sense to
 have different settings for the two. So one could make the "PageSize"

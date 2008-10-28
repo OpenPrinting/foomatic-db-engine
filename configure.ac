@@ -112,9 +112,9 @@ fi
 AC_PATH_PROG(PRINTF,printf,$BSB)dnl
 
 dnl dislabel ghostscript check
-AC_MSG_CHECKING(GhostScript check)
+AC_MSG_CHECKING(Ghostscript check)
 AC_ARG_ENABLE( gscheck,
-[  --disable-gscheck      disable checking GhostScript for security flaw],
+[  --disable-gscheck      disable checking Ghostscript for security flaw],
 [
 if test "$enableval" = "yes" ; then
 	GSCHECK=yes;
@@ -131,19 +131,19 @@ AC_SUBST(GSCHECK)
 
 echo GS "$GS"
 if test "$GS" != "GHOSTSCRIPT_NOT_FOUND" -a "$GSCHECK" != "no" ; then
-  AC_MSG_CHECKING(GhostScript -dSAFER and -dPARANOIDSAFER option)
+  AC_MSG_CHECKING(Ghostscript -dSAFER and -dPARANOIDSAFER option)
   if $GS -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=nullpage -sOutputFile=- $srcdir/gsQuit ; then
     if $GS -q -dBATCH -dNOPAUSE -dSAFER -dPARANOIDSAFER -sDEVICE=nullpage -sOutputFile=- $srcdir/gsTest 1>/dev/null 2>/dev/null ; then
   	  AC_MSG_WARN( [
 WARNING: '($GS) -dSAFER -dPARANOIDSAFER ' allows files to be read
-Please read README.GhostScriptSecurityProblem
-and fix your distribution of GhostScript
+Please read README.GhostscriptSecurityProblem
+and fix your distribution of Ghostscript
 OR use:
 configure --disable-gscheck
 ] )
-      AC_MSG_ERROR(GhostScript security hole found!)
+      AC_MSG_ERROR(Ghostscript security hole found!)
     else
-      AC_MSG_RESULT(no GhostScript security hole found)
+      AC_MSG_RESULT(no Ghostscript security hole found)
     fi
   else
     AC_MSG_ERROR(Error with: $GS -q -dSAFER -dPARANOIDSAFER -sDEVICE=nullpage -sOutputFile=- )
@@ -151,7 +151,7 @@ configure --disable-gscheck
 fi
 
 
-AC_MSG_CHECKING(how to redirect GhostScript output to fd 3)
+AC_MSG_CHECKING(how to redirect Ghostscript output to fd 3)
 if test "$DEVFD3" = "" ; then
 	v=`( if test -d /dev/fd ; then echo 3 >/dev/fd/3; fi) 3>&1 1>&2`
 	if test "$v" != "" ; then

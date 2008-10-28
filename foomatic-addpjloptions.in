@@ -52,8 +52,8 @@ EOF
 my $opt = {};
 my $debug = 0;
 my $exclusions =
-	{ 'PAPER'=>1,  # already handled by GhostScript/PS
-	  'RESOLUTION'=>1, # already handled by GhostScript/PS
+	{ 'PAPER'=>1,  # already handled by Ghostscript/PS
+	  'RESOLUTION'=>1, # already handled by Ghostscript/PS
 	  'LANG'=>1,       # only affects printer display
 	  'PERSONALITY'=>1,# the page description language
 			# is set by the driver

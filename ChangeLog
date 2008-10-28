@@ -1,4 +1,17 @@
+
 2008-10-28  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Match the field headers of IEEE-1284 device
+	  IDs case insensitively. Some IDs have these headers not
+	  all-uppercase, like Kyocera. Fixed also that the manufacturer
+	  name can creep into the "*Product:" field of the PPD when the
+	  model name cannot be read from the device ID.
+
+	* lib/Foomatic/DB.pm: Bumped version number in PPD header to 4.0.0.
+
+	* README, USAGE, configure.ac, foomatic-addpjloptions.in, 
+	  foomatic-perl-data.c, lib/Foomatic/DB.pm:
+	  s/GhostScript/Ghostscript/
 
 	* foomatic-ppd-to-xml.in, lib/Foomatic/DB.pm: Several fixes to
 	  find existing XMLs and to let merging changes into existing
