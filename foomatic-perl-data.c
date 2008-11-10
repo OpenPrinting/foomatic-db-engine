@@ -819,7 +819,7 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
   printer->id = NULL;
   printer->make = NULL;
   printer->model = NULL;
-  printer->functionality = NULL;
+  printer->functionality = (xmlChar *)"X";
   printer->unverified = NULL;
   printer->noxmlentry = NULL;
   printer->general_ieee = NULL;
@@ -2494,7 +2494,7 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
   ret->snmp_mdl = NULL;
   ret->snmp_des = NULL;
   ret->snmp_cmd = NULL;
-  ret->functionality = NULL;
+  ret->functionality = (xmlChar *)"X";
   ret->driver = NULL;
   ret->unverified = (xmlChar *)"0";
   ret->noxmlentry = (xmlChar *)"0";
