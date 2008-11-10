@@ -1,3 +1,10 @@
+2008-11-10  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-perl-data.c: If the overview XML input has no
+	  <functionality> field, the functionality entry stays a NULL
+	  pointer. On some systems like Solaris outputting a NULL pointer
+	  with "printf()" leads to a segmentation fault (under Linux it is
+	  no problem, the output will be "(null)"). Fix for bug #213.
 
 2008-10-28  Till Kamppeter <till.kamppeter@gmail.com>
 
