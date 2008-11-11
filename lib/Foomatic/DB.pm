@@ -3838,7 +3838,7 @@ sub getppd (  $ $ $ ) {
 		     sprintf("\n*${jcl}OpenUI *%s/%s: PickOne\n", $name, 
 			     cutguiname($com, $shortgui)));
 
-		if ($arg->{'style'} ne 'G') {
+		if ($arg->{'style'} ne 'G' && ($optstyle ne "JCL")) {
 		    # For non-PostScript options insert line with option
 		    # properties
 		    push(@optionblob, sprintf
@@ -3983,7 +3983,7 @@ sub getppd (  $ $ $ ) {
 		    # inserted, unless they are member of a composite
 		    # option AND they are set to the "Controlled by
 		    # '<Composite>'" choice (driverval is "\x01")
-		    if (($arg->{'style'} eq 'G') &&
+		    if (($arg->{'style'} eq 'G' || $optstyle eq "JCL") &&
 			($v->{'driverval'} ne "\x01")) {
 			# Ghostscript argument; offer up ps for
 			# insertion
@@ -4224,7 +4224,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		 sprintf("\n*${jcl}OpenUI *%s/%s: Boolean\n", $name, 
 			 cutguiname($com, $shortgui)));
 
-	    if ($arg->{'style'} eq 'G') {
+	    if ($arg->{'style'} eq 'G' || $optstyle == "JCL") {
 		# Ghostscript argument
 		$psstr = $cmd;
 		# Boolean options should not use the "%s" default for $cmd
@@ -4387,7 +4387,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		for my $v (@choicelist) {
 		    my $psstr = "";
 		    
-		    if ($arg->{'style'} eq 'G') {
+		    if ($optstyle eq "PS"|| $optstyle eq "JCL") {
 			# Ghostscript argument; offer up ps for insertion
 			my $sprintfcmd = $cmd;
 			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
