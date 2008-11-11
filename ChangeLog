@@ -11,6 +11,9 @@
 	  via FoomaticRIPOptionSetting); Remove redundant FoomaticRIPOptions
 	  for JCL enumerated choice options.
 
+	* lib/Foomatic/DB.pm: Surround JCL option values with @PJL...<0A> if
+	  necessary. Quote prototypes of custom JCL options.
+
 2008-11-10  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: If the overview XML input has no

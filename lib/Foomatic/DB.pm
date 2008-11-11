@@ -3988,6 +3988,14 @@ sub getppd (  $ $ $ ) {
 			# Ghostscript argument; offer up ps for
 			# insertion
 			my $sprintfcmd = $cmd;
+			if ($optstyle eq "JCL") {
+			    if ($sprintfcmd !~ m/^@/) {
+				$sprintfcmd = "\@PJL " . $sprintfcmd;
+			    }
+			    if ($sprintfcmd !~ m/<0A>$/) {
+				$sprintfcmd = $sprintfcmd . "<0A>";
+			    }
+			}
 			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
 			$psstr = sprintf($sprintfcmd, 
 					 (defined($v->{'driverval'})
@@ -4079,6 +4087,12 @@ sub getppd (  $ $ $ ) {
 		    my $templ = $cmd;
 		    if ($optstyle eq "JCL") {
 			$templ =~ s/%s/\\1/;
+			if ($templ !~ m/^@/) {
+			    $templ = "\@PJL " . $templ;
+			}
+			if ($templ !~ m/<0A>$/) {
+			    $templ = $templ . "<0A>";
+			}
 		    }
 		    else {
 			my $cnt = 0;
@@ -4089,7 +4103,7 @@ sub getppd (  $ $ $ ) {
 			}
 			$templ =~ s/%s/ ${cnt} 1 roll /;
 		    }
-		    push(@optionblob, sprintf("*Custom%s%s True: %s\n", $jcl, $name, $templ));
+		    push(@optionblob, sprintf("*Custom%s%s True: \"%s\"\n", $jcl, $name, $templ));
 		    push(@optionblob,
 			sprintf("*ParamCustom%s%s %s/%s: 1 %s 0 %d\n\n",
 			    $jcl, $name, $name, $arg->{'comment'},
@@ -4229,6 +4243,15 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		$psstr = $cmd;
 		# Boolean options should not use the "%s" default for $cmd
 		$psstr =~ s/^%s$//;
+
+		if ($optstyle eq "JCL") {
+		    if ($psstr !~ m/^@/) {
+			$psstr = "\@PJL " . $psstr;
+		    }
+		    if ($psstr !~ m/<0A>$/) {
+			$psstr = $psstr . "<0A>";
+		    }
+		}
 	    } else {
 		# Option setting directive for Foomatic filter
 		# 4 "%" because of the "sprintf" applied to it
@@ -4390,6 +4413,14 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    if ($optstyle eq "PS"|| $optstyle eq "JCL") {
 			# Ghostscript argument; offer up ps for insertion
 			my $sprintfcmd = $cmd;
+			if ($optstyle eq "JCL") {
+			    if ($sprintfcmd !~ m/^@/) {
+				$sprintfcmd = "\@PJL " . $sprintfcmd;
+			    }
+			    if ($sprintfcmd !~ m/<0A>$/) {
+				$sprintfcmd = $sprintfcmd . "<0A>";
+			    }
+			}
 			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
 			$psstr = sprintf($sprintfcmd, $v);
 		    } else {
@@ -4418,6 +4449,12 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		my $templ = $cmd;
 		if ($optstyle eq "JCL") {
 		    $templ =~ s/%s/\\1/;
+		    if ($templ !~ m/^@/) {
+			$templ = "\@PJL " . $templ;
+		    }
+		    if ($templ !~ m/<0A>$/) {
+			$templ = $templ . "<0A>";
+		    }
 		}
 		else {
 		    my $cnt = 0;
@@ -4428,7 +4465,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    }
 		    $templ =~ s/%s/ ${cnt} 1 roll /;
 		}
-		push(@optionblob, sprintf("*Custom%s%s True: %s\n", $jcl, $name, $templ));
+		push(@optionblob, sprintf("*Custom%s%s True: \"%s\"\n", $jcl, $name, $templ));
 		push(@optionblob,
 		    sprintf("*ParamCustom%s%s %s/%s: 1 int %d %d\n\n",
 			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
@@ -4618,6 +4655,12 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		my $templ = $cmd;
 		if ($optstyle eq "JCL") {
 		    $templ =~ s/%s/\\1/;
+		    if ($templ !~ m/^@/) {
+			$templ = "\@PJL " . $templ;
+		    }
+		    if ($templ !~ m/<0A>$/) {
+			$templ = $templ . "<0A>";
+		    }
 		}
 		else {
 		    my $cnt = 0;
@@ -4628,7 +4671,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    }
 		    $templ =~ s/%s/ ${cnt} 1 roll /;
 		}
-		push(@optionblob, sprintf("*Custom%s%s True: %s\n", $jcl, $name, $templ));
+		push(@optionblob, sprintf("*Custom%s%s True: \"%s\"\n", $jcl, $name, $templ));
 		push(@optionblob,
 		    sprintf("*ParamCustom%s%s %s/%s: 1 real %f %f\n\n",
 			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
