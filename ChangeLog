@@ -1,3 +1,9 @@
+2008-11-11  Lars Uebernickel <larsuebernickel@gmx.de>
+	* lib/Foomatic/DB.pm: Set default section to 'JCL' when the option is
+	a JCL option.
+
+	* lib/Foomatic/DB.pm: Output CUPS custom options.
+
 2008-11-10  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: If the overview XML input has no
