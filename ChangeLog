@@ -4,6 +4,13 @@
 
 	* lib/Foomatic/DB.pm: Output CUPS custom options.
 
+	* lib/Foomatic/DB.pm: Set the correct section in OrderDependency
+	  (until now, AnySetup was always used)
+
+	* lib/Foomatic/DB.pm: Insert JCL code directly for JCL options (not
+	  via FoomaticRIPOptionSetting); Remove redundant FoomaticRIPOptions
+	  for JCL enumerated choice options.
+
 2008-11-10  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-perl-data.c: If the overview XML input has no

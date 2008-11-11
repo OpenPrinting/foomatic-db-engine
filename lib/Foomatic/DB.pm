@@ -3838,7 +3838,7 @@ sub getppd (  $ $ $ ) {
 		     sprintf("\n*${jcl}OpenUI *%s/%s: PickOne\n", $name, 
 			     cutguiname($com, $shortgui)));
 
-		if ($arg->{'style'} ne 'G') {
+		if ($arg->{'style'} ne 'G' && ($optstyle ne "JCL")) {
 		    # For non-PostScript options insert line with option
 		    # properties
 		    push(@optionblob, sprintf
@@ -3983,7 +3983,7 @@ sub getppd (  $ $ $ ) {
 		    # inserted, unless they are member of a composite
 		    # option AND they are set to the "Controlled by
 		    # '<Composite>'" choice (driverval is "\x01")
-		    if (($arg->{'style'} eq 'G') &&
+		    if (($arg->{'style'} eq 'G' || $optstyle eq "JCL") &&
 			($v->{'driverval'} ne "\x01")) {
 			# Ghostscript argument; offer up ps for
 			# insertion
@@ -4076,7 +4076,6 @@ sub getppd (  $ $ $ ) {
 
                  # Insert Custom Option
 		if ($type =~ /^(string|password)$/) {
-		    my $header = sprintf("*Custom%s%s True", $jcl, $name);
 		    my $templ = $cmd;
 		    if ($optstyle eq "JCL") {
 			$templ =~ s/%s/\\1/;
@@ -4090,14 +4089,7 @@ sub getppd (  $ $ $ ) {
 			}
 			$templ =~ s/%s/ ${cnt} 1 roll /;
 		    }
-		    my $foomaticstr = ripdirective($header, $templ) . "\n";
-		    push(@optionblob, "\n");
-		    push(@optionblob, $foomaticstr);
-		    # Stuff to insert into command line/job is more than one
-		    # line? Let an "*End" line follow
-		    if ($foomaticstr =~ /\n.*\n/s) {
-			push(@optionblob, "*End\n");
-		    }
+		    push(@optionblob, sprintf("*Custom%s%s True: %s\n", $jcl, $name, $templ));
 		    push(@optionblob,
 			sprintf("*ParamCustom%s%s %s/%s: 1 %s 0 %d\n\n",
 			    $jcl, $name, $name, $arg->{'comment'},
@@ -4232,7 +4224,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		 sprintf("\n*${jcl}OpenUI *%s/%s: Boolean\n", $name, 
 			 cutguiname($com, $shortgui)));
 
-	    if ($arg->{'style'} eq 'G') {
+	    if ($arg->{'style'} eq 'G' || $optstyle == "JCL") {
 		# Ghostscript argument
 		$psstr = $cmd;
 		# Boolean options should not use the "%s" default for $cmd
@@ -4258,8 +4250,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 	    }
 
 	    push(@optionblob,
-		 sprintf("*OrderDependency: %s AnySetup *%s\n", 
-			 $order, $name),
+		 sprintf("*OrderDependency: %s %s *%s\n", 
+			 $order, $section, $name),
 		 sprintf("*Default%s: $defstr\n", $name),
 		 sprintf("*%s True/%s: \"%s\"\n", $name, 
 			 cutguiname($name, $shortgui), $psstr),
@@ -4376,8 +4368,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		      $name, $arg->{'min'}, $arg->{'max'}));
 
 		push(@optionblob,
-		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
-			     $order, $name),
+		     sprintf("*OrderDependency: %s %s *%s\n", 
+			     $order, $section, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? $default : 'Unknown')),
@@ -4395,7 +4387,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		for my $v (@choicelist) {
 		    my $psstr = "";
 		    
-		    if ($arg->{'style'} eq 'G') {
+		    if ($optstyle eq "PS"|| $optstyle eq "JCL") {
 			# Ghostscript argument; offer up ps for insertion
 			my $sprintfcmd = $cmd;
 			$sprintfcmd =~ s/\%(?!s)/\%\%/g;
@@ -4423,7 +4415,6 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    sprintf("*${jcl}CloseUI: *%s\n\n", $name));
 
 		# Insert custom option
-		my $header = sprintf("*Custom%s%s True", $jcl, $name);
 		my $templ = $cmd;
 		if ($optstyle eq "JCL") {
 		    $templ =~ s/%s/\\1/;
@@ -4437,14 +4428,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    }
 		    $templ =~ s/%s/ ${cnt} 1 roll /;
 		}
-		my $foomaticstr = ripdirective($header, $templ) . "\n";
-		push(@optionblob, "\n");
-		push(@optionblob, $foomaticstr);
-		# Stuff to insert into command line/job is more than one
-		# line? Let an "*End" line follow
-		if ($foomaticstr =~ /\n.*\n/s) {
-		    push(@optionblob, "*End\n");
-		}
+		push(@optionblob, sprintf("*Custom%s%s True: %s\n", $jcl, $name, $templ));
 		push(@optionblob,
 		    sprintf("*ParamCustom%s%s %s/%s: 1 int %d %d\n\n",
 			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
@@ -4583,8 +4567,8 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		      $name, $arg->{'min'}, $arg->{'max'}));
 
 		push(@optionblob,
-		     sprintf("*OrderDependency: %s AnySetup *%s\n", 
-			     $order, $name),
+		     sprintf("*OrderDependency: %s %s *%s\n", 
+			     $order, $section, $name),
 		     sprintf("*Default%s: %s\n", 
 			     $name,
 			     (defined($default) ? 
@@ -4631,7 +4615,6 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		     sprintf("*${jcl}CloseUI: *%s\n\n", $name));
 
 		# Insert custom option
-		my $header = sprintf("*Custom%s%s True", $jcl, $name);
 		my $templ = $cmd;
 		if ($optstyle eq "JCL") {
 		    $templ =~ s/%s/\\1/;
@@ -4645,14 +4628,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    }
 		    $templ =~ s/%s/ ${cnt} 1 roll /;
 		}
-		my $foomaticstr = ripdirective($header, $templ) . "\n";
-		push(@optionblob, "\n");
-		push(@optionblob, $foomaticstr);
-		# Stuff to insert into command line/job is more than one
-		# line? Let an "*End" line follow
-		if ($foomaticstr =~ /\n.*\n/s) {
-		    push(@optionblob, "*End\n");
-		}
+		push(@optionblob, sprintf("*Custom%s%s True: %s\n", $jcl, $name, $templ));
 		push(@optionblob,
 		    sprintf("*ParamCustom%s%s %s/%s: 1 real %f %f\n\n",
 			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
