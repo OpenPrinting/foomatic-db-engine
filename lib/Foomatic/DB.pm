@@ -3649,8 +3649,6 @@ sub getppd (  $ $ $ ) {
 	@group = split("/", $arg->{'group'}) if defined($arg->{'group'});
 	my $idx = $arg->{'idx'};
 
-	my $jcl = ($section eq 'JCLSetup' ? "JCL" : "");
-
 	# What is the execution style of the current option? Skip options
         # of unknown execution style
 	my $optstyle = ($arg->{'style'} eq 'G' ? "PS" :
@@ -3670,7 +3668,16 @@ sub getppd (  $ $ $ ) {
 	}
 
 	# Set default for missing section value
-	if (!defined($section)) {$section = "AnySetup";}
+	if (!defined($section)) {
+	    if ($optstyle eq "JCL") {
+		$section = "JCLSetup"
+	    }
+	    else {
+		$section = "AnySetup";
+	    }
+	}
+
+	my $jcl = ($section eq 'JCLSetup' ? "JCL" : "");
 
 	# Set default for missing tranaslation/longname
 	if (!$com) {$com = longname($name);}
@@ -4067,6 +4074,36 @@ sub getppd (  $ $ $ ) {
 		push(@optionblob,
 		     sprintf("*${jcl}CloseUI: *%s\n", $name));
 
+                 # Insert Custom Option
+		if ($type =~ /^(string|password)$/) {
+		    my $header = sprintf("*Custom%s%s True", $jcl, $name);
+		    my $templ = $cmd;
+		    if ($optstyle eq "JCL") {
+			$templ =~ s/%s/\\1/;
+		    }
+		    else {
+			my $cnt = 0;
+			my @words = split(/[ <>]/, $cmd);
+			foreach my $word (@words) {
+			    last if ($word eq '%s');
+			    $cnt++ if ($word);
+			}
+			$templ =~ s/%s/ ${cnt} 1 roll /;
+		    }
+		    my $foomaticstr = ripdirective($header, $templ) . "\n";
+		    push(@optionblob, "\n");
+		    push(@optionblob, $foomaticstr);
+		    # Stuff to insert into command line/job is more than one
+		    # line? Let an "*End" line follow
+		    if ($foomaticstr =~ /\n.*\n/s) {
+			push(@optionblob, "*End\n");
+		    }
+		    push(@optionblob,
+			sprintf("*ParamCustom%s%s %s/%s: 1 %s 0 %d\n\n",
+			    $jcl, $name, $name, $arg->{'comment'},
+			    $arg->{'maxlength'}));
+		}
+
 		if ($name eq "PageSize") {
 		    # Close the PageRegion, ImageableArea, and 
 		    # PaperDimension clauses
@@ -4383,9 +4420,35 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		}
 		
 		push(@optionblob,
-		     sprintf("*${jcl}CloseUI: *%s\n", $name));
+		    sprintf("*${jcl}CloseUI: *%s\n\n", $name));
+
+		# Insert custom option
+		my $header = sprintf("*Custom%s%s True", $jcl, $name);
+		my $templ = $cmd;
+		if ($optstyle eq "JCL") {
+		    $templ =~ s/%s/\\1/;
+		}
+		else {
+		    my $cnt = 0;
+		    my @words = split(/[ <>]/, $cmd);
+		    foreach my $word (@words) {
+			last if ($word eq '%s');
+			$cnt++ if ($word);
+		    }
+		    $templ =~ s/%s/ ${cnt} 1 roll /;
+		}
+		my $foomaticstr = ripdirective($header, $templ) . "\n";
+		push(@optionblob, "\n");
+		push(@optionblob, $foomaticstr);
+		# Stuff to insert into command line/job is more than one
+		# line? Let an "*End" line follow
+		if ($foomaticstr =~ /\n.*\n/s) {
+		    push(@optionblob, "*End\n");
+		}
+		push(@optionblob,
+		    sprintf("*ParamCustom%s%s %s/%s: 1 int %d %d\n\n",
+			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
 	    }
-	    
 	} elsif ($type eq 'float') {
 	    
 	    # Real numerical options do not exist in the Adobe
@@ -4565,7 +4628,35 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		}
 		
 		push(@optionblob,
-		     sprintf("*${jcl}CloseUI: *%s\n", $name));
+		     sprintf("*${jcl}CloseUI: *%s\n\n", $name));
+
+		# Insert custom option
+		my $header = sprintf("*Custom%s%s True", $jcl, $name);
+		my $templ = $cmd;
+		if ($optstyle eq "JCL") {
+		    $templ =~ s/%s/\\1/;
+		}
+		else {
+		    my $cnt = 0;
+		    my @words = split(/[ <>]/, $cmd);
+		    foreach my $word (@words) {
+			last if ($word eq '%s');
+			$cnt++ if ($word);
+		    }
+		    $templ =~ s/%s/ ${cnt} 1 roll /;
+		}
+		my $foomaticstr = ripdirective($header, $templ) . "\n";
+		push(@optionblob, "\n");
+		push(@optionblob, $foomaticstr);
+		# Stuff to insert into command line/job is more than one
+		# line? Let an "*End" line follow
+		if ($foomaticstr =~ /\n.*\n/s) {
+		    push(@optionblob, "*End\n");
+		}
+		push(@optionblob,
+		    sprintf("*ParamCustom%s%s %s/%s: 1 real %f %f\n\n",
+			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
+
 	    }
         }
     }
