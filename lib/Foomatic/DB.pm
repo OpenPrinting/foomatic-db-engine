@@ -4094,6 +4094,9 @@ sub getppd (  $ $ $ ) {
 			    $templ = $templ . "<0A>";
 			}
 		    }
+		    elsif ($optstyle eq "CmdLine") {
+			$templ = " pop ";
+		    }
 		    else {
 			my $cnt = 0;
 			my @words = split(/[ <>]/, $cmd);
@@ -4456,6 +4459,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 			$templ = $templ . "<0A>";
 		    }
 		}
+		elsif ($optstyle eq "CmdLine") {
+		    $templ = " pop ";
+		}
 		else {
 		    my $cnt = 0;
 		    my @words = split(/[ <>]/, $cmd);
@@ -4471,7 +4477,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 			$jcl, $name, $name, $arg->{'comment'}, $min, $max));
 	    }
 	} elsif ($type eq 'float') {
-	    
+
 	    # Real numerical options do not exist in the Adobe
 	    # specification for PPD files. So we map the numerical
 	    # options to enumerated options offering the minimum, the
@@ -4661,6 +4667,9 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		    if ($templ !~ m/<0A>$/) {
 			$templ = $templ . "<0A>";
 		    }
+		}
+		elsif ($optstyle eq "CmdLine") {
+		    $templ = " pop ";
 		}
 		else {
 		    my $cnt = 0;
