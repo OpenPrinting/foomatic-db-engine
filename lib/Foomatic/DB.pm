@@ -370,6 +370,7 @@ sub normalize {
     $str =~ s/[^a-z0-9\|]+/ /g;
     $str =~ s/(?<=[a-z])(?=[0-9])/ /g;
     $str =~ s/(?<=[0-9])(?=[a-z])/ /g;
+    $str =~ s/ //g;
     return $str;
 }
 
@@ -636,6 +637,7 @@ sub find_printer {
 		my $searcht = normalize($task->[0]);
 		my $lsearcht = length($searcht);
 		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
+		$searcht =~ s!(\\\|)!$1.*!g;
 		my $s = normalize($task->[1]);
 		if ((1 || $lsearcht >= $matchlength) &&
 		    $s =~ m!$searcht!i) {
@@ -651,6 +653,7 @@ sub find_printer {
 		my $searcht = normalize($task->[1]);
 		my $lsearcht = length($searcht);
 		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
+		$searcht =~ s!(\\\|)!$1.*!g;
 		my $s = normalize($task->[0]);
 		if ((1 || $lsearcht >= $matchlength) &&
 		    $s =~ m!$searcht!i) {

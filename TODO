@@ -1,4 +1,5 @@
-See also the bugtracker at foomatic.sourceforge.net.
+See also the bugtracker at http://bugs.linux-foundation.org/, product
+"OpenPrinting".
 
  - Possibility for users to have their personal default options
    (.lpoptions file as in CUPS, due to the Foomatic options having the same
@@ -8,8 +9,6 @@ See also the bugtracker at foomatic.sourceforge.net.
 
  - Write a few key lint-like and transforming tools for the xml data.
 
- - Fold foomatic-gswrapper into the foomatic-rip
-
  - Improve ascii support to lpdomatic and pdq files.  ASCII should
    simply be a matter of observing the ascii bit in the printer $dat
    and sending either crlf-ed text or postscriptifying and running
@@ -18,9 +17,4 @@ See also the bugtracker at foomatic.sourceforge.net.
    output (with head line, page numbers, ...). When one implements
    the possibility to pass text directly to the printer, one should
    consider the optional use or the "pr" filter.
-
- - PDQ file versioning is still unsatisfactory.  I changed from a
-   checksum to the current timestamp.  So now it's sequential, but
-   changes all every time.  Other spoolers' code needs a version story
-   in the first place.
 

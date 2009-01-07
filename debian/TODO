@@ -1,8 +1,0 @@
-Possible future plans:
-
-- Complete the manpages.
-
-- Package foomatic-filters-ppds?
-
-- Provide a simple way to generate custom debian packages containing
-  datafiles for selected printers/drivers?

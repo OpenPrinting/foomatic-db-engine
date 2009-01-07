@@ -460,7 +460,7 @@ parse(char **data, /* I/O - Data to process */
 			if (debug)
 			  fprintf(stderr, 
 				  "    Resetting Driver/PPD.\n");
-			strcpy(cid, "Postscript");
+			cid[0] = '\0';
 			cppd[0] = '\0';
 		      }
 		    }
@@ -690,7 +690,7 @@ parse(char **data, /* I/O - Data to process */
 			if (debug)
 			  fprintf(stderr, 
 				  "    Resetting Driver/PPD.\n");
-			strcpy(cid, "Postscript");
+			cid[0] = '\0';
 			cppd[0] = '\0';
 		      }
 		    }
@@ -878,6 +878,7 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  }
 		}
+		if (cppd[0]) strcpy(cid, "Postscript");
 		if (nestinglevel < inid) {
 		  inid = 0;
 		  strcpy(cid, currtagbody);
@@ -1608,7 +1609,7 @@ parse(char **data, /* I/O - Data to process */
 				      If pid is set, we want only combos
 				      which provide PPDs and if we do
 				      not have a ready-made PPD we must */
-			 /* (driverhasproto) || */ /* have a command line
+			 (driverhasproto) || /* have a command line
 						prototype */
 			 ((cppd[0] != '\0')))) { /* or a ready-made
 						    PPD file. */
