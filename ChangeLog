@@ -1,3 +1,33 @@
+2009-01-07  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* configure.ac: Bumped version number to 4.0.0.
+
+	* foomatic-combo-xml.c: All printers with <postscript> in their
+	  <lang> sections got listed as supported by the "Postscript"
+	  driver. Now explicit assignment of this driver via the
+	  <printers> section in the driver entry or the <drivers> section
+	  in the printer entry is required.
+	  Let the overview for listing only printer/driver combos with
+	  valid PPDs (foomatic-combo-xml -C") also show combos where the
+	  driver is only mentioned in the printer's driver list. Now
+	  foomatic-compiledb really generates all PPDs which are available
+	  on the OpenPrinting web site (bug #291).
+
+	* README, USAGE, TODO: Updated for version 4.0.0.
+
+	* lib/Foomatic/DB.pm: Improved printer search. Now searches with model
+	  number but without product line name also work (ex: "Ricoh MPC3500"
+	  finds the "Ricoh Aficio MP C3500").
+
+	* debian/: Removed. The Debian package maintainer does not maintain
+	  the debian directory in this BZR repository.
+
+	* foomatic-filters-ppds-README, foomatic-filters-ppds-install,
+	  README.build-foomatic-filters-ppds, Makefile.in: Removed build
+	  of the foomatic-filters-ppds package, as foomatic-rip is now
+	  written in C and so no universal platform-independent tarball of
+	  this type can be created any more.
+
 2008-11-11  Lars Uebernickel <larsuebernickel@gmx.de>
 	* lib/Foomatic/DB.pm: Set default section to 'JCL' when the option is
 	a JCL option.

@@ -252,9 +252,9 @@ clean: lib/Makefile remove-trash
 	rm -f $(BINFILES:=.1) $(SBINFILES:=.8)
 #	Remove links from inplace installation
 	rm -f foomatic-rip foomatic-datafile man
-#       Remove foomatic-filters-ppds-<version>.tar.gz package
-	rm -rf foomatic-filters-ppds foomatic-filters-ppds-[0-9]*
-	rm -rf foomatic-filters-ppds*.tar.gz
+#       Remove foomatic-ppds-<version>.tar.gz package
+	rm -rf foomatic-ppds foomatic-ppds-[0-9]*
+	rm -rf foomatic-ppds*.tar.gz
 
 distclean: clean
 	rm -f $(AC_OUTPUT_FILES) config.log config.status config.cache
@@ -332,44 +332,6 @@ lib/Foomatic/Defaults.pm: Makefile makeDefaults
 	chmod a+rx ./makeDefaults
 	./makeDefaults $(INPLACE)
 	if [ x$(INPLACE) = x--inplace ] ; then touch .testing-stamp ; fi
-
-# Make foomatic-filters-ppds-<version>.tar.gz 
-filters-ppds: inplace
-#	Generate the package name
-	local_libdir=$(LOCAL_LIBDIR); \
-	packagename=foomatic-filters-ppds-$${local_libdir##*foomatic-db-}; \
-	( echo $${packagename} | \
-	  perl -e "(<> =~ m:/: ? exit 1 : exit 0)" ) || \
-	  packagename=foomatic-filters-ppds-`date +%Y%m%d`; \
-	rm -rf $${packagename} ppd; \
-	mkdir -p $${packagename}/share; \
-	mkdir -p $${packagename}/bin; \
-	mkdir -p $${packagename}/share/man/man1; \
-	./foomatic-compiledb -t ppd -j 1 || exit 1; \
-	sleep 10; \
-	( cd ppd; \
-	  for file in `ls -1 *.ppd`; do \
-	    make=$${file%%-*}; \
-	    mkdir -p $$make || exit 1; \
-	    mv $$file $$make/ || exit 1; \
-	  done; \
-	  rm -f *.ppd || exit 1; \
-	); \
-	mv ppd $${packagename}/share || exit 1; \
-	${INSTALL} -m 755 $(LOCAL_FOOMATIC_RIP) $${packagename}/bin || exit 1; \
-	local_foomatic_rip=$(LOCAL_FOOMATIC_RIP); \
-	foomatic_filters_root=$${local_foomatic_rip%/*}; \
-	${INSTALL} -m 755 $${foomatic_filters_root}/foomatic-gswrapper \
-	  $${packagename}/bin || exit 1; \
-	${INSTALL} -m 644 $${foomatic_filters_root}/*.1 $${packagename}/share/man/man1 \
-	   || exit 1; \
-	${INSTALL} -m 755 foomatic-filters-ppds-install $${packagename}/install || exit 1; \
-	${INSTALL} -m 644 foomatic-filters-ppds-README $${packagename}/README || exit 1; \
-	${INSTALL} -m 644 COPYING $${packagename}/COPYING || exit 1; \
-	chmod -R a+rX,go-w $${packagename} || exit 1; \
-	rm -f $${packagename}.tar.gz || exit 1; \
-	unset GZIP; \
-	tar -cf - $${packagename} | gzip > $${packagename}.tar.gz || exit 1
 
 .PHONY: all defaults check-config build install install-bin \
 	man inplace testing clean inplace-clean testing-clean distclean \
