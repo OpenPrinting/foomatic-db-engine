@@ -135,7 +135,7 @@ sub cupslistppds {
 		    Foomatic::DB::getppdheaderdata($printer, $driver, 
 						   ($onlyrecommended ? '' :
 						    $printer->{'driver'}));
-	    print "\"$progname:$longname\" en \"$make\" \"$nickname\" \"$ieee1284\"\n";
+	    print "\"$progname:$printer->{'id'}-$driver.ppd\" en \"$make\" \"$nickname\" \"$ieee1284\"\n";
 	}
     }
 }

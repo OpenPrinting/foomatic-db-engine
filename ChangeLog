@@ -1,3 +1,8 @@
+2009-01-08  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppdfile.in: "foomatic-ppdfile list" showed wrong PPD
+	  file names for some printers (bug #281).
+
 2009-01-07  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* configure.ac: Bumped version number to 4.0.0.
