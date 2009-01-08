@@ -42,17 +42,8 @@ component.
 Intro
 -----
 
-This is the stable version of Foomatic. See
-
-http://www.freestandards.org/en/OpenPrinting/Database/HowToContribute#programming
-
-to know more about its development.
-
-Your suggestions, bug reports, patches, ... are welcome on
-
-http://forums.openprinting.org/list.php?34
-
-This version is also the base of our database web interface on
+This is the stable version of Foomatic. This version is also the base
+of our database web interface on
 
 http://www.openprinting.org/
 
@@ -959,7 +950,7 @@ auto-detected):
  db/source/printer/<poid>.xml    - printer-specific data, one per printer id
  db/source/driver/<driver>.xml   - driver-specific data, one per driver name
  db/source/opt/<idx>.xml         - option data, one file per option
- db/source/PPD/         0        - Ready-made PPD files, usually supplied by
+ db/source/PPD/                  - Ready-made PPD files, usually supplied by
                                    printer manufacturers for their PostScript
 				   printers.
 
