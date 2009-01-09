@@ -1,3 +1,7 @@
+2009-01-09  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* Tagged branch for release 4.0.0.
+
 2009-01-08  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppdfile.in: "foomatic-ppdfile list" showed wrong PPD
