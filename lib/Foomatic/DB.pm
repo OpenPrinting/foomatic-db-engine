@@ -4113,7 +4113,7 @@ sub getppd (  $ $ $ ) {
 		    push(@optionblob,
 			sprintf("*ParamCustom%s%s %s/%s: 1 %s 0 %d\n\n",
 			    $jcl, $name, $name, $arg->{'comment'},
-			    $arg->{'maxlength'}));
+			    $type, $arg->{'maxlength'}));
 		}
 
 		if ($name eq "PageSize") {

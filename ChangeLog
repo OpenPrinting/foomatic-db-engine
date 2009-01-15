@@ -1,3 +1,9 @@
+2009-01-15  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: For string and password options the
+	  "*ParamCustom..." keywords were not generated correctly (option
+	  type missing, bug #297).
+
 2009-01-09  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* Tagged branch for release 4.0.0.
