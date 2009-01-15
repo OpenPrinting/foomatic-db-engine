@@ -3,6 +3,8 @@
 	* lib/Foomatic/DB.pm: For string and password options the
 	  "*ParamCustom..." keywords were not generated correctly (option
 	  type missing, bug #297).
+	  Changed the way how the driver's short description is added to the
+	  PPD so that it can be longer than 80 characters (bug #296).
 
 2009-01-09  Till Kamppeter <till.kamppeter@gmail.com>
 
