@@ -1,3 +1,10 @@
+2009-02-25  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added "application/vnd.apple-pdf" as input
+	  mime type to the generated Foomatic PPDs, so that also under Mac
+	  OS X a full PDF printing workflow will get established (bug
+	  #313).
+
 2009-01-15  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: For string and password options the

@@ -5268,6 +5268,7 @@ sub get_tmpl {
 *cupsModelNumber:  2
 *cupsFilter:	"application/vnd.cups-postscript 100 foomatic-rip"
 *cupsFilter:	"application/vnd.cups-pdf 0 foomatic-rip"
+*cupsFilter:	"application/vnd.apple-pdf 25 foomatic-rip"
 *%pprRIP:        foomatic-rip other
 *ModelName:     "\@\@MODEL\@\@"
 *ShortNickName: "\@\@SHORTNICKNAME\@\@"
