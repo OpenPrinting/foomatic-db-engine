@@ -36,7 +36,7 @@ if (!$opt_t) {
 }
 my $destdir;
 if( $opt_d ){
-    $destdir = $destdir;
+    $destdir = $opt_d;
 }
 
 print STDERR "\n";
