@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([footmatic-db-engine], 4.0.0)
+AC_INIT([footmatic-db-engine], 4.1.0)
 AC_CONFIG_SRCDIR(foomatic-perl-data.c)
 
 dnl If the user didn't specify the $sysconfdir on the command line, let it

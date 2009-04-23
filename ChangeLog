@@ -1,3 +1,8 @@
+2009-04-23  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README, USAGE, configure.ac: Set version number to 4.1.0, to be
+	  always newer than the stable branch.
+
 2009-03-17  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-compiledb.in: Fixed copy-and-paste bug in foomatic-compiledb
