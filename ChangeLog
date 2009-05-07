@@ -1,3 +1,8 @@
+2009-05-07  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: If a JCL option is member of a composite option
+	  it was generated incorrectly in the PPD files (Ubuntu bug #361772).
+
 2009-04-23  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README, USAGE, configure.ac: Set version number to 4.1.0, to be

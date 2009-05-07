@@ -3374,11 +3374,11 @@ sub setgroupandorder {
 	    $a->{'group'} = "$name";
 	}
 
-	# If the member is composite, call this function on it recursively.
-	# This sets the groups of the members of this composite member option
-	# and also sets the section and order number of this composite
-	# member, so that we can so that we can set section and order of the
-	# currently treated option
+	# If the member is composite, call this function on it
+	# recursively.  This sets the groups of the members of this
+	# composite member option and also sets the section and order
+	# number of this composite member, so that we can set section
+	# and order of the currently treated option
 	$db->setgroupandorder($a, $members_in_subgroup)
 	    if $a->{'style'} eq 'X';
 
@@ -3671,16 +3671,16 @@ sub getppd (  $ $ $ ) {
 	}
 
 	# Set default for missing section value
-	if (!defined($section)) {
-	    if ($optstyle eq "JCL") {
-		$section = "JCLSetup"
-	    }
-	    else {
-		$section = "AnySetup";
-	    }
+	if (defined($arg->{'style'}) && ($arg->{'style'} eq "J") &&
+	    !defined($arg->{'memberof'})) {
+	    $arg->{'section'} = "JCLSetup";
+        } elsif (!defined($arg->{'section'})) {
+	    $arg->{'section'} = "AnySetup"
 	}
+	$section = $arg->{'section'};
 
-	my $jcl = ($section eq 'JCLSetup' ? "JCL" : "");
+	my $jcl = (($section eq 'JCLSetup') &&
+		   !defined($arg->{'memberof'}) ? "JCL" : "");
 
 	# Set default for missing tranaslation/longname
 	if (!$com) {$com = longname($name);}
@@ -3841,7 +3841,8 @@ sub getppd (  $ $ $ ) {
 		     sprintf("\n*${jcl}OpenUI *%s/%s: PickOne\n", $name, 
 			     cutguiname($com, $shortgui)));
 
-		if ($arg->{'style'} ne 'G' && ($optstyle ne "JCL")) {
+		if ($arg->{'style'} ne 'G' && 
+		    (($optstyle ne "JCL") || defined($arg->{'memberof'}))) {
 		    # For non-PostScript options insert line with option
 		    # properties
 		    push(@optionblob, sprintf
@@ -3986,7 +3987,9 @@ sub getppd (  $ $ $ ) {
 		    # inserted, unless they are member of a composite
 		    # option AND they are set to the "Controlled by
 		    # '<Composite>'" choice (driverval is "\x01")
-		    if (($arg->{'style'} eq 'G' || $optstyle eq "JCL") &&
+		    if (($arg->{'style'} eq 'G' || 
+			 (($optstyle eq "JCL") &&
+			  !defined($arg->{'memberof'}))) &&
 			($v->{'driverval'} ne "\x01")) {
 			# Ghostscript argument; offer up ps for
 			# insertion
