@@ -1,3 +1,14 @@
+2009-05-08  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c: If a printer XML entry has a driver in its
+	  driver list but for which there is no driver XML entry, this
+	  printer/driver combo was considered as producing a PPD because the
+	  driver is not in the list of drivers without command line
+	  prototype. Replaced the negative list of drivers without command
+	  line prototype by a positive list of drivers with command
+	  line prototype. Now non-existing driver XML files are handled
+	  correctly as drivers not producing PPDs (Ubuntu bug #373371).
+
 2009-05-07  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: If a JCL option is member of a composite option

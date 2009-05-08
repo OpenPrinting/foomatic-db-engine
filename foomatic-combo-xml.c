@@ -1507,14 +1507,11 @@ parse(char **data, /* I/O - Data to process */
 		      fprintf(stderr,
 			      "    Overview: Driver: %s Command line: |%s|\n",
 			      cdriver, s);
-		    if (*s == '\0') {
-		      /* We have found an empty command line prototype, so]
-			 this driver does not produce any PPD file, 
-			 mark this driver as not having a command line
-			 prototype, remove the file from memory and
-			 return. */
+		    if (*s != '\0') {
+		      /* We have found a non-empty command line prototype, so
+			 this driver produces PPD files */
 		      /* Add the driver to the first entry in the printer
-			 list, the pseudo printer "noproto" */
+			 list, the pseudo printer "proto" */
 		      plistpointer = *printerlist;
 		      plistpreventry = NULL;
 		      dlistpointer = plistpointer->drivers;
@@ -1536,6 +1533,9 @@ parse(char **data, /* I/O - Data to process */
 			else 
 			  plistpointer->drivers = dlistpointer;
 		      }
+		    } else {
+		      /* We have found an empty command line prototype, so
+			 this driver does not produce any PPD file, */
 		      /* Renove the driver XML data from memory */
 		      free((void *)(*data));
 		      *data = NULL;
@@ -1588,8 +1588,8 @@ parse(char **data, /* I/O - Data to process */
 		    driverhasproto = 0;
 		    if ((cid[0] != '\0') && (pid)) {
 		      /* Check if our driver has a command line prototype,
-			 it should not be driver of the pseudo-printer
-			 "noproto" (first item in the printer list) then */
+			 it should be driver of the pseudo-printer
+			 "proto" (first item in the printer list) then */
 		      plistpointer = *printerlist;
 		      plistpreventry = NULL;
 		      dlistpointer = plistpointer->drivers;
@@ -1599,7 +1599,7 @@ parse(char **data, /* I/O - Data to process */
 			dlistpreventry = dlistpointer;
 			dlistpointer = (driverlist_t *)(dlistpointer->next);
 		      }
-		      if (dlistpointer == 0) {
+		      if (dlistpointer != 0) {
 			driverhasproto = 1;
 		      }
 		    }
@@ -2284,12 +2284,12 @@ main(int  argc,     /* I - Number of command-line arguments */
       pid = NULL;
 
     /* Add a pseudo-printer to the printer list to which we assign all
-       drivers without command line prototype, so we can determine
-       which printer/driver combos do not provide a PPD file. */
+       drivers with a command line prototype, so we can determine
+       which printer/driver combos provide PPD files. */
     if (pid) {
       plistpointer = 
 	(printerlist_t *)malloc(sizeof(printerlist_t));
-      strcpy(plistpointer->id, "noproto");
+      strcpy(plistpointer->id, "proto");
       plistpointer->drivers = NULL;
       plistpointer->next = NULL;
       printerlist = plistpointer;
@@ -2413,7 +2413,7 @@ main(int  argc,     /* I - Number of command-line arguments */
 	 printer XML entry. This we do only for a general overview, not
          for an overview of valid PPD files ("-C" option) */
       while (printerlist) {
-	if (printerlist->id && strcmp(printerlist->id, "noproto")) {
+	if (printerlist->id && strcmp(printerlist->id, "proto")) {
 	  if (debug) fprintf(stderr, "    Printer only mentioned in driver XML files:\n      Printer ID: |%s|\n",
 			     printerlist->id);
 	  /*strcpy(printerlist->id, translateid(printerlist->id, idlist));*/
