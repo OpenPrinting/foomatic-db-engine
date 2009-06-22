@@ -2,7 +2,7 @@
 
 	* lib/Foomatic/DB.pm: At some points "==" was used to compare strings,
 	  it must be "eq". Especially this broke the PPD generation for all
-	  boolean command-line-style options.
+	  boolean command-line-style options (bug #356).
 
 2009-05-08  Till Kamppeter <till.kamppeter@gmail.com>
 
