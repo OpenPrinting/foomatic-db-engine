@@ -4247,7 +4247,7 @@ ${foomaticstr}*ParamCustomPageSize Width: 1 points 36 $maxpagewidth
 		 sprintf("\n*${jcl}OpenUI *%s/%s: Boolean\n", $name, 
 			 cutguiname($com, $shortgui)));
 
-	    if ($arg->{'style'} eq 'G' || $optstyle == "JCL") {
+	    if ($arg->{'style'} eq 'G' || $optstyle eq "JCL") {
 		# Ghostscript argument
 		$psstr = $cmd;
 		# Boolean options should not use the "%s" default for $cmd
@@ -4939,7 +4939,7 @@ EOFPGSZ
 		s/(?<=[a-zA-Z0-9])[^a-zA-Z0-9]+[a-zA-Z0-9]*$//;
 	    my $new =
 		"$parts{'make'} $parts{'model'}, $parts{'driver'}";
-	    last if ($new == $shortnickname);
+	    last if ($new eq $shortnickname);
 	    $shortnickname = $new;
 	}
 	if (length($shortnickname) > 31) {
