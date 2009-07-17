@@ -30,6 +30,11 @@ my $destdir = $opt_f;
 
 $ppdfile = $ARGV[0];
 
+if ($ppdlink && !$drivers) {
+    $ppdlink = 0;
+    warn("WARNING: \"-l\" set without supplying a driver via \"-d\". No PPD file links will get created!\n");
+}
+
 my $ppddlpath;
 if ($basedir) {
     $basedir =~ s:/+$::;
@@ -63,10 +68,29 @@ my $parameters = {
 
 my $db = Foomatic::DB->new();
 my $dat = ppdtoperl($ppdfile, $parameters);
-my $existing = ($db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1))[0];
-my $d = $db->get_printer($existing) if $existing;
-my $result;
-if ($existing && !$d->{'noxmlentry'}) {
+my @existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
+foreach my $product (@{$dat->{ppdproduct}}) {
+    my @pids = $db->find_printer("$dat->{'make'}|$product", 4, 1);
+    push(@existing,
+	 grep {
+	     !Foomatic::DB::member($_, @existing);
+	 } @pids);
+}
+push(@existing,
+     grep {
+	 !Foomatic::DB::member($_, @existing);
+     } map {
+         m:^(.*)\.xml$:; $1;
+     } map {
+         m:([^/]+)$:; $1;
+     } split(/\n/s, 
+	     `find $libdir/db/source/printer -name "*.xml" -print0 | xargs -0 grep -l $ppddlpath`));
+my $entryfound = 0;
+foreach my $entry (@existing) {
+    my $d = $db->get_printer($entry);
+    my $result;
+    next if $d->{'noxmlentry'};
+    $entryfound = 1;
     $db->{'dat'} = $d;
     if (!defined($parameters->{'drivers'})) {
 	$parameters->{'drivers'} = [$dat->{'driver'}];
@@ -78,18 +102,23 @@ if ($existing && !$d->{'noxmlentry'}) {
     }
     Foomatic::DB::apply_driver_and_pdl_info($db->{'dat'}, $parameters);
     $db->{'dat'}{'general_ieee'} = $dat->{'general_ieee'} if
-	defined($dat->{'general_ieee'});
+	defined($dat->{'general_ieee'}) && 
+	!defined($db->{'dat'}{'general_ieee'});
     $db->{'dat'}{'general_mfg'} = $dat->{'general_mfg'} if
-	defined($dat->{'general_mfg'});
+	defined($dat->{'general_mfg'}) &&
+	!defined($db->{'dat'}{'general_mfg'});
     $db->{'dat'}{'general_mdl'} = $dat->{'general_mdl'} if
-	defined($dat->{'general_mdl'});
+	defined($dat->{'general_mdl'}) &&
+	!defined($db->{'dat'}{'general_mdl'});
     $db->{'dat'}{'general_des'} = $dat->{'general_des'} if
-	defined($dat->{'general_des'});
+	defined($dat->{'general_des'}) &&
+	!defined($db->{'dat'}{'general_des'});
     $db->{'dat'}{'general_cmd'} = $dat->{'general_cmd'} if
-	defined($dat->{'general_cmd'});
+	defined($dat->{'general_cmd'}) &&
+	!defined($db->{'dat'}{'general_cmd'});
     $db->{'dat'}{'comment'} .= "\n      <p>\n\n" . $dat->{'comment'};
     my $xml1 = $db->perltoxml('p');
-    my $xml2 = $db->get_printer_xml($existing);
+    my $xml2 = $db->get_printer_xml($entry);
     $xml2 =~ s/(<\/functionality>)/$1\n  <driver><\/driver>/s if 
 	$xml2 !~ /<driver>/;
     $xml2 = transferregexp($xml1, $xml2,
@@ -112,21 +141,49 @@ if ($existing && !$d->{'noxmlentry'}) {
 	'<\/drivers>[\s\n\r]*<comments>.*<\/comments>[\s\n\r]*<\/printer>');
     $result = $xml2;
     print "Modifying printer entry $db->{'dat'}{'id'}.xml ...\n";
-} else {
+    open FILE, "> " . ($destdir ? $destdir . "/" : ()) . 
+	$db->{'dat'}{'id'} . ".xml" or
+	die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
+    print FILE $result;
+    close FILE;
+    delete($db->{'dat'});
+}
+if (!$entryfound) {
     $db->{'dat'} = $dat;
     $db->{'dat'}{'comment'} =
 	"      This database entry was automatically generated\n" .
 	"      from the PPD file for this printer.<p>\n\n" .
 	$db->{'dat'}{'comment'};
     $db->{'dat'}{'functionality'} = "A";
-    $result = $db->perltoxml('p');
-    print "Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
+    foreach my $product (@{$db->{'dat'}{ppdproduct}}) {
+	$db->{'dat'}{'model'} =
+	    Foomatic::DB::clean_manufacturer_name(Foomatic::DB::clean_model_name($product))
+	    if scalar(@{$db->{'dat'}{ppdproduct}}) > 1;
+	$db->{'dat'}{'model'} =~ s/^$db->{'dat'}{'make'}\s*//i;
+	$db->{'dat'}{'id'} =
+	    Foomatic::DB::generatepid($db->{'dat'}{'make'},
+				      $db->{'dat'}{'model'});
+	if (scalar(@{$db->{'dat'}{ppdproduct}}) > 1) {
+	    $db->{'dat'}{'general_mfg'} = $db->{'dat'}{'ppdmanufacturer'} if
+		$db->{'dat'}{'ppdmanufacturer'} &&
+		!$db->{'dat'}{'general_mfg'};
+	    $db->{'dat'}{'general_mdl'} = $product;
+	    $db->{'dat'}{'general_ieee'} = "MFG:" .
+		$db->{'dat'}{'general_mfg'} .
+		";MDL:" . $db->{'dat'}{'general_mdl'} . ";" .
+		($db->{'dat'}{'general_cmd'} ?
+		 "CMD:" . $db->{'dat'}{'general_cmd'} . ";" : "");
+	}
+	$result = $db->perltoxml('p');
+	print "Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
+	open FILE, "> " . ($destdir ? $destdir . "/" : ()) . 
+	    $db->{'dat'}{'id'} . ".xml" or
+	    die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
+	print FILE $result;
+	close FILE;
+    }
+    delete($db->{'dat'});
 }
-open FILE, "> " . ($destdir ? $destdir . "/" : ()) . 
-    $db->{'dat'}{'id'} . ".xml" or
-    die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
-print FILE $result;
-close FILE;
 
 exit 0;
 

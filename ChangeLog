@@ -1,3 +1,18 @@
+2009-07-17  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added support for multiple "*Product:" lines
+	  in PPD files, improved determination of the model name from the
+	  PPD file, put generation of the Foomatic ID from make and model
+	  into the function generatepid().
+	  
+	* foomatic-ppd-to-xml.in: For determining whether there is already
+	  a Foomatic entry for the given PPD, use also all "*Product:"
+	  lines in the PPD and the PPD links in the XML files in the
+	  OpenPrinting database. Let more than one printer XML file get
+	  created if the PPD has multiple "*Product:" lines. General
+	  support for multiple printer XMLs for one PPD file. Warn if the
+	  "-l" command line switch is used if "-d" is not supplied.
+	
 2009-06-22  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: At some points "==" was used to compare strings,

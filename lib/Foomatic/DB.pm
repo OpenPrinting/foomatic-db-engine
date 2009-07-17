@@ -1415,9 +1415,12 @@ sub ppdfromvartoperl {
 	    $line =~ m!^([^\"]*?)\s*\"!;
 	    $cmd .= " $1";
 	    $cmd =~ s/^\s*//;
-	    $dat->{'ppdproduct'} = unhexify($cmd);
-	    $dat->{'ppdproduct'} =~ s/^\s*\(\s*//;
-	    $dat->{'ppdproduct'} =~ s/\s*\)\s*$//;
+	    my $ppdproduct = unhexify($cmd);
+	    $ppdproduct =~ s/^\s*\(\s*//;
+	    $ppdproduct =~ s/\s*\)\s*$//;
+	    @{$dat->{'ppdproduct'}} = ()
+		if !defined($dat->{'ppdproduct'});
+	    push(@{$dat->{'ppdproduct'}}, $ppdproduct);
 	} elsif (m!^\*Manufacturer:\s*\"(.*)$!) {
 	    # "*Manufacturer: <code>"
 	    my $line = $1;
@@ -2087,12 +2090,15 @@ sub ppdfromvartoperl {
 	($dat->{'make'}, $dat->{'model'}) = guessmake($dat->{'makemodel'});
 	$dat->{'model'} =~ s/^(.*?)\s*(,|Foomatic|CUPS|\(?\d+\.\d+\)?)/$1/i;
     }
-    if (defined($dat->{'general_mdl'})) {
+    if (defined($dat->{'ppdmodelname'})) {
+	(my $dummy, $dat->{'model'}) = guessmake($dat->{'ppdmodelname'});
+    } elsif (defined($dat->{'ppdproduct'}) &&
+	     (scaler(@{$dat->{'ppdproduct'}}) == 1)) {
+	$dat->{'model'} = $dat->{'ppdproduct'}[0];
+    } elsif (!$dat->{'model'} && defined($dat->{'general_mdl'})) {
 	$dat->{'model'} = $dat->{'general_mdl'};
-    } elsif (defined($dat->{'ppdmodelname'})) {
-	$dat->{'model'} = guessmake($dat->{'ppdmodelname'});
-    } elsif (!$dat->{'model'} && defined($dat->{'ppdproduct'})) {
-	$dat->{'model'} = $dat->{'ppdproduct'};
+    } elsif (defined($dat->{'ppdproduct'})) {
+	$dat->{'model'} = $dat->{'ppdproduct'}[0];
     }
     $dat->{'make'} = clean_manufacturer_name($dat->{'make'});
     $dat->{'model'} = clean_manufacturer_name($dat->{'model'});
@@ -2106,7 +2112,7 @@ sub ppdfromvartoperl {
     # and *Product fields of the PPD.
     $dat->{'general_mfg'} = $dat->{'ppdmanufacturer'} if 
 	$dat->{'ppdmanufacturer'} && !$dat->{'general_mfg'};
-    $dat->{'general_mdl'} = $dat->{'ppdproduct'} if 
+    $dat->{'general_mdl'} = $dat->{'ppdproduct'}[0] if 
 	$dat->{'ppdproduct'} && !$dat->{'general_mdl'};
     $dat->{'general_ieee'} = "MFG:" . $dat->{'general_mfg'} .
 	";MDL:" . $dat->{'general_mdl'} . ";" if 
@@ -2114,23 +2120,8 @@ sub ppdfromvartoperl {
 	!$dat->{'general_ieee'};
 
     # Generate the Foomatic printer ID
-    if (!$dat->{'id'}) {
-	my $mk = $dat->{'make'};
-	$mk =~ s/\s+/_/g;
-	$mk =~ s/\+/plus/g;
-	$mk =~ s/[^A-Za-z0-9\._]/_/g;
-	$mk =~ s/_+/_/g;
-	$mk =~ s/^_//;
-	$mk =~ s/_$//;
-	my $md = $dat->{'model'};
-	$md =~ s/\s+/_/g;
-	$md =~ s/\+/plus/g;
-	$md =~ s/[^A-Za-z0-9\.\-]/_/g;
-	$md =~ s/_+/_/g;
-	$md =~ s/^_//;
-	$md =~ s/_$//;
-	$dat->{'id'} = "$mk-$md";
-    }
+    $dat->{'id'} = generatepid($dat->{'make'}, $dat->{'model'})
+	if !$dat->{'id'};
 
     # Find out printer's page description languages and suitable drivers
     apply_driver_and_pdl_info($dat, $parameters);
@@ -2206,6 +2197,24 @@ sub ppdfromvartoperl {
     generalentries($dat);
 
     return $dat;
+}
+
+sub generatepid {
+    # Generate the Foomatic printer ID
+    my ($mk, $md) = @_;
+    $mk =~ s/\s+/_/g;
+    $mk =~ s/\+/plus/g;
+    $mk =~ s/[^A-Za-z0-9\._]/_/g;
+    $mk =~ s/_+/_/g;
+    $mk =~ s/^_//;
+    $mk =~ s/_$//;
+    $md =~ s/\s+/_/g;
+    $md =~ s/\+/plus/g;
+    $md =~ s/[^A-Za-z0-9\.\-]/_/g;
+    $md =~ s/_+/_/g;
+    $md =~ s/^_//;
+    $md =~ s/_$//;
+    return "$mk-$md";
 }
 
 sub perltoxml {
