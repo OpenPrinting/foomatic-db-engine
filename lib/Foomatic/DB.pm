@@ -1261,11 +1261,19 @@ sub apply_driver_and_pdl_info {
 		$drivers{'ljet4d'} = 1;
 		$drivers{'ljet4'} = 1;
 		$drivers{'lj4dith'} = 1;
-		$drivers{'hpijs'} = 1;
+		if ($dat->{'make'} =~ /^(HP|Hewlett[\s-]+Packard)$/i) {
+		    $drivers{'hplip'} = 1;
+		} else {
+		    $drivers{'hpijs-pcl5e'} = 1;
+		}
 		$drivers{'gutenprint'} = 1;
 	    } elsif ($level eq "5c") {
 		$drivers{'cljet5'} = 1;
-		$drivers{'hpijs'} = 1;
+		if ($dat->{'make'} =~ /^(HP|Hewlett[\s-]+Packard)$/i) {
+		    $drivers{'hplip'} = 1;
+		} else {
+		    $drivers{'hpijs-pcl5c'} = 1;
+		}
 	    } elsif ($level eq "5") {
 		$drivers{'ljet3d'} = 1;
 		$drivers{'ljet3'} = 1;
@@ -3201,16 +3209,18 @@ sub deviceIDfromDBEntry {
 sub ppd1284DeviceID {
 
     # Clean up IEEE-1284 device ID to only contain the fields relevant
-    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU), thus
+    # to printer model auto-detection (MFG, MDL, DES, CMD, SKU, DRV), thus
     # the line length limit of PPDs does not get exceeded on very long
     # ID strings.
 
     my ($id) = @_;
     my $ppdid = "";
     
-    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMANDS?\s*SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
+    foreach my $field ("(MFG|MANUFACTURER)", "(MDL|MODEL)", "(CMD|COMMANDS?\\s*SET)", "(DES|DESCRIPTION)", "SKU", "DRV") {
 	if ($id =~ m/(\b$field:\s*[^:;]+;?)/is) {
-	    $ppdid .= $1;
+	    my $f = $1;
+	    $ppdid .= ";" if $ppdid && $ppdid !~ /;$/;
+	    $ppdid .= $f;
 	}
     }
 
@@ -3286,6 +3296,7 @@ sub getppdheaderdata {
 	    }
 	}
     }
+    $ieee1284 .= ";" if $ieee1284 && $ieee1284 !~ /;$/;
     $ieee1284 .= "DRV:D$driver" .
 	($recdriver ? ($driver eq $recdriver ? ",R1" : ",R0") : "") .
 	"$drvfield;";
@@ -4975,9 +4986,10 @@ EOFPGSZ
 	    $dat->{$type} = '';
 	}
     }
-    my $extralines = $dat->{'printerppdentry'} .
-	             $dat->{'driverppdentry'} .
-		     $dat->{'comboppdentry'};
+    my $extralines = ($dat->{'comboppdentry'} ?
+		      $dat->{'comboppdentry'} :
+		      $dat->{'printerppdentry'} .
+		      $dat->{'driverppdentry'});
 
     my $tmpl = get_tmpl();
     $tmpl =~ s!\@\@POSTPIPE\@\@!$postpipe!g;
@@ -5298,6 +5310,8 @@ sub get_tmpl {
 *PSVersion:	"(3010.000) 861"
 *PSVersion:	"(3010.000) 862"
 *PSVersion:	"(3010.000) 863"
+*PSVersion:	"(3010.000) 864"
+*PSVersion:	"(3010.000) 870"
 *LanguageLevel:	"3"
 \@\@COLOR\@\@
 *FileSystem:	False

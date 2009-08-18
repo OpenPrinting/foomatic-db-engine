@@ -147,8 +147,7 @@ sub sortdrivers ($$) {
 			"bj8hg12f.upp",
 			"bj8pp12f.upp",
 			# HP and compatible inkjets
-			"hpijs-rss", # HP drivers, patched
-			"hpijs", # HP drivers, with Duplex and 1200 dpi
+			"hplip", # HP drivers, with Duplex and 1200 dpi
 			"cdj970", # Duplex support
 			"DJ", # HP drivers, but no duplex
 			"chp2200", # HP driver

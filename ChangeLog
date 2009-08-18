@@ -1,3 +1,24 @@
+2009-08-18  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-preferred-driver.in: The "hpijs" driver entry got replaced
+	  by "hplip".
+
+	* lib/Foomatic/DB.pm: Add "hpijs-pcl5e" or "hpijs-pcl5c" or "hplip"
+	  instead of "hpijs" to the driver list of the XML file of a PCL 5c/e
+	  printer if a printer XML file is generated from a PPD file.
+
+	  Fixed ppd1284DeviceID() function, it did not recognize the
+	  "CMD"/"COMMAND SET" field in the device ID string.
+
+	  Made sure that the fields in the IEEE-1284 device ID get closed with
+	  a semicolon before adding a new field.
+
+	  If there is a <ppdentry> XML tag for the printer/driver combo, do not
+	  use the <ppdentry> XML tags for the printer or the driver.
+
+	  Add "*PSVersion:" keywords for the newest Ghostscript versions to the
+	  PPD files.
+
 2009-07-17  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added support for multiple "*Product:" lines
