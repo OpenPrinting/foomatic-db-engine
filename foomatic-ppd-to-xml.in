@@ -19,7 +19,7 @@ my $progname = ($1 || $0);
 
 help() if !@ARGV;
 #my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
-getopts("d:r:p:lb:f:h");
+getopts("d:r:p:lb:f:nh");
 help() if $opt_h;
 my $drivers = $opt_d;
 my $rdriver = $opt_r;
@@ -27,6 +27,7 @@ my $pdls = $opt_p;
 my $ppdlink = $opt_l;
 my $basedir = $opt_b;
 my $destdir = $opt_f;
+my $nomod = $opt_n;
 
 $ppdfile = $ARGV[0];
 
@@ -91,6 +92,7 @@ foreach my $entry (@existing) {
     my $result;
     next if $d->{'noxmlentry'};
     $entryfound = 1;
+    last if $nomod;
     $db->{'dat'} = $d;
     if (!defined($parameters->{'drivers'})) {
 	$parameters->{'drivers'} = [$dat->{'driver'}];
@@ -232,7 +234,10 @@ $progname -h
                   <ppdfile> can also be given relative to this directory.
  -f <directory> : Directory where the resulting XML file to write to. The
                   name of the file will be the printer ID with the ".xml"
-                  extension.  
+                  extension.
+ -n             : Do not write modified versions of existing XML files,
+                  only create XML files for printer for which there is no
+                  XML file yet.
  -h             : show help information
 
 

@@ -1,3 +1,9 @@
+2009-08-19  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in: Added "-n" option to the foomatic-ppd-to-xml
+	  utility. This makes only new printer XML files being generated and
+	  no modified versions of existing files.
+
 2009-08-18  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-preferred-driver.in: The "hpijs" driver entry got replaced
