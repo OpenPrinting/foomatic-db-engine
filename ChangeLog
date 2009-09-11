@@ -1,3 +1,13 @@
+2009-09-11  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added first functions for getting the data
+	  from an SQL database instead of from an XML database:
+	  connect_to_mysql_db(), disconnect_from_sql_db(),
+	  get_overview_from_sql_db(), and helper function
+	  read_conf_file(). It is checked whether valid database access
+	  data is in the file mysql.conf in the default configuration
+	  directory, and if so, the MySQL database is used.
+
 2009-08-19  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppd-to-xml.in: Added "-n" option to the foomatic-ppd-to-xml

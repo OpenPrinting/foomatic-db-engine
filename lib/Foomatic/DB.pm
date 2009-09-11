@@ -12,6 +12,7 @@ use Encode;
 @EXPORT = qw(ppdtoperl ppdfromvartoperl);
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
+use DBI;
 use Data::Dumper;
 use POSIX;                      # for rounding integers
 use strict;
@@ -23,6 +24,7 @@ sub new {
     my $type = shift(@_);
     my $this = bless {@_}, $type;
     $this->{'language'} = "C";
+    $this->connect_to_mysql_db;
     return $this;
 }
 
@@ -31,6 +33,269 @@ my %driver_types = ('F' => 'Filter',
 		    'P' => 'Postscript',
 		    'U' => 'Ghostscript Uniprint',
 		    'G' => 'Ghostscript');
+
+sub read_conf_file {
+    my ($file) = @_;
+
+    my %conf;
+    # Read config file if present
+    if (open CONF, "< $file") {
+	while (<CONF>)
+	{
+	    $conf{$1}="$2" if (m/^\s*([^\#\s]\S*)\s*:\s*(.*?)\s*$/);
+	}
+	close CONF;
+    }
+
+    return %conf;
+}
+
+sub connect_to_mysql_db {
+    my ($this) = @_;
+    my %mysqlconf = read_conf_file($sysdeps->{'foo-etc'} . "/mysql.conf");
+    if (defined($mysqlconf{'server'}) || defined($mysqlconf{'user'}) ||
+	defined($mysqlconf{'password'}) || defined($mysqlconf{'database'})) {
+	#print STDERR "XXX Config file:\n" . Dumper(%mysqlconf) . "\n";
+	$mysqlconf{'server'} = 'localhost' if !$mysqlconf{'server'};
+	$mysqlconf{'user'} = 'root' if !$mysqlconf{'user'};
+	$mysqlconf{'password'} = '' if !$mysqlconf{'password'};
+	$mysqlconf{'database'} = 'openprinting' if !$mysqlconf{'database'};
+	$this->{'dbh'} = DBI->connect("dbi:mysql:database=" .
+	                              $mysqlconf{'database'} . ';host=' .
+				      $mysqlconf{'server'},
+				      $mysqlconf{'user'},
+				      $mysqlconf{'password'},
+				      { RaiseError => 1, AutoCommit => 0 }) or
+				      warn $this->{'dbh'}->errstr;
+    } else {
+	$this->{'dbh'} = NULL;
+    }
+    #if ($this->{'dbh'}) {
+	#print STDERR "XXX Database connected!\n";
+	#$this->get_overview_from_sql_db(0);
+	#print STDERR "XXX Overview generated!\n";
+    #}
+}
+
+sub disconnect_from_sql_db {
+    my ($this) = @_;
+    if ($this->{'dbh'}) {
+	$this->{'dbh'}->disconnect or
+	    warn $this->{'dbh'}->errstr;
+    }
+}
+
+sub get_overview_from_sql_db {
+    my ($this, $cupsppds) = @_;
+    if ($this->{'dbh'}) {
+	my $printerquerystr = "SELECT printer.id, " .
+	    "printer.make, printer.model, printer.functionality, " .
+	    "printer.unverified, printer.default_driver, " .
+	    "printer.general_ieee1284, printer.general_manufacturer, " .
+	    "printer.general_model, printer.general_commandset, " .
+	    "printer.general_description, " .                         
+	    "printer.parallel_ieee1284, printer.parallel_manufacturer, " .
+	    "printer.parallel_model, printer.parallel_commandset, " .
+	    "printer.parallel_description, " .
+	    "printer.usb_ieee1284, printer.usb_manufacturer, " .
+	    "printer.usb_model, printer.usb_commandset, " .
+	    "printer.usb_description, " .
+	    "printer.snmp_ieee1284, printer.snmp_manufacturer, " .
+	    "printer.snmp_model, printer.snmp_commandset, " .
+	    "printer.snmp_description " .
+	    "FROM printer " .
+	    "ORDER BY BINARY(printer.id);";
+	my $sthp = $this->{'dbh'}->prepare($printerquerystr);
+	$sthp->execute();
+	my $driverquerystr = "SELECT driver_printer_assoc.printer_id, " .
+	    "driver_printer_assoc.driver_id, " .
+	    "driver.url, driver.supplier, driver.thirdpartysupplied, " .
+	    "driver.manufacturersupplied, driver.license, " .
+	    "driver.nonfreesoftware, driver.patents, driver.shortdescription, " .
+	    "driver.execution, " .
+	    "driver.max_res_x, driver.max_res_y, driver.color, " .
+	    "driver.text, driver.lineart, driver.graphics, driver.photo, " .
+	    "driver.load_time, driver.speed, " .
+	    "driver_printer_assoc.max_res_x AS exc_max_res_x, " .
+	    "driver_printer_assoc.max_res_y AS exc_max_res_y, " .
+	    "driver_printer_assoc.color AS exc_color, " .
+	    "driver_printer_assoc.text AS exc_text, " .
+	    "driver_printer_assoc.lineart AS exc_lineart, " .
+	    "driver_printer_assoc.graphics AS exc_graphics, " .
+	    "driver_printer_assoc.photo AS exc_photo, " .
+	    "driver_printer_assoc.load_time AS exc_load_time, " .
+	    "driver_printer_assoc.speed AS exc_speed, " .
+	    "driver_printer_assoc.ppd " .
+	    "FROM driver_printer_assoc, driver " .
+	    "WHERE (" .
+	    ($cupsppds ?
+	     "NOT (driver.prototype = '' OR driver.prototype is NULL) AND " .
+	     ($cupsppds == 1 ?
+	      "(driver_printer_assoc.ppd = '' OR " .
+	      "driver_printer_assoc.ppd IS NULL) AND " : "") : "") .
+	    "driver_printer_assoc.driver_id=driver.id" .
+	    ")" .
+	    "ORDER BY BINARY(driver_printer_assoc.printer_id), " .
+	    "BINARY(driver_printer_assoc.driver_id);";
+	my $sthd = $this->{'dbh'}->prepare($driverquerystr);
+	$sthd->execute();
+	my @prow = $sthp->fetchrow_array;
+	my @drow = $sthd->fetchrow_array;
+	my $overview = [];
+	while ( 1 ) {
+	    last if !@prow && !@drow;
+	    #print "XXX P: " .join('|', @prow) . "\n";
+	    #print "XXX D: " .join('|', @drow) . "\n";
+	    # New printer entry in the overview data structure
+	    my $printer = "";
+	    my $pentry = {};
+	    if (!@prow || ($drow[0] lt $prow[0])) {
+		# printer/driver combo list contains a printer which is not 
+		# in the printer list, fill printer data with defaults, mainly
+		# empty fields. Do not touch $prow in this loop run.
+		$printer = $drow[0];
+		#print "XXX Printer (not in DB): $printer\n";
+		$pentry->{'id'} = $printer;
+		$pentry->{'functionality'} = "X";
+		$pentry->{'unverified'} = 0;
+		$pentry->{'noxmlentry'} = 1;
+	    } else {
+		# Treat the current printer from the printer list now
+		$printer = $prow[0];
+		#print "XXX Printer: $printer\n";
+		$pentry->{'id'} = $printer;
+		$pentry->{'make'} = $prow[1] if defined($prow[1]);
+		$pentry->{'model'} = $prow[2] if defined($prow[2]);
+		$pentry->{'functionality'} = $prow[3] if defined($prow[3]);
+		$pentry->{'unverified'} = int($prow[4]) if defined($prow[4]);
+		$pentry->{'noxmlentry'} = 0;
+		$pentry->{'driver'} = $prow[5] if defined($prow[5]);
+		$pentry->{'general_ieee'} = $prow[6] if defined($prow[6]);
+		$pentry->{'general_mfg'} = $prow[7] if defined($prow[7]);
+		$pentry->{'general_mdl'} = $prow[8] if defined($prow[8]);
+		$pentry->{'general_cmd'} = $prow[9] if defined($prow[9]);
+		$pentry->{'general_des'} = $prow[10] if defined($prow[10]);
+		$pentry->{'par_ieee'} = $prow[11] if defined($prow[11]);
+		$pentry->{'par_mfg'} = $prow[12] if defined($prow[12]);
+		$pentry->{'par_mdl'} = $prow[13] if defined($prow[13]);
+		$pentry->{'par_cmd'} = $prow[14] if defined($prow[14]);
+		$pentry->{'par_des'} = $prow[15] if defined($prow[15]);
+		$pentry->{'usb_ieee'} = $prow[16] if defined($prow[16]);
+		$pentry->{'usb_mfg'} = $prow[17] if defined($prow[17]);
+		$pentry->{'usb_mdl'} = $prow[18] if defined($prow[18]);
+		$pentry->{'usb_cmd'} = $prow[19] if defined($prow[19]);
+		$pentry->{'usb_des'} = $prow[20] if defined($prow[20]);
+		$pentry->{'snmp_ieee'} = $prow[21] if defined($prow[21]);
+		$pentry->{'snmp_mfg'} = $prow[22] if defined($prow[22]);
+		$pentry->{'snmp_mdl'} = $prow[23] if defined($prow[23]);
+		$pentry->{'snmp_cmd'} = $prow[24] if defined($prow[24]);
+		$pentry->{'snmp_des'} = $prow[25] if defined($prow[25]);
+
+		# Current row in printer list treated, advance
+		@prow = $sthp->fetchrow_array;
+	    }
+	    if (!defined($pentry->{'make'})) {
+		my $make = $printer;
+		$make =~ s/^([^\-]+)\-.*$/$1/;
+		$make =~ s/_/ /g;
+		$pentry->{'make'} = $make;
+	    }
+	    if (!defined($pentry->{'model'})) {
+		my $model = $printer;
+		$model =~ s/^[^\-]+\-(.*)$/$1/;
+		$model =~ s/_/ /g;
+		$model = "Unknown model" if !$model;
+		$pentry->{'model'} = $model;
+	    }
+
+	    # Driver list for the current printer
+	    if (@drow && ($printer eq $drow[0])) {
+		# We have at least one driver for this printer, create the
+		# driver list
+		$pentry->{'drivers'} = [];
+		$pentry->{'driverproperties'} = {};
+		while (@drow && (uc($printer) eq uc($drow[0]))) {
+		    # Treat the current combo from the printer/driver list now
+		    my $driver = $drow[1];
+		    #print "XXX    Driver: $driver\n";
+		    push (@{$pentry->{'drivers'}}, $driver);
+		    my $properties = undef;
+		    $properties->{'url'} = $drow[2] if defined($drow[2]);
+		    $properties->{'supplier'} = $drow[3] if defined($drow[3]);
+		    $properties->{'thirdpartysupplied'} = int($drow[4])
+			if defined($drow[4]);
+		    $properties->{'manufacturersupplied'} = $drow[5]
+			if defined($drow[5]);
+		    $properties->{'license'} = $drow[6] if defined($drow[6]);
+		    $properties->{'nonfree'} = int($drow[7])
+			if defined($drow[7]);
+		    $properties->{'patents'} = int($drow[8])
+			if defined($drow[8]);
+		    $properties->{'shortdescription'} = $drow[9]
+			if defined($drow[9]);
+		    $properties->{'type'} = $drow[10] if defined($drow[10]);
+		    $properties->{'drvmaxresx'} = int($drow[11])
+			if defined($drow[11]);
+		    $properties->{'drvmaxresy'} = int($drow[12])
+			if defined($drow[12]);
+		    $properties->{'drvcolor'} = int($drow[13])
+			if defined($drow[13]);
+		    $properties->{'text'} = int($drow[14])
+			if defined($drow[14]);
+		    $properties->{'lineart'} = int($drow[15])
+			if defined($drow[15]);
+		    $properties->{'graphics'} = int($drow[16])
+			if defined($drow[16]);
+		    $properties->{'photo'} = int($drow[17])
+			if defined($drow[17]);
+		    $properties->{'load'} = int($drow[18])
+			if defined($drow[18]);
+		    $properties->{'speed'} = int($drow[19])
+			if defined($drow[19]);
+		    $properties->{'drvmaxresx'} = int($drow[20])
+			if defined($drow[20]);
+		    $properties->{'drvmaxresy'} = int($drow[21])
+			if defined($drow[21]);
+		    $properties->{'drvcolor'} = int($drow[22])
+			if defined($drow[22]);
+		    $properties->{'text'} = int($drow[23])
+			if defined($drow[23]);
+		    $properties->{'lineart'} = int($drow[24])
+			if defined($drow[24]);
+		    $properties->{'graphics'} = int($drow[25])
+			if defined($drow[25]);
+		    $properties->{'photo'} = int($drow[26])
+			if defined($drow[26]);
+		    $properties->{'load'} = int($drow[27])
+			if defined($drow[27]);
+		    $properties->{'speed'} = int($drow[28])
+			if defined($drow[28]);
+		    $properties->{'ppd'} = $drow[29]
+			if defined($drow[29]);
+		    $pentry->{'driverproperties'}{$driver} = $properties
+			if defined($properties);
+
+		    # Current row in printer/driver list treated, advance
+		    @drow = $sthd->fetchrow_array;
+		}
+	    } else {
+		# There is no driver for this printer. Skip this printer
+		# if the overview was requested only to find out which
+		# PPDs/drivers are available.
+		#print "XXX    No Driver\n";
+		next if $cupsppds;
+	    }
+
+	    # Add printer record to data structure
+	    push(@{$overview}, $pentry);
+	}
+	#print Dumper($overview);
+	$this->{'overview'} = $overview;
+	return $this->{'overview'};
+    } else {
+	return undef;
+    }
+}
 
 # Translate old numerical PostGreSQL printer IDs to the new clear text ones.
 sub translate_printer_id {
@@ -78,6 +343,16 @@ sub get_overview {
     return $this->{'overview'} if defined($this->{'overview'}) &&
 	!$rebuild;
     $this->{'overview'} = undef;
+
+    #if ($this->{'dbh'}) {
+	#print STDERR "XXX Database connected!\n";
+	#$this->get_overview_from_sql_db($cupsppds);
+	#print STDERR "XXX Overview generated!\n";
+	#return $this->{'overview'};
+    #}
+    
+    # Get overview from an SQL database if we have one
+    return $this->get_overview_from_sql_db($cupsppds) if $this->{'dbh'};
 
     # Read on-disk cache file if we have one
     if (defined($this->{'overviewfile'})) {
