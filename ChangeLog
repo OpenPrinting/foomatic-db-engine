@@ -7,6 +7,8 @@
 	  read_conf_file(). It is checked whether valid database access
 	  data is in the file mysql.conf in the default configuration
 	  directory, and if so, the MySQL database is used.
+	  Added also a DESTROY() method for Foomatic::DB which closes the
+	  connection to the SQL database if one was used.
 
 2009-08-19  Till Kamppeter <till.kamppeter@gmail.com>
 

@@ -28,6 +28,13 @@ sub new {
     return $this;
 }
 
+# destructor for Foomatic::DB, only closes an SQL database connection if an
+# SQL database was used
+sub DESTROY {
+    my ($this) = @_;
+    $this->disconnect_from_sql_db;
+}
+
 # A map from the database's internal one-letter driver types to English
 my %driver_types = ('F' => 'Filter',
 		    'P' => 'Postscript',
