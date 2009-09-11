@@ -32,7 +32,10 @@ sub new {
 my %driver_types = ('F' => 'Filter',
 		    'P' => 'Postscript',
 		    'U' => 'Ghostscript Uniprint',
-		    'G' => 'Ghostscript');
+		    'G' => 'Ghostscript built-in',
+                    'I' => 'IJS',
+                    'C' => 'CUPS Raster',
+                    'V' => 'OpenPrinting Vector');
 
 sub read_conf_file {
     my ($file) = @_;
@@ -70,11 +73,11 @@ sub connect_to_mysql_db {
     } else {
 	$this->{'dbh'} = NULL;
     }
-    #if ($this->{'dbh'}) {
+    #if ($this->{'dbh'}) { #XXX
 	#print STDERR "XXX Database connected!\n";
-	#$this->get_overview_from_sql_db(0);
+	#$this->get_overview_from_sql_db(0); # XXX
 	#print STDERR "XXX Overview generated!\n";
-    #}
+    #} # XXX
 }
 
 sub disconnect_from_sql_db {
@@ -233,7 +236,18 @@ sub get_overview_from_sql_db {
 			if defined($drow[8]);
 		    $properties->{'shortdescription'} = $drow[9]
 			if defined($drow[9]);
-		    $properties->{'type'} = $drow[10] if defined($drow[10]);
+		    if (defined($drow[10])) {
+			my $type = $drow[10];
+			$properties->{'type'} =
+			    ($type eq 'cups' ? 'C' :
+			     ($type eq 'ijs' ? 'I' :
+			      ($type eq 'opvp' ? 'V' :
+			       ($type eq 'ghostscript' ? 'G' :
+				($type eq 'filter' ? 'F' :
+				 ($type eq 'uniprint' ? 'U' :
+				  ($type eq 'postscript' ? 'P' :
+				   undef)))))));
+		    }
 		    $properties->{'drvmaxresx'} = int($drow[11])
 			if defined($drow[11]);
 		    $properties->{'drvmaxresy'} = int($drow[12])
@@ -272,6 +286,23 @@ sub get_overview_from_sql_db {
 			if defined($drow[28]);
 		    $properties->{'ppd'} = $drow[29]
 			if defined($drow[29]);
+
+		    # Get support contact list from separate table;
+		    my $supportquerystr =
+			"SELECT url, level, description " .
+			"FROM driver_support_contact " .
+			"WHERE driver_id=\"$driver\";";
+		    my $sths = $this->{'dbh'}->prepare($supportquerystr);
+		    $sths->execute();
+		    while (my @srow = $sths->fetchrow_array) {
+			my $sc = undef;
+			$sc->{'url'} = $srow[0] if defined($srow[0]);
+			$sc->{'level'} = $srow[1] if defined($srow[1]);
+			$sc->{'description'} = $srow[2] if defined($srow[2]);
+			push(@{$properties->{'supportcontacts'}}, $sc)
+			    if defined($sc);
+		    }
+
 		    $pentry->{'driverproperties'}{$driver} = $properties
 			if defined($properties);
 
@@ -289,7 +320,7 @@ sub get_overview_from_sql_db {
 	    # Add printer record to data structure
 	    push(@{$overview}, $pentry);
 	}
-	#print Dumper($overview);
+	#print Dumper($overview); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {
@@ -344,12 +375,12 @@ sub get_overview {
 	!$rebuild;
     $this->{'overview'} = undef;
 
-    #if ($this->{'dbh'}) {
+    #if ($this->{'dbh'}) { # XXX
 	#print STDERR "XXX Database connected!\n";
-	#$this->get_overview_from_sql_db($cupsppds);
+	#$this->get_overview_from_sql_db($cupsppds); #XXX
 	#print STDERR "XXX Overview generated!\n";
-	#return $this->{'overview'};
-    #}
+	#return $this->{'overview'}; #XXX
+    #} #XXX
     
     # Get overview from an SQL database if we have one
     return $this->get_overview_from_sql_db($cupsppds) if $this->{'dbh'};
