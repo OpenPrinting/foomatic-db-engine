@@ -1,6 +1,14 @@
+2009-09-14  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added more methods for using an SQL database:
+	  get_driverlist_from_sql_db(), get_printerlist_from_sql_db(),
+	  get_printer_from_sql_db(), get_driver_from_sql_db(),
+	  get_driver_support_contacts_from_sql_db().
+	  Added helper function get_make_model_from_id().
+
 2009-09-11  Till Kamppeter <till.kamppeter@gmail.com>
 
-	* lib/Foomatic/DB.pm: Added first functions for getting the data
+	* lib/Foomatic/DB.pm: Added first methods for getting the data
 	  from an SQL database instead of from an XML database:
 	  connect_to_mysql_db(), disconnect_from_sql_db(),
 	  get_overview_from_sql_db(), and helper function
