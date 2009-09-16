@@ -119,9 +119,10 @@ sub get_driver_support_contacts_from_sql_db {
 	$sths->execute();
 	while (my @srow = $sths->fetchrow_array) {
 	    my $sc = undef;
-	    $sc->{'url'} = $srow[0] if defined($srow[0]);
-	    $sc->{'level'} = $srow[1] if defined($srow[1]);
-	    $sc->{'description'} = $srow[2] if defined($srow[2]);
+	    $sc->{'url'} = $srow[0] if defined($srow[0]) && ($srow[0] ne "");
+	    $sc->{'level'} = $srow[1] if defined($srow[1]) && ($srow[1] ne "");
+	    $sc->{'description'} = $srow[2]
+		if defined($srow[2]) && ($srow[2] ne "");
 	    push(@supportcontacts, $sc)
 		if defined($sc);
 	}
@@ -131,8 +132,71 @@ sub get_driver_support_contacts_from_sql_db {
     return @supportcontacts;
 }
 
+sub get_margins_from_sql_db {
+    my ($this, $drv, $poid) = @_;
+    my $margins = undef;
+    if ($this->{'dbh'}) {
+	my $marginsquerystr =
+	    "SELECT margin_type, pagesize, margin_unit, margin_absolute, " .
+	    "margin_left, margin_bottom, margin_right, margin_top " .
+	    "FROM margin " .
+	    "WHERE " .
+	    ($drv ? "driver_id=\"$drv\" " :
+	     "(driver_id IS NULL OR driver_id=\"\") ") .
+	    "AND " .
+	    ($poid ? "printer_id=\"$poid\" " :
+	     "(printer_id IS NULL OR printer_id=\"\") ") .
+	    ";";
+	my $sthm = $this->{'dbh'}->prepare($marginsquerystr);
+	$sthm->execute();
+	while (my @mrow = $sthm->fetchrow_array) {
+	    my $rec = undef;
+	    $rec->{'absolute'} = 1 if defined($mrow[3]) && (int($mrow[3]) != 0);
+	    $rec->{'absolute'} = 0 if defined($mrow[3]) && (int($mrow[3]) == 0);
+	    $rec->{'unit'} = $mrow[2] if defined($mrow[2]) && ($mrow[2] ne "");
+	    $rec->{'left'} = $mrow[4] if defined($mrow[4]) && ($mrow[4] ne "");
+	    $rec->{'bottom'} = $mrow[5]
+		if defined($mrow[5]) && ($mrow[5] ne "");
+	    $rec->{'right'} = $mrow[6] if defined($mrow[6]) && ($mrow[6] ne "");
+	    $rec->{'top'} = $mrow[7] if defined($mrow[7]) && ($mrow[7] ne "");
+	    if (defined($rec) && defined($mrow[0])) {
+		if ($mrow[0] eq "general") {
+		    $margins->{"_general"} = $rec;
+		} elsif (($mrow[0] eq "exception") && defined($mrow[1]) &&
+			 $mrow[1]) {
+		    $margins->{$mrow[1]} = $rec;
+		}
+	    }
+	}
+    }
+    return $margins;
+}
+
+sub get_driver_packages_from_sql_db {
+    my ($this, $driver) = @_;
+    my @packages;
+    if ($this->{'dbh'}) {
+	my $querystr =
+	    "SELECT scope, name " .
+	    "FROM driver_package " .
+	    "WHERE driver_id=\"$driver\";";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	while (my @row = $sth->fetchrow_array) {
+	    my $pkg = undef;
+	    $pkg->{'scope'} = $row[0] if defined($row[0]) && ($row[0] ne "");
+	    $pkg->{'url'} = $row[1] if defined($row[1]) && ($row[1] ne "");
+	    push(@packages, $pkg) if defined($pkg);
+	}
+    } else {
+	@packages = ();
+    }
+    return @packages;
+}
+
 sub get_overview_from_sql_db {
     my ($this, $cupsppds) = @_;
+    #$cupsppds=0; # XXX
     if ($this->{'dbh'}) {
 	my $printerquerystr = "SELECT printer.id, " .
 	    "printer.make, printer.model, printer.functionality, " .
@@ -210,32 +274,57 @@ sub get_overview_from_sql_db {
 		$printer = $prow[0];
 		#print "XXX Printer: $printer\n";
 		$pentry->{'id'} = $printer;
-		$pentry->{'make'} = $prow[1] if defined($prow[1]);
-		$pentry->{'model'} = $prow[2] if defined($prow[2]);
-		$pentry->{'functionality'} = $prow[3] if defined($prow[3]);
-		$pentry->{'unverified'} = int($prow[4]) if defined($prow[4]);
+		$pentry->{'make'} = $prow[1]
+		    if defined($prow[1]) && ($prow[1] ne "");
+		$pentry->{'model'} = $prow[2]
+		    if defined($prow[2]) && ($prow[2] ne "");
+		$pentry->{'functionality'} = $prow[3]
+		    if defined($prow[3]) && ($prow[3] ne "");
+		$pentry->{'unverified'} = int($prow[4])
+		    if defined($prow[4]) && ($prow[4] ne "");
 		$pentry->{'noxmlentry'} = 0;
-		$pentry->{'driver'} = $prow[5] if defined($prow[5]);
-		$pentry->{'general_ieee'} = $prow[6] if defined($prow[6]);
-		$pentry->{'general_mfg'} = $prow[7] if defined($prow[7]);
-		$pentry->{'general_mdl'} = $prow[8] if defined($prow[8]);
-		$pentry->{'general_cmd'} = $prow[9] if defined($prow[9]);
-		$pentry->{'general_des'} = $prow[10] if defined($prow[10]);
-		$pentry->{'par_ieee'} = $prow[11] if defined($prow[11]);
-		$pentry->{'par_mfg'} = $prow[12] if defined($prow[12]);
-		$pentry->{'par_mdl'} = $prow[13] if defined($prow[13]);
-		$pentry->{'par_cmd'} = $prow[14] if defined($prow[14]);
-		$pentry->{'par_des'} = $prow[15] if defined($prow[15]);
-		$pentry->{'usb_ieee'} = $prow[16] if defined($prow[16]);
-		$pentry->{'usb_mfg'} = $prow[17] if defined($prow[17]);
-		$pentry->{'usb_mdl'} = $prow[18] if defined($prow[18]);
-		$pentry->{'usb_cmd'} = $prow[19] if defined($prow[19]);
-		$pentry->{'usb_des'} = $prow[20] if defined($prow[20]);
-		$pentry->{'snmp_ieee'} = $prow[21] if defined($prow[21]);
-		$pentry->{'snmp_mfg'} = $prow[22] if defined($prow[22]);
-		$pentry->{'snmp_mdl'} = $prow[23] if defined($prow[23]);
-		$pentry->{'snmp_cmd'} = $prow[24] if defined($prow[24]);
-		$pentry->{'snmp_des'} = $prow[25] if defined($prow[25]);
+		$pentry->{'driver'} = $prow[5]
+		    if defined($prow[5]) && ($prow[5] ne "");
+		$pentry->{'general_ieee'} = $prow[6]
+		    if defined($prow[6]) && ($prow[6] ne "");
+		$pentry->{'general_mfg'} = $prow[7]
+		    if defined($prow[7]) && ($prow[7] ne "");
+		$pentry->{'general_mdl'} = $prow[8]
+		    if defined($prow[8] && ($prow[8] ne ""));
+		$pentry->{'general_cmd'} = $prow[9]
+		    if defined($prow[9]) && ($prow[9] ne "");
+		$pentry->{'general_des'} = $prow[10]
+		    if defined($prow[10]) && ($prow[10] ne "");
+		$pentry->{'par_ieee'} = $prow[11]
+		    if defined($prow[11]) && ($prow[11] ne "");
+		$pentry->{'par_mfg'} = $prow[12]
+		    if defined($prow[12]) && ($prow[12] ne "");
+		$pentry->{'par_mdl'} = $prow[13]
+		    if defined($prow[13]) && ($prow[13] ne "");
+		$pentry->{'par_cmd'} = $prow[14]
+		    if defined($prow[14]) && ($prow[14] ne "");
+		$pentry->{'par_des'} = $prow[15]
+		    if defined($prow[15]) && ($prow[15] ne "");
+		$pentry->{'usb_ieee'} = $prow[16]
+		    if defined($prow[16]) && ($prow[16] ne "");
+		$pentry->{'usb_mfg'} = $prow[17]
+		    if defined($prow[17]) && ($prow[17] ne "");
+		$pentry->{'usb_mdl'} = $prow[18]
+		    if defined($prow[18]) && ($prow[18] ne "");
+		$pentry->{'usb_cmd'} = $prow[19]
+		    if defined($prow[19]) && ($prow[19] ne "");
+		$pentry->{'usb_des'} = $prow[20]
+		    if defined($prow[20]) && ($prow[20] ne "");
+		$pentry->{'snmp_ieee'} = $prow[21]
+		    if defined($prow[21]) && ($prow[21] ne "");
+		$pentry->{'snmp_mfg'} = $prow[22]
+		    if defined($prow[22]) && ($prow[22] ne "");
+		$pentry->{'snmp_mdl'} = $prow[23]
+		    if defined($prow[23]) && ($prow[23] ne "");
+		$pentry->{'snmp_cmd'} = $prow[24]
+		    if defined($prow[24]) && ($prow[24] ne "");
+		$pentry->{'snmp_des'} = $prow[25]
+		    if defined($prow[25]) && ($prow[25] ne "");
 
 		# Current row in printer list treated, advance
 		@prow = $sthp->fetchrow_array;
@@ -259,20 +348,24 @@ sub get_overview_from_sql_db {
 		    #print "XXX    Driver: $driver\n";
 		    push (@{$pentry->{'drivers'}}, $driver);
 		    my $properties = undef;
-		    $properties->{'url'} = $drow[2] if defined($drow[2]);
-		    $properties->{'supplier'} = $drow[3] if defined($drow[3]);
+		    $properties->{'url'} = $drow[2]
+			if defined($drow[2]) && ($drow[2] ne "");
+		    $properties->{'supplier'} = $drow[3]
+			if defined($drow[3]) && ($drow[3] ne "");
 		    $properties->{'manufacturersupplied'} = $drow[5]
-			if defined($drow[5]);
+			if defined($drow[5]) && ($drow[5] ne "");
 		    $properties->{'manufacturersupplied'} = 0
-			if defined($drow[4]) && (int($drow[4]) != 0);
-		    $properties->{'license'} = $drow[6] if defined($drow[6]);
+			if defined($drow[4]) && (int($drow[4]) != 0) &&
+			($drow[4] ne "");
+		    $properties->{'license'} = $drow[6]
+			if defined($drow[6]) && ($drow[6] ne "");
 		    $properties->{'nonfree'} = int($drow[7])
-			if defined($drow[7]);
+			if defined($drow[7]) && ($drow[7] ne "");
 		    $properties->{'patents'} = int($drow[8])
-			if defined($drow[8]);
+			if defined($drow[8]) && ($drow[8] ne "");
 		    $properties->{'shortdescription'} = $drow[9]
-			if defined($drow[9]);
-		    if (defined($drow[10])) {
+			if defined($drow[9]) && ($drow[9] ne "");
+		    if (defined($drow[10]) && ($drow[10] ne "")) {
 			my $type = $drow[10];
 			$properties->{'type'} =
 			    ($type eq 'cups' ? 'C' :
@@ -285,43 +378,48 @@ sub get_overview_from_sql_db {
 				   undef)))))));
 		    }
 		    $properties->{'drvmaxresx'} = int($drow[11])
-			if defined($drow[11]);
+			if defined($drow[11]) && ($drow[11] ne "");
 		    $properties->{'drvmaxresy'} = int($drow[12])
-			if defined($drow[12]);
+			if defined($drow[12]) && ($drow[12] ne "");
 		    $properties->{'drvcolor'} = int($drow[13])
-			if defined($drow[13]);
+			if defined($drow[13]) && ($drow[13] ne "");
 		    $properties->{'text'} = int($drow[14])
-			if defined($drow[14]);
+			if defined($drow[14]) && ($drow[14] ne "");
 		    $properties->{'lineart'} = int($drow[15])
-			if defined($drow[15]);
+			if defined($drow[15]) && ($drow[15] ne "");
 		    $properties->{'graphics'} = int($drow[16])
-			if defined($drow[16]);
+			if defined($drow[16]) && ($drow[16] ne "");
 		    $properties->{'photo'} = int($drow[17])
-			if defined($drow[17]);
+			if defined($drow[17]) && ($drow[17] ne "");
 		    $properties->{'load'} = int($drow[18])
-			if defined($drow[18]);
+			if defined($drow[18]) && ($drow[18] ne "");
 		    $properties->{'speed'} = int($drow[19])
-			if defined($drow[19]);
+			if defined($drow[19]) && ($drow[19] ne "");
 		    $properties->{'drvmaxresx'} = int($drow[20])
-			if defined($drow[20]);
+			if defined($drow[20]) && ($drow[20] ne "");
 		    $properties->{'drvmaxresy'} = int($drow[21])
-			if defined($drow[21]);
+			if defined($drow[21]) && ($drow[21] ne "");
 		    $properties->{'drvcolor'} = int($drow[22])
-			if defined($drow[22]);
+			if defined($drow[22]) && ($drow[22] ne "");
 		    $properties->{'text'} = int($drow[23])
-			if defined($drow[23]);
+			if defined($drow[23]) && ($drow[23] ne "");
 		    $properties->{'lineart'} = int($drow[24])
-			if defined($drow[24]);
+			if defined($drow[24]) && ($drow[24] ne "");
 		    $properties->{'graphics'} = int($drow[25])
-			if defined($drow[25]);
+			if defined($drow[25]) && ($drow[25] ne "");
 		    $properties->{'photo'} = int($drow[26])
-			if defined($drow[26]);
+			if defined($drow[26]) && ($drow[26] ne "");
 		    $properties->{'load'} = int($drow[27])
-			if defined($drow[27]);
+			if defined($drow[27]) && ($drow[27] ne "");
 		    $properties->{'speed'} = int($drow[28])
-			if defined($drow[28]);
+			if defined($drow[28]) && ($drow[28] ne "");
 		    $properties->{'ppd'} = $drow[29]
-			if defined($drow[29]);
+			if defined($drow[29]) && ($drow[29] ne "");
+
+		    # Get downloadable packages from separate table
+		    my @packages =
+			$this->get_driver_packages_from_sql_db($driver);
+		    $properties->{'packages'} = \@packages if (@packages);
 
 		    # Get support contact list from separate table
 		    my @supportcontacts =
@@ -347,6 +445,10 @@ sub get_overview_from_sql_db {
 	    push(@{$overview}, $pentry);
 	}
 	#print Dumper($overview); # XXX
+	#print Dumper($this->get_driverlist_from_sql_db); # XXX
+	#print Dumper($this->get_printerlist_from_sql_db); # XXX
+	#print Dumper($this->get_driver_from_sql_db("hpijs-pcl5e")); # XXX
+	#print Dumper($this->get_printer_from_sql_db("Brother-DCP-8045D")); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {
@@ -408,63 +510,81 @@ sub get_printer_from_sql_db {
 	if (@prow) { 
 	    $pentry->{'noxmlentry'} = 0;
 	    $pentry->{'id'} = $poid;
-	    $pentry->{'make'} = $prow[1] if defined($prow[1]);
-	    $pentry->{'model'} = $prow[2] if defined($prow[2]);
-	    $pentry->{'pcmodel'} = $prow[2] if defined($prow[2]);
-	    $pentry->{'functionality'} = $prow[4] if defined($prow[4]);
-	    $pentry->{'type'} = $prow[5] if defined($prow[5]);
-	    $pentry->{'color'} = int($prow[6]) if defined($prow[6]);
-	    $pentry->{'maxxres'} = int($prow[7]) if defined($prow[7]);
-	    $pentry->{'maxyres'} = int($prow[8]) if defined($prow[8]);
-	    $pentry->{'url'} = int($prow[9]) if defined($prow[9]);
-	    $pentry->{'unverified'} = int($prow[10]) if defined($prow[10]);
+	    $pentry->{'make'} = $prow[1]
+		if defined($prow[1]) && ($prow[1] ne "");
+	    $pentry->{'model'} = $prow[2]
+		if defined($prow[2]) && ($prow[2] ne "");
+	    $pentry->{'pcmodel'} = $prow[3]
+		if defined($prow[3]) && ($prow[3] ne "");
+	    $pentry->{'functionality'} = $prow[4]
+		if defined($prow[4]) && ($prow[4] ne "");
+	    $pentry->{'type'} = $prow[5]
+		if defined($prow[5]) && ($prow[5] ne "");
+	    $pentry->{'color'} = int($prow[6])
+		if defined($prow[6]) && ($prow[6] ne "");
+	    $pentry->{'maxxres'} = int($prow[7])
+		if defined($prow[7]) && (int($prow[7]) != 0);
+	    $pentry->{'maxyres'} = int($prow[8])
+		if defined($prow[8]) && (int($prow[8]) != 0);
+	    $pentry->{'url'} = int($prow[9])
+		if defined($prow[9]) && ($prow[9] ne "");
+	    $pentry->{'unverified'} = int($prow[10])
+		if defined($prow[10]) && ($prow[10] ne "");
 	    my @langlist = ();
 	    if (defined($prow[11]) && (int($prow[11]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "postscript";
-		$lang->{'level'} = $prow[12] if defined($prow[12]);
+		$lang->{'level'} = $prow[12]
+		    if defined($prow[12]) && ($prow[12] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[13]) && (int($prow[13]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "pdf";
-		$lang->{'level'} = $prow[14] if defined($prow[14]);
+		$lang->{'level'} = $prow[14]
+		    if defined($prow[14]) && ($prow[14] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[15]) && (int($prow[15]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "pcl";
-		$lang->{'level'} = $prow[16] if defined($prow[16]);
+		$lang->{'level'} = $prow[16]
+		    if defined($prow[16]) && ($prow[16] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[17]) && (int($prow[17]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "escp";
-		$lang->{'level'} = $prow[18] if defined($prow[18]);
+		$lang->{'level'} = $prow[18]
+		    if defined($prow[18]) && ($prow[18] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[19]) && (int($prow[19]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "escp2";
-		$lang->{'level'} = $prow[20] if defined($prow[20]);
+		$lang->{'level'} = $prow[20]
+		    if defined($prow[20]) && ($prow[20] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[21]) && (int($prow[21]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "hpgl2";
-		$lang->{'level'} = $prow[22] if defined($prow[22]);
+		$lang->{'level'} = $prow[22]
+		    if defined($prow[22]) && ($prow[22] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[23]) && (int($prow[23]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "tiff";
-		$lang->{'level'} = $prow[24] if defined($prow[24]);
+		$lang->{'level'} = $prow[24]
+		    if defined($prow[24]) && ($prow[24] ne "24");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[25]) && (int($prow[25]) != 0)) {
 		my $lang;
 		$lang->{'name'} = "lips";
-		$lang->{'level'} = $prow[26] if defined($prow[26]);
+		$lang->{'level'} = $prow[26]
+		    if defined($prow[26]) && ($prow[26] ne "");
 		push(@langlist, $lang);
 	    }
 	    if (defined($prow[27]) && (int($prow[27]) != 0)) {
@@ -473,33 +593,62 @@ sub get_printer_from_sql_db {
 		push(@langlist, $lang);
 	    }
 	    $pentry->{'languages'} = \@langlist if @langlist;
-	    $pentry->{'pjl'} = int($prow[28]) if defined($prow[28]);
-	    $pentry->{'ascii'} = $prow[29] if defined($prow[29]);
-	    $pentry->{'general_ieee'} = $prow[30] if defined($prow[30]);
-	    $pentry->{'general_mfg'} = $prow[31] if defined($prow[31]);
-	    $pentry->{'general_mdl'} = $prow[32] if defined($prow[32]);
-	    $pentry->{'general_cmd'} = $prow[33] if defined($prow[33]);
-	    $pentry->{'general_des'} = $prow[34] if defined($prow[34]);
-	    $pentry->{'par_ieee'} = $prow[35] if defined($prow[35]);
-	    $pentry->{'par_mfg'} = $prow[36] if defined($prow[36]);
-	    $pentry->{'par_mdl'} = $prow[37] if defined($prow[37]);
-	    $pentry->{'par_cmd'} = $prow[38] if defined($prow[38]);
-	    $pentry->{'par_des'} = $prow[39] if defined($prow[39]);
-	    $pentry->{'usb_ieee'} = $prow[40] if defined($prow[40]);
-	    $pentry->{'usb_mfg'} = $prow[41] if defined($prow[41]);
-	    $pentry->{'usb_mdl'} = $prow[42] if defined($prow[42]);
-	    $pentry->{'usb_cmd'} = $prow[43] if defined($prow[43]);
-	    $pentry->{'usb_des'} = $prow[44] if defined($prow[44]);
-	    $pentry->{'snmp_ieee'} = $prow[45] if defined($prow[45]);
-	    $pentry->{'snmp_mfg'} = $prow[46] if defined($prow[46]);
-	    $pentry->{'snmp_mdl'} = $prow[47] if defined($prow[47]);
-	    $pentry->{'snmp_cmd'} = $prow[48] if defined($prow[48]);
-	    $pentry->{'snmp_des'} = $prow[49] if defined($prow[49]);
-	    $pentry->{'driver'} = $prow[50] if defined($prow[50]);
+	    $pentry->{'pjl'} = int($prow[28])
+		if defined($prow[28]) && ($prow[28] ne "");
+	    $pentry->{'ascii'} = $prow[29]
+		if defined($prow[29]) && ($prow[29] ne "");
+	    $pentry->{'general_ieee'} = $prow[30]
+		if defined($prow[30]) && ($prow[30] ne "");
+	    $pentry->{'general_mfg'} = $prow[31]
+		if defined($prow[31]) && ($prow[31] ne "");
+	    $pentry->{'general_mdl'} = $prow[32]
+		if defined($prow[32]) && ($prow[32] ne "");
+	    $pentry->{'general_cmd'} = $prow[33]
+		if defined($prow[33]) && ($prow[33] ne "");
+	    $pentry->{'general_des'} = $prow[34]
+		if defined($prow[34]) && ($prow[34] ne "");
+	    $pentry->{'par_ieee'} = $prow[35]
+		if defined($prow[35]) && ($prow[35] ne "");
+	    $pentry->{'par_mfg'} = $prow[36]
+		if defined($prow[36]) && ($prow[36] ne "");
+	    $pentry->{'par_mdl'} = $prow[37]
+		if defined($prow[37]) && ($prow[37] ne "");
+	    $pentry->{'par_cmd'} = $prow[38]
+		if defined($prow[38]) && ($prow[38] ne "");
+	    $pentry->{'par_des'} = $prow[39]
+		if defined($prow[39]) && ($prow[39] ne "");
+	    $pentry->{'usb_ieee'} = $prow[40]
+		if defined($prow[40]) && ($prow[40] ne "");
+	    $pentry->{'usb_mfg'} = $prow[41]
+		if defined($prow[41]) && ($prow[41] ne "");
+	    $pentry->{'usb_mdl'} = $prow[42]
+		if defined($prow[42]) && ($prow[42] ne "");
+	    $pentry->{'usb_cmd'} = $prow[43]
+		if defined($prow[43]) && ($prow[43] ne "");
+	    $pentry->{'usb_des'} = $prow[44]
+		if defined($prow[44]) && ($prow[44] ne "");
+	    $pentry->{'snmp_ieee'} = $prow[45]
+		if defined($prow[45]) && ($prow[45] ne "");
+	    $pentry->{'snmp_mfg'} = $prow[46]
+		if defined($prow[46]) && ($prow[46] ne "");
+	    $pentry->{'snmp_mdl'} = $prow[47]
+		if defined($prow[47]) && ($prow[47] ne "");
+	    $pentry->{'snmp_cmd'} = $prow[48]
+		if defined($prow[48]) && ($prow[48] ne "");
+	    $pentry->{'snmp_des'} = $prow[49]
+		if defined($prow[49]) && ($prow[49] ne "");
+	    $pentry->{'driver'} = $prow[50]
+		if defined($prow[50]) && ($prow[50] ne "");
 	    $pentry->{'ppdentry'} = $prow[51]
 		if defined($prow[51]) && ($prow[51] ne "");
-	    $pentry->{'contriburl'} = $prow[52] if defined($prow[52]);
-	    $pentry->{'comment'} = $prow[53] if defined($prow[53]);
+	    $pentry->{'contriburl'} = $prow[52]
+		if defined($prow[52]) && ($prow[52] ne "");
+	    $pentry->{'comment'} = $prow[53]
+		if defined($prow[53]) && ($prow[53] ne "");
+
+	    # Get unprintable margins from separate table
+	    my $margins = $this->get_margins_from_sql_db(undef, $poid);
+	    $pentry->{'margins'} = $margins if defined($margins);
 	} else {
 	    $pentry->{'noxmlentry'} = 1;
 	    $pentry->{'id'} = $poid;
@@ -530,41 +679,47 @@ sub get_driver_from_sql_db {
 	my @drow = $sth->fetchrow_array;
 	if (@drow) {
 	    $dentry->{'name'} = $driver;
-	    $dentry->{'obsolete'} = $drow[2] if defined($drow[2]);
-	    $dentry->{'pcdriver'} = $drow[3] if defined($drow[3]);
-	    $dentry->{'url'} = $drow[4] if defined($drow[4]);
-	    $dentry->{'supplier'} = $drow[5] if defined($drow[5]);
+	    $dentry->{'obsolete'} = $drow[2]
+		if defined($drow[2]) && ($drow[2] ne "");
+	    $dentry->{'pcdriver'} = $drow[3]
+		if defined($drow[3]) && ($drow[3] ne "");
+	    $dentry->{'url'} = $drow[4]
+		if defined($drow[4]) && ($drow[4] ne "");
+	    $dentry->{'supplier'} = $drow[5]
+		if defined($drow[5] && ($drow[5] ne ""));
 	    $dentry->{'manufacturersupplied'} = $drow[7]
-		if defined($drow[7]);
+		if defined($drow[7]) && ($drow[7] ne "");
 	    $dentry->{'manufacturersupplied'} = 0
 		if defined($drow[6]) && (int($drow[6]) != 0);
-	    $dentry->{'license'} = $drow[8] if defined($drow[8]);
-	    $dentry->{'licensetext'} = $drow[9] if defined($drow[9]);
+	    $dentry->{'license'} = $drow[8]
+		if defined($drow[8]) && ($drow[8] ne "");
+	    $dentry->{'licensetext'} = $drow[9]
+		if defined($drow[9]) && ($drow[9] ne "");
 	    $dentry->{'free'} = (int($drow[10]) == 0 ? 1 : 0)
 		if defined($drow[10]);
 	    $dentry->{'patents'} = int($drow[11])
-		if defined($drow[11]);
+		if defined($drow[11]) && ($drow[11] ne "");
 	    $dentry->{'shortdescription'} = $drow[12]
-		if defined($drow[12]);
+		if defined($drow[12]) && ($drow[12] ne "");
 	    $dentry->{'drvmaxresx'} = int($drow[13])
-		if defined($drow[13]);
+		if defined($drow[13]) && (int($drow[13]) != 0);
 	    $dentry->{'drvmaxresy'} = int($drow[14])
-		if defined($drow[14]);
+		if defined($drow[14]) && (int($drow[14]) != 0);
 	    $dentry->{'drvcolor'} = int($drow[15])
-		if defined($drow[15]);
+		if defined($drow[15] && ($drow[15] ne ""));
 	    $dentry->{'text'} = int($drow[16])
-		if defined($drow[16]);
+		if defined($drow[16]) && ($drow[16] ne "");
 	    $dentry->{'lineart'} = int($drow[17])
-		if defined($drow[17]);
+		if defined($drow[17]) && ($drow[17] ne "");
 	    $dentry->{'graphics'} = int($drow[18])
-		if defined($drow[18]);
+		if defined($drow[18]) && ($drow[18] ne "");
 	    $dentry->{'photo'} = int($drow[19])
-		if defined($drow[19]);
+		if defined($drow[19]) && ($drow[19] ne "");
 	    $dentry->{'load'} = int($drow[20])
-		if defined($drow[20]);
+		if defined($drow[20]) && ($drow[20] ne "");
 	    $dentry->{'speed'} = int($drow[21])
-		if defined($drow[21]);
-	    if (defined($drow[22])) {
+		if defined($drow[21]) && ($drow[21] ne "");
+	    if (defined($drow[22]) && ($drow[22] ne "")) {
 		my $type = $drow[22];
 		$dentry->{'type'} =
 		    ($type eq 'cups' ? 'C' :
@@ -577,17 +732,25 @@ sub get_driver_from_sql_db {
 			   undef)))))));
 	    }
 	    $dentry->{'nopjl'} = $drow[23]
-		if defined($drow[23]);
+		if defined($drow[23]) && ($drow[23] ne "");
 	    $dentry->{'nopageaccounting'} = $drow[24]
-		if defined($drow[24]);
+		if defined($drow[24]) && ($drow[24] ne "");
 	    $dentry->{'cmd'} = $drow[25]
-		if defined($drow[25]);
+		if defined($drow[25]) && ($drow[25] ne "");
 	    $dentry->{'cmd_pdf'} = $drow[26]
-		if defined($drow[26]);
+		if defined($drow[26]) && ($drow[26] ne "");
 	    $dentry->{'ppdentry'} = $drow[27]
 		if defined($drow[27]) && ($drow[27] ne "");
 	    $dentry->{'comments'} = $drow[28]
-		if defined($drow[28]);
+		if defined($drow[28]) && ($drow[28] ne "");
+
+	    # Get unprintable margins from separate table
+	    my $margins = $this->get_margins_from_sql_db($driver, undef);
+	    $dentry->{'margins'} = $margins if defined($margins);
+
+	    # Get downloadable packages from separate table
+	    my @packages = $this->get_driver_packages_from_sql_db($driver);
+	    $dentry->{'packages'} = \@packages if (@packages);
 
 	    # Get support contact list from separate table
 	    my @supportcontacts =
@@ -601,6 +764,66 @@ sub get_driver_from_sql_db {
 	$dentry = undef;
     }
     return $dentry;
+}
+
+sub printer_exists_in_sql_db {
+    my ($this, $poid) = @_;
+    # Check whether a printer entry exists in the database
+    if ($this->{'dbh'}) {
+	# Get printer record
+	my $printerquerystr =
+	    "SELECT id " .
+	    "FROM printer " .
+	    "WHERE id=\"$poid\";";
+	my $sth = $this->{'dbh'}->prepare($printerquerystr);
+	$sth->execute();
+	my @prow = $sth->fetchrow_array;
+	return 1 if @prow;
+	return undef;
+    } else {
+	return undef;
+    }
+}
+
+sub get_printers_for_driver_from_sql_db {
+    my ($this, $drv) = @_;
+    my @printerlist = ();
+    if ($this->{'dbh'}) {
+	# Get printer IDs of printer/driver combos with the given driver
+	my $querystr =
+	    "SELECT printer_id " .
+	    "FROM driver_printer_assoc " .
+	    "WHERE driver_id=\"$drv\";";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	while (my @row = $sth->fetchrow_array) {
+	    push(@printerlist, $row[0]);
+	}
+    }
+    return @printerlist;
+}
+
+sub get_drivers_for_printer_from_sql_db {
+    my ($this, $poid) = @_;
+    my @driverlist = ();
+    if ($this->{'dbh'}) {
+	# Get drivers of printer/driver combos with the given printer ID
+	my $querystr =
+	    "SELECT driver_id " .
+	    "FROM driver_printer_assoc " .
+	    "WHERE printer_id=\"$poid\";";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	while (my @row = $sth->fetchrow_array) {
+	    push(@driverlist, $row[0]);
+	}
+    }
+    return @driverlist;
+}
+
+sub get_combo_data_from_sql_db {
+    my ($this, $drv, $poid, $withoptions) = @_;
+    
 }
 
 # Translate old numerical PostGreSQL printer IDs to the new clear text ones.
@@ -770,6 +993,7 @@ sub get_printer {
 
 sub printer_exists {
     my ($this, $poid) = @_;
+    return $this->printer_exists_in_sql_db($poid) if $this->{'dbh'};
     # Check whether a printer XML file exists in the database
     return 1 if (-r "$libdir/db/source/printer/$poid.xml");
     return undef;
@@ -803,6 +1027,7 @@ sub get_driver_xml {
 
 sub get_printers_for_driver {
     my ($this, $drv) = @_;
+    return $this->get_printers_for_driver_from_sql_db($drv) if $this->{'dbh'};
 
     my @printerlist = ();
 
@@ -824,6 +1049,7 @@ sub get_printers_for_driver {
 # Routine lookup; just examine the overview
 sub get_drivers_for_printer {
     my ($this, $printer) = @_;
+    return $this->get_drivers_for_printer_from_sql_db($printer) if $this->{'dbh'};
 
     my @drivers = ();
 

@@ -1,3 +1,14 @@
+2009-09-16  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added more methods for using an SQL database:
+	  printer_exists_in_sql_db(), get_printers_for_driver_from_sql_db(),
+	  get_drivers_for_printer_from_sql_db(), get_margins_from_sql_db(),
+	  get_driver_packages_from_sql_db
+	  Let overview and driver listing also include links to downloadable
+	  packages and info about unprintable margins.
+	  Do not create unneeded empty fields in the Perl data structures
+	  when reading data sets from the SQL database.
+
 2009-09-14  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added more methods for using an SQL database:
