@@ -235,7 +235,7 @@ sub get_overview_from_sql_db {
 	    "driver_printer_assoc.photo AS exc_photo, " .
 	    "driver_printer_assoc.load_time AS exc_load_time, " .
 	    "driver_printer_assoc.speed AS exc_speed, " .
-	    "driver_printer_assoc.ppd " .
+	    "driver_printer_assoc.ppd, driver.obsolete " .
 	    "FROM driver_printer_assoc, driver " .
 	    "WHERE (" .
 	    ($cupsppds ?
@@ -415,6 +415,8 @@ sub get_overview_from_sql_db {
 			if defined($drow[28]) && ($drow[28] ne "");
 		    $properties->{'ppd'} = $drow[29]
 			if defined($drow[29]) && ($drow[29] ne "");
+		    $properties->{'obsolete'} = $drow[30]
+			if defined($drow[30]) && ($drow[30] ne "");
 
 		    # Get downloadable packages from separate table
 		    my @packages =
@@ -447,8 +449,9 @@ sub get_overview_from_sql_db {
 	#print Dumper($overview); # XXX
 	#print Dumper($this->get_driverlist_from_sql_db); # XXX
 	#print Dumper($this->get_printerlist_from_sql_db); # XXX
-	#print Dumper($this->get_driver_from_sql_db("hpijs-pcl5e")); # XXX
+	#print Dumper($this->get_driver_from_sql_db("dplix")); # XXX
 	#print Dumper($this->get_printer_from_sql_db("Brother-DCP-8045D")); # XXX
+	#print Dumper($this->get_combo_data_from_sql_db("Postscript-Kyocera", "Kyocera-FS-1030D")); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {
@@ -741,7 +744,7 @@ sub get_driver_from_sql_db {
 		if defined($drow[26]) && ($drow[26] ne "");
 	    $dentry->{'ppdentry'} = $drow[27]
 		if defined($drow[27]) && ($drow[27] ne "");
-	    $dentry->{'comments'} = $drow[28]
+	    $dentry->{'comment'} = $drow[28]
 		if defined($drow[28]) && ($drow[28] ne "");
 
 	    # Get unprintable margins from separate table
@@ -823,7 +826,90 @@ sub get_drivers_for_printer_from_sql_db {
 
 sub get_combo_data_from_sql_db {
     my ($this, $drv, $poid, $withoptions) = @_;
-    
+    my $dat = undef;
+    if ($this->{'dbh'}) {
+	# Is this printer/driver combo valid?
+	my $querystr =
+	    "SELECT max_res_x, max_res_y, color, text, lineart, graphics, " .
+	    "photo, load_time, speed, ppd, ppdentry " .
+	    "FROM driver_printer_assoc " .
+	    "WHERE printer_id=\"$poid\" AND driver_id=\"$drv\";";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	my @row = $sth->fetchrow_array;
+	if (@row) {
+	    # Get data for printer and driver
+	    my $printer = $this->get_printer_from_sql_db($poid);
+	    return undef if !defined($printer);
+	    my $driver = $this->get_driver_from_sql_db($drv);
+	    return undef if !defined($driver);
+	    for my $k (keys %{$printer}) {
+		print "XXX 1 |$k|$printer->{$k}|";
+		if ($k eq "driver") {
+		    $dat->{'recdriver'} = $printer->{$k};
+		} elsif ($k eq "ppdentry") {
+		    $dat->{'printerppdentry'} = $printer->{$k};
+		} elsif ($k eq "margins") {
+		    $dat->{'printermargins'} = $printer->{$k};
+		} elsif ($k eq "comment") {
+		    $dat->{'printercomment'} = $printer->{$k};
+		} else {
+		    $dat->{$k} = $printer->{$k};
+		}
+		print "$dat->{$k}|\n"; # XXX
+	    }
+	    $printer = undef;
+	    for my $k (keys %{$driver}) {
+		print "XXX 2 |$k|$driver->{$k}|";
+		if ($k eq "id") {
+		    # Do nothing
+		} elsif ($k eq "name") {
+		    $dat->{'driver'} = $driver->{$k};
+		} elsif ($k eq "ppdentry") {
+		    $dat->{'driverppdentry'} = $driver->{$k};
+		} elsif ($k eq "margins") {
+		    $dat->{'drivermargins'} = $driver->{$k};
+		} else {
+		    $dat->{$k} = $driver->{$k};
+		}
+		print "$dat->{$k}|\n"; # XXX
+	    }
+	    $driver = undef;
+
+	    # Get data specific to printer/driver combo
+	    $dat->{'drvmaxresx'} = int($row[0])
+		if defined($row[0]) && (int($row[0]) != 0);
+	    $dat->{'drvmaxresy'} = int($row[1])
+		if defined($row[1]) && (int($row[1]) != 0);
+	    $dat->{'drvcolor'} = int($row[2])
+		if defined($row[2] && ($row[2] ne ""));
+	    $dat->{'text'} = int($row[3])
+		if defined($row[3]) && ($row[3] ne "");
+	    $dat->{'lineart'} = int($row[4])
+		if defined($row[4]) && ($row[4] ne "");
+	    $dat->{'graphics'} = int($row[5])
+		if defined($row[5]) && ($row[5] ne "");
+	    $dat->{'photo'} = int($row[6])
+		if defined($row[6]) && ($row[6] ne "");
+	    $dat->{'load'} = int($row[7])
+		if defined($row[7]) && ($row[7] ne "");
+	    $dat->{'speed'} = int($row[8])
+		if defined($row[8]) && ($row[8] ne "");
+	    push(@{$dat->{'drivers'}},
+		 {'name' => $drv, 'id' => $drv, 'ppd' => $row[9]})
+		if defined($row[9]) && ($row[9] ne "");
+	    $dat->{'comboppdentry'} = $row[10]
+		if defined($row[10]) && ($row[10] ne "");
+
+	    # Get unprintable margins from separate table
+	    my $margins = $this->get_margins_from_sql_db($driver, $poid);
+	    $dat->{'combomargins'} = $margins if defined($margins);
+
+	} else {
+	    # Printer $poid not supported by driver $drv
+	}
+    }
+    return $dat;
 }
 
 # Translate old numerical PostGreSQL printer IDs to the new clear text ones.

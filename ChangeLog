@@ -1,3 +1,9 @@
+2009-09-17  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Started work on get_combo_data_from_sql_db().
+	  For now it collects the printer and driver info but not yet the
+	  option data.
+
 2009-09-16  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added more methods for using an SQL database:
