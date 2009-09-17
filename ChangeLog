@@ -1,5 +1,13 @@
 2009-09-17  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* lib/Foomatic/DB.pm: Removed line 
+
+	  *cupsFilter:   "application/vnd.apple-pdf 25 foomatic-rip"
+
+	  from the Foomatic-generated PPD files, it causes problems with
+	  some printers on Mac OS X (bug #386, removes enhancement of bug 
+	  #313).
+
 	* lib/Foomatic/DB.pm: Started work on get_combo_data_from_sql_db().
 	  For now it collects the printer and driver info but not yet the
 	  option data.
