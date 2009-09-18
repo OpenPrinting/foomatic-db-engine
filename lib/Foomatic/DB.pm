@@ -451,7 +451,7 @@ sub get_overview_from_sql_db {
 	#print Dumper($this->get_printerlist_from_sql_db); # XXX
 	#print Dumper($this->get_driver_from_sql_db("dplix")); # XXX
 	#print Dumper($this->get_printer_from_sql_db("Brother-DCP-8045D")); # XXX
-	#print Dumper($this->get_combo_data_from_sql_db("Postscript-Kyocera", "Kyocera-FS-1030D")); # XXX
+	#print Dumper($this->get_combo_data_from_sql_db("pxlmono", "HP-LaserJet_4050")); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {
@@ -825,7 +825,7 @@ sub get_drivers_for_printer_from_sql_db {
 }
 
 sub get_combo_data_from_sql_db {
-    my ($this, $drv, $poid, $withoptions) = @_;
+    my ($this, $drv, $poid) = @_;
     my $dat = undef;
     if ($this->{'dbh'}) {
 	# Is this printer/driver combo valid?
@@ -844,7 +844,7 @@ sub get_combo_data_from_sql_db {
 	    my $driver = $this->get_driver_from_sql_db($drv);
 	    return undef if !defined($driver);
 	    for my $k (keys %{$printer}) {
-		print "XXX 1 |$k|$printer->{$k}|";
+		#print "XXX 1 |$k|$printer->{$k}|";
 		if ($k eq "driver") {
 		    $dat->{'recdriver'} = $printer->{$k};
 		} elsif ($k eq "ppdentry") {
@@ -856,11 +856,11 @@ sub get_combo_data_from_sql_db {
 		} else {
 		    $dat->{$k} = $printer->{$k};
 		}
-		print "$dat->{$k}|\n"; # XXX
+		#print "$dat->{$k}|\n"; # XXX
 	    }
 	    $printer = undef;
 	    for my $k (keys %{$driver}) {
-		print "XXX 2 |$k|$driver->{$k}|";
+		#print "XXX 2 |$k|$driver->{$k}|";
 		if ($k eq "id") {
 		    # Do nothing
 		} elsif ($k eq "name") {
@@ -872,7 +872,7 @@ sub get_combo_data_from_sql_db {
 		} else {
 		    $dat->{$k} = $driver->{$k};
 		}
-		print "$dat->{$k}|\n"; # XXX
+		#print "$dat->{$k}|\n"; # XXX
 	    }
 	    $driver = undef;
 
@@ -905,6 +905,187 @@ sub get_combo_data_from_sql_db {
 	    my $margins = $this->get_margins_from_sql_db($driver, $poid);
 	    $dat->{'combomargins'} = $margins if defined($margins);
 
+	    # Compute the options and choices which should appear in the PPD
+	    # file
+	    my $mfg = $poid;
+	    $mfg =~ s/^([^\-]*)\-.*$/$1/;
+	    my @optionchoicequerystr;
+	    $optionchoicequerystr[0] =
+		"CREATE TEMPORARY TABLE o1 " .
+		"SELECT option_id, sense, defval, " .
+		"if(driver=\"$drv\", 2, if(driver=\"\", 0, -1)) + " .
+		"if(printer=\"$poid\", 4, if(printer=\"$mfg-\", 1, " .
+		"if(printer=\"\", 0, -1))) AS score " .
+		"FROM option_constraint " .
+		"WHERE ((driver=\"$drv\" OR driver=\"\") " .
+		"AND (printer=\"$poid\" OR printer=\"$mfg-\" " .
+		"OR printer=\"\") AND is_choice_constraint=0) ".
+		"ORDER BY option_id;";
+	    $optionchoicequerystr[1] =
+		"CREATE TEMPORARY TABLE o2 " .
+		"SELECT option_id, max(score) AS score " .
+		"FROM o1 " .
+		"GROUP BY option_id;";
+	    $optionchoicequerystr[2] =
+		"CREATE TEMPORARY TABLE o3 " .
+		"SELECT o1.option_id, o1.defval " .
+		"FROM o1, o2 " .
+		"WHERE o1.score=o2.score " .
+		"AND o1.option_id=o2.option_id AND o1.sense=true;";
+	    $optionchoicequerystr[3] =
+		"CREATE TEMPORARY TABLE needed_options " .
+		"SELECT id, option_type, shortname, longname, execution, " .
+		"required, prototype, option_spot, option_order, " .
+		"option_section, option_group, comments, max_value, " .
+		"min_value, shortname_false, maxlength, allowed_chars, " .
+		"allowed_regexp, defval " .
+		"FROM options, o3 " .
+		"WHERE options.id=o3.option_id " .
+		"ORDER BY id;";
+	    $optionchoicequerystr[4] =
+		"CREATE TEMPORARY TABLE o4 " .
+		"SELECT option_constraint.option_id, " .
+		"option_constraint.choice_id, sense, " .
+		"if(driver=\"$drv\", 2, " .
+		"if(driver=\"\", 0, -1)) + if(printer=\"$poid\", 4, " .
+		"if(printer=\"$mfg-\", 1, if(printer=\"\", 0, -1))) AS score " .
+		"FROM option_constraint, needed_options " .
+		"WHERE option_constraint.option_id=needed_options.id " .
+		"AND (driver=\"$drv\" OR driver=\"\") " .
+		"AND (printer=\"$poid\" OR printer=\"$mfg-\" " .
+		"OR printer=\"\") " .
+		"AND option_constraint.is_choice_constraint=1 " .
+		"ORDER BY option_constraint.option_id, " .
+		"option_constraint.choice_id;";
+	    $optionchoicequerystr[5] =
+		"CREATE TEMPORARY TABLE o5 " .
+		"SELECT option_id, choice_id, sense, max(score) AS score " .
+		"FROM o4 " .
+		"GROUP BY option_id, choice_id;";
+	    $optionchoicequerystr[6] =
+		"CREATE TEMPORARY TABLE o6 " .
+		"SELECT option_choice.option_id AS option_id, " .
+		"option_choice.id AS choice_id, option_choice.shortname, " .
+		"option_choice.longname, option_choice.driverval " .
+		"FROM option_choice, needed_options " .
+		"WHERE option_choice.option_id=needed_options.id;";
+	    $optionchoicequerystr[7] =
+		"CREATE TEMPORARY TABLE needed_choices " .
+		"SELECT o6.option_id, o6.choice_id, shortname, longname, " .
+		"driverval " .
+		"FROM o6 LEFT JOIN o5 " .
+		"ON o6.option_id=o5.option_id AND o6.choice_id=o5.choice_id " .
+		"WHERE o5.sense IS NULL OR o5.sense=false " .
+		"ORDER BY o6.option_id, o6.choice_id;";
+	    $optionchoicequerystr[8] =
+		"DROP TABLE o1, o2, o3, o4, o5, o6;";
+	    for my $q (@optionchoicequerystr) {
+		my $ocsth = $this->{'dbh'}->prepare($q);
+		$ocsth->execute();
+	    }
+	    my $optionlistquerystr =
+		"SELECT * FROM needed_options;";
+	    my $olsth = $this->{'dbh'}->prepare($optionlistquerystr);
+	    $olsth->execute();
+	    my $choicelistquerystr =
+		"SELECT * FROM needed_choices;";
+	    my $clsth = $this->{'dbh'}->prepare($choicelistquerystr);
+	    $clsth->execute();
+	    my $option = "";
+	    my @olrow;
+	    my $arg;
+	    my $defaultset = 0;
+	    while (my @clrow = $clsth->fetchrow_array) {
+		if ($clrow[0] ne $option) {
+		    $option = $clrow[0];
+		    while (@olrow = $olsth->fetchrow_array) {
+			#print "XXX O: " .join('|', @olrow) . "\n";
+			$defaultset = 0;
+			$arg = undef;
+			$arg->{'idx'} = "opt/$olrow[0]"
+			    if defined($olrow[0]) && ($olrow[0] ne "");
+			$arg->{'type'} = $olrow[1]
+			    if defined($olrow[1]) && ($olrow[1] ne "");
+			$arg->{'name'} = $olrow[2]
+			    if defined($olrow[2]) && ($olrow[2] ne "");
+			$arg->{'comment'} = $olrow[3]
+			    if defined($olrow[3]) && ($olrow[3] ne "");
+			if (defined($olrow[4]) && ($olrow[4] ne "")) {
+			    $arg->{'style'} = 
+				($olrow[4] eq "substitution" ? "C" :
+				 ($olrow[4] eq "postscript" ? "G" :
+				  ($olrow[4] eq "pjl" ? "J" :
+				   ($olrow[4] eq "composite" ? "X" :
+				    ($olrow[4] eq "forced_composite" ? "X" :
+				     undef)))));
+			    $arg->{'substyle'} = "F" if
+				$olrow[4] eq "forced_composite";
+			}
+			$arg->{'required'} = $olrow[5]
+			    if defined($olrow[5]) && ($olrow[5] ne "");
+			$arg->{'proto'} = $olrow[6]
+			    if defined($olrow[6]) && ($olrow[6] ne "");
+			$arg->{'spot'} = $olrow[7]
+			    if defined($olrow[7]) && ($olrow[7] ne "");
+			$arg->{'order'} = $olrow[8]
+			    if defined($olrow[8]) && ($olrow[8] ne "");
+			$arg->{'section'} = $olrow[9]
+			    if defined($olrow[9]) && ($olrow[9] ne "");
+			$arg->{'group'} = $olrow[10]
+			    if defined($olrow[10]) && ($olrow[10] ne "");
+			$arg->{'help'} = $olrow[11]
+			    if defined($olrow[11]) && ($olrow[11] ne "");
+			$arg->{'max'} = $olrow[12]
+			    if defined($olrow[12]) && ($olrow[12] ne "");
+			$arg->{'min'} = $olrow[13]
+			    if defined($olrow[13]) && ($olrow[13] ne "");
+			$arg->{'name_false'} = $olrow[14]
+			    if defined($olrow[14]) && ($olrow[14] ne "");
+			$arg->{'maxlength'} = $olrow[15]
+			    if defined($olrow[15]) && ($olrow[15] ne "");
+			$arg->{'allowedchars'} = $olrow[16]
+			    if defined($olrow[16]) && ($olrow[16] ne "");
+			$arg->{'allowedregexp'} = $olrow[17]
+			    if defined($olrow[17]) && ($olrow[17] ne "");
+			$arg->{'default'} = $olrow[18]
+			    if defined($olrow[18]) && ($olrow[18] ne "");
+			if ($olrow[1] eq "enum") {
+			    $arg->{'default'} = "ev/" . $arg->{'default'};
+			}
+			if (defined($arg)) {
+			    push(@{$dat->{'args'}}, $arg);
+			    $dat->{'args_byname'}{$olrow[2]} =
+				$dat->{'args'}[scalar(@{$dat->{'args'}})-1];
+			}
+			last if $clrow[0] eq $olrow[0];
+		    }
+		}
+		#print "XXX C: " .join('|', @clrow) . "\n";
+		my $choice = undef;
+		$choice->{'idx'} = "ev/$clrow[1]"
+		    if defined($clrow[1]) && ($clrow[1] ne "");
+		$choice->{'value'} = $clrow[2]
+		    if defined($clrow[2]) && ($clrow[2] ne "");
+		$choice->{'value'} = "None"
+		    if !defined($choice->{'value'});
+		$choice->{'comment'} = $clrow[3]
+		    if defined($clrow[3]) && ($clrow[3] ne "");
+		$choice->{'driverval'} = $clrow[4]
+		    if defined($clrow[4]);
+		if (defined($choice)) {
+		    $arg->{'vals_byname'}{$clrow[2]} = $choice;
+		    push(@{$arg->{'vals'}}, $arg->{'vals_byname'}{$clrow[2]});
+		    if (($defaultset == 0) &&
+			($choice->{'idx'} eq $arg->{'default'})) {
+			$arg->{'default'} = $choice->{'value'};
+			$defaultset = 1;
+		    }
+		}
+	    }
+	    my $cleanupquerystr =
+		"DROP TABLE needed_options, needed_choices;";
+	    my $custh = $this->{'dbh'}->prepare($cleanupquerystr);
+	    $custh->execute();
 	} else {
 	    # Printer $poid not supported by driver $drv
 	}
@@ -1971,11 +2152,15 @@ sub getdat ($ $ $) {
 
     # Generate Perl data structure from database
     my %dat;			# Our purpose in life...
-    my $VAR1;
-    eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C -l $this->{'language'}`) ||
-	die ("Could not run \"foomatic-combo-xml\"/" .
-	     "\"foomatic-perl-data\"!");
-    %dat = %{$VAR1};
+    if ($this->{'dbh'}) {
+	%dat = %{$this->get_combo_data_from_sql_db($drv, $poid)};
+    } else {
+	my $VAR1;
+	eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C -l $this->{'language'}`) ||
+	    die ("Could not run \"foomatic-combo-xml\"/" .
+		 "\"foomatic-perl-data\"!");
+	%dat = %{$VAR1};
+    }
 
     # Funky one-at-a-time cache thing
     $this->{'dat'} = \%dat;

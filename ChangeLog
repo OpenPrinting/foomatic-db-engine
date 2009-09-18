@@ -1,3 +1,8 @@
+2009-09-18  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Completed get_combo_data_from_sql_db()
+	  method. Now PPDs can be generated based on an SQL database.
+
 2009-09-17  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Removed line 
