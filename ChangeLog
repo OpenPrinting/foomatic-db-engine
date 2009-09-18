@@ -2,6 +2,9 @@
 
 	* lib/Foomatic/DB.pm: Completed get_combo_data_from_sql_db()
 	  method. Now PPDs can be generated based on an SQL database.
+	  Added new methods get_makes_from_sql_db(),
+	  get_models_by_make_from_sql_db(),
+	  get_printer_from_make_model_from_sql_db.
 
 2009-09-17  Till Kamppeter <till.kamppeter@gmail.com>
 

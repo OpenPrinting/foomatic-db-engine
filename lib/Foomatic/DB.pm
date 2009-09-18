@@ -451,7 +451,7 @@ sub get_overview_from_sql_db {
 	#print Dumper($this->get_printerlist_from_sql_db); # XXX
 	#print Dumper($this->get_driver_from_sql_db("dplix")); # XXX
 	#print Dumper($this->get_printer_from_sql_db("Brother-DCP-8045D")); # XXX
-	#print Dumper($this->get_combo_data_from_sql_db("pxlmono", "HP-LaserJet_4050")); # XXX
+	print Dumper($this->get_combo_data_from_sql_db("pxlmono", "HP-LaserJet_4050")); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {
@@ -1091,6 +1091,56 @@ sub get_combo_data_from_sql_db {
 	}
     }
     return $dat;
+}
+
+sub get_makes_from_sql_db {
+    my ($this) = @_;
+    my @makes;
+    if ($this->{'dbh'}) {
+	# Get list of manufacturers
+	my $querystr =
+	    "SELECT make FROM printer GROUP BY make;";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	while (my @row = $sth->fetchrow_array) {
+	    push(@makes, $row[0]);
+	}
+    }
+    return @makes;
+}
+
+sub get_models_by_make_from_sql_db {
+    my ($this, $wantmake) = @_;
+    my @models;
+    if ($this->{'dbh'}) {
+	# Get list of models for a given manufacturer
+	my $querystr =
+	    "SELECT model FROM printer WHERE make=\"$wantmake\"";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	while (my @row = $sth->fetchrow_array) {
+	    push(@models, $row[0]);
+	}
+    }
+    return @models;
+}
+
+sub get_printer_from_make_model_from_sql_db {
+    my ($this, $wantmake, $wantmodel) = @_;
+    my $p = undef;
+    if ($this->{'dbh'}) {
+	# Get a printer ID from a make/model
+	my $querystr =
+	    "SELECT id FROM printer " .
+	    "WHERE make=\"$wantmake\" AND model=\"$wantmodel\";";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	my @row = $sth->fetchrow_array;
+	if (@row) {
+	    $p = $row[0];
+	}
+    }
+    return $p;
 }
 
 # Translate old numerical PostGreSQL printer IDs to the new clear text ones.
@@ -7201,6 +7251,7 @@ sub getascii {
 # Return list of printer makes
 sub get_makes {
     my ($this) = @_;
+    return $this->get_makes_from_sql_db if $this->{'dbh'};
 
     my @makes;
     my %seenmakes;
@@ -7218,6 +7269,8 @@ sub get_makes {
 # get a list of model names from a make
 sub get_models_by_make {
     my ($this, $wantmake) = @_;
+    return $this->get_models_by_make_from_sql_db($wantmake)
+	if $this->{'dbh'};
 
     my $over = $this->get_overview();
 
@@ -7234,7 +7287,8 @@ sub get_models_by_make {
 # get a printer id from a make/model
 sub get_printer_from_make_model {
     my ($this, $wantmake, $wantmodel) = @_;
-
+    return $this->get_printer_from_make_model_from_sql_db($wantmake, $wantmodel)
+	if $this->{'dbh'};
     my $over = $this->get_overview();
     my $p;
     for $p (@{$over}) {
