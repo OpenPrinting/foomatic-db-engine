@@ -1,5 +1,9 @@
 2009-09-18  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* foomatic-ppdfile.in: When generating a PPD file, do only generate
+	  the overview if really needed. This makes generating PPDs 10 times
+	  faster whenusing a MySQL database.
+
 	* lib/Foomatic/DB.pm: Completed get_combo_data_from_sql_db()
 	  method. Now PPDs can be generated based on an SQL database.
 	  Added new methods get_makes_from_sql_db(),

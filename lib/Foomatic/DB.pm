@@ -451,7 +451,7 @@ sub get_overview_from_sql_db {
 	#print Dumper($this->get_printerlist_from_sql_db); # XXX
 	#print Dumper($this->get_driver_from_sql_db("dplix")); # XXX
 	#print Dumper($this->get_printer_from_sql_db("Brother-DCP-8045D")); # XXX
-	print Dumper($this->get_combo_data_from_sql_db("pxlmono", "HP-LaserJet_4050")); # XXX
+	#print Dumper($this->get_combo_data_from_sql_db("pxlmono", "HP-LaserJet_4050")); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {

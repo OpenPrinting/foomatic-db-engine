@@ -177,7 +177,6 @@ sub generateppd {
     my $poid;
 
     my $db = Foomatic::DB->new();
-    $db->get_overview();
     my $printer;
     my @drivers = $db->get_driverlist();
 
@@ -208,13 +207,17 @@ sub generateppd {
     $poid = Foomatic::DB::translate_printer_id($poid);
 
     my $lcname = lc( $poid );
-    my $pentry;
-    for $printer (@{$db->{'overview'}}) {
-	my $name = lc( $printer->{'id'} );
-	print STDERR "DEBUG2: $progname: compare '$lcname' to '$name'\n" if $debug;
-	if( $name eq $lcname ){
-	    $pentry = $printer;
-	    last;
+    my $pentry = $db->get_printer($poid);
+    if (!$pentry || ($pentry->{'noxmlentry'} != 0)) {
+	$pentry = undef;
+	$db->get_overview();
+	for $printer (@{$db->{'overview'}}) {
+	    my $name = lc( $printer->{'id'} );
+	    print STDERR "DEBUG2: $progname: compare '$lcname' to '$name'\n" if $debug;
+	    if( $name eq $lcname ){
+		$pentry = $printer;
+		last;
+	    }
 	}
     }
 
@@ -230,8 +233,9 @@ sub generateppd {
 	}
     }
     
+    my @drvlist = $db->get_drivers_for_printer($poid);
     my $found = 0;
-    for my $d (@{$pentry->{'drivers'}}) {
+    for my $d (@drvlist) {
 	last if ($found = ($driver eq $d));
     }
     if ( not $found ) {
