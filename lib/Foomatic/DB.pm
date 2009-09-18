@@ -466,7 +466,7 @@ sub get_driverlist_from_sql_db {
 	    # Get driver list
 	    my $driverquerystr =
 		"SELECT id " .
-		"FROM driver ";
+		"FROM driver;";
 	    my $sth = $this->{'dbh'}->prepare($driverquerystr);
 	    $sth->execute();
 	    $this->{"names-source/driver"} = [];
@@ -485,7 +485,7 @@ sub get_printerlist_from_sql_db {
 	    # Get printer list
 	    my $printerquerystr =
 		"SELECT id " .
-		"FROM printer ";
+		"FROM printer;";
 	    my $sth = $this->{'dbh'}->prepare($printerquerystr);
 	    $sth->execute();
 	    $this->{"names-source/printer"} = [];
@@ -1115,7 +1115,7 @@ sub get_models_by_make_from_sql_db {
     if ($this->{'dbh'}) {
 	# Get list of models for a given manufacturer
 	my $querystr =
-	    "SELECT model FROM printer WHERE make=\"$wantmake\"";
+	    "SELECT model FROM printer WHERE make=\"$wantmake\";";
 	my $sth = $this->{'dbh'}->prepare($querystr);
 	$sth->execute();
 	while (my @row = $sth->fetchrow_array) {
