@@ -77,7 +77,6 @@ sub connect_to_mysql_db {
     my %mysqlconf = read_conf_file($sysdeps->{'foo-etc'} . "/mysql.conf");
     if (defined($mysqlconf{'server'}) || defined($mysqlconf{'user'}) ||
 	defined($mysqlconf{'password'}) || defined($mysqlconf{'database'})) {
-	#print STDERR "XXX Config file:\n" . Dumper(%mysqlconf) . "\n";
 	$mysqlconf{'server'} = 'localhost' if !$mysqlconf{'server'};
 	$mysqlconf{'user'} = 'root' if !$mysqlconf{'user'};
 	$mysqlconf{'password'} = '' if !$mysqlconf{'password'};
@@ -92,11 +91,6 @@ sub connect_to_mysql_db {
     } else {
 	$this->{'dbh'} = NULL;
     }
-    #if ($this->{'dbh'}) { #XXX
-	#print STDERR "XXX Database connected!\n";
-	#$this->get_overview_from_sql_db(0); # XXX
-	#print STDERR "XXX Overview generated!\n";
-    #} # XXX
 }
 
 sub disconnect_from_sql_db {
@@ -105,6 +99,31 @@ sub disconnect_from_sql_db {
 	$this->{'dbh'}->disconnect or
 	    warn $this->{'dbh'}->errstr;
     }
+}
+
+sub get_driver_dependencies_from_sql_db {
+    my ($this, $driver) = @_;
+    my @dependencies;
+    if ($this->{'dbh'}) {
+	my $querystr =
+	    "SELECT required_driver, version " .
+	    "FROM driver_dependency " .
+	    "WHERE driver_id=\"$driver\";";
+	my $sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	while (my @row = $sth->fetchrow_array) {
+	    my $dep = undef;
+	    $dep->{'driver'} = $row[0]
+		if defined($row[0]) && ($row[0] ne "");
+	    $dep->{'version'} = $row[1]
+		if defined($row[1]) && ($row[1] ne "");
+	    push(@dependencies, $dep)
+		if defined($dep);
+	}
+    } else {
+	@dependencies = ();
+    }
+    return @dependencies;
 }
 
 sub get_driver_support_contacts_from_sql_db {
@@ -196,7 +215,6 @@ sub get_driver_packages_from_sql_db {
 
 sub get_overview_from_sql_db {
     my ($this, $cupsppds) = @_;
-    #$cupsppds=0; # XXX
     if ($this->{'dbh'}) {
 	my $printerquerystr = "SELECT printer.id, " .
 	    "printer.make, printer.model, printer.functionality, " .
@@ -235,7 +253,8 @@ sub get_overview_from_sql_db {
 	    "driver_printer_assoc.photo AS exc_photo, " .
 	    "driver_printer_assoc.load_time AS exc_load_time, " .
 	    "driver_printer_assoc.speed AS exc_speed, " .
-	    "driver_printer_assoc.ppd, driver.obsolete " .
+	    "driver_printer_assoc.ppd, driver.obsolete, " .
+	    "driver.driver_group, driver.locales, driver.licenselink " .
 	    "FROM driver_printer_assoc, driver " .
 	    "WHERE (" .
 	    ($cupsppds ?
@@ -254,8 +273,6 @@ sub get_overview_from_sql_db {
 	my $overview = [];
 	while ( 1 ) {
 	    last if !@prow && !@drow;
-	    #print "XXX P: " .join('|', @prow) . "\n";
-	    #print "XXX D: " .join('|', @drow) . "\n";
 	    # New printer entry in the overview data structure
 	    my $printer = "";
 	    my $pentry = {};
@@ -264,7 +281,6 @@ sub get_overview_from_sql_db {
 		# in the printer list, fill printer data with defaults, mainly
 		# empty fields. Do not touch $prow in this loop run.
 		$printer = $drow[0];
-		#print "XXX Printer (not in DB): $printer\n";
 		$pentry->{'id'} = $printer;
 		$pentry->{'functionality'} = "X";
 		$pentry->{'unverified'} = 0;
@@ -272,7 +288,6 @@ sub get_overview_from_sql_db {
 	    } else {
 		# Treat the current printer from the printer list now
 		$printer = $prow[0];
-		#print "XXX Printer: $printer\n";
 		$pentry->{'id'} = $printer;
 		$pentry->{'make'} = $prow[1]
 		    if defined($prow[1]) && ($prow[1] ne "");
@@ -345,7 +360,6 @@ sub get_overview_from_sql_db {
 		while (@drow && (uc($printer) eq uc($drow[0]))) {
 		    # Treat the current combo from the printer/driver list now
 		    my $driver = $drow[1];
-		    #print "XXX    Driver: $driver\n";
 		    push (@{$pentry->{'drivers'}}, $driver);
 		    my $properties = undef;
 		    $properties->{'url'} = $drow[2]
@@ -417,6 +431,18 @@ sub get_overview_from_sql_db {
 			if defined($drow[29]) && ($drow[29] ne "");
 		    $properties->{'obsolete'} = $drow[30]
 			if defined($drow[30]) && ($drow[30] ne "");
+		    $properties->{'group'} = $drow[31]
+			if defined($drow[31]) && ($drow[31] ne "");
+		    $properties->{'locales'} = $drow[32]
+			if defined($drow[32]) && ($drow[32] ne "");
+		    $properties->{'licenselink'} = $drow[33]
+			if defined($drow[33]) && ($drow[33] ne "");
+
+		    # Get dependencies from separate table
+		    my @dependencies =
+			$this->get_driver_dependencies_from_sql_db($driver);
+		    $properties->{'requires'} = \@dependencies
+			if (@dependencies);
 
 		    # Get downloadable packages from separate table
 		    my @packages =
@@ -439,19 +465,12 @@ sub get_overview_from_sql_db {
 		# There is no driver for this printer. Skip this printer
 		# if the overview was requested only to find out which
 		# PPDs/drivers are available.
-		#print "XXX    No Driver\n";
 		next if $cupsppds;
 	    }
 
 	    # Add printer record to data structure
 	    push(@{$overview}, $pentry);
 	}
-	#print Dumper($overview); # XXX
-	#print Dumper($this->get_driverlist_from_sql_db); # XXX
-	#print Dumper($this->get_printerlist_from_sql_db); # XXX
-	#print Dumper($this->get_driver_from_sql_db("dplix")); # XXX
-	#print Dumper($this->get_printer_from_sql_db("Brother-DCP-8045D")); # XXX
-	#print Dumper($this->get_combo_data_from_sql_db("pxlmono", "HP-LaserJet_4050")); # XXX
 	$this->{'overview'} = $overview;
 	return $this->{'overview'};
     } else {
@@ -682,48 +701,54 @@ sub get_driver_from_sql_db {
 	my @drow = $sth->fetchrow_array;
 	if (@drow) {
 	    $dentry->{'name'} = $driver;
-	    $dentry->{'obsolete'} = $drow[2]
+	    $dentry->{'group'} = $drow[2]
 		if defined($drow[2]) && ($drow[2] ne "");
-	    $dentry->{'pcdriver'} = $drow[3]
+	    $dentry->{'locales'} = $drow[3]
 		if defined($drow[3]) && ($drow[3] ne "");
-	    $dentry->{'url'} = $drow[4]
+	    $dentry->{'obsolete'} = $drow[4]
 		if defined($drow[4]) && ($drow[4] ne "");
-	    $dentry->{'supplier'} = $drow[5]
-		if defined($drow[5] && ($drow[5] ne ""));
-	    $dentry->{'manufacturersupplied'} = $drow[7]
+	    $dentry->{'pcdriver'} = $drow[5]
+		if defined($drow[5]) && ($drow[5] ne "");
+	    $dentry->{'url'} = $drow[6]
+		if defined($drow[6]) && ($drow[6] ne "");
+	    $dentry->{'supplier'} = $drow[7]
 		if defined($drow[7]) && ($drow[7] ne "");
-	    $dentry->{'manufacturersupplied'} = 0
-		if defined($drow[6]) && (int($drow[6]) != 0);
-	    $dentry->{'license'} = $drow[8]
-		if defined($drow[8]) && ($drow[8] ne "");
-	    $dentry->{'licensetext'} = $drow[9]
+	    $dentry->{'manufacturersupplied'} = $drow[9]
 		if defined($drow[9]) && ($drow[9] ne "");
-	    $dentry->{'free'} = (int($drow[10]) == 0 ? 1 : 0)
-		if defined($drow[10]);
-	    $dentry->{'patents'} = int($drow[11])
+	    $dentry->{'manufacturersupplied'} = 0
+		if defined($drow[8]) && (int($drow[8]) != 0);
+	    $dentry->{'license'} = $drow[10]
+		if defined($drow[10]) && ($drow[10] ne "");
+	    $dentry->{'licensetext'} = $drow[11]
 		if defined($drow[11]) && ($drow[11] ne "");
-	    $dentry->{'shortdescription'} = $drow[12]
+	    $dentry->{'licenselink'} = $drow[12]
 		if defined($drow[12]) && ($drow[12] ne "");
-	    $dentry->{'drvmaxresx'} = int($drow[13])
-		if defined($drow[13]) && (int($drow[13]) != 0);
-	    $dentry->{'drvmaxresy'} = int($drow[14])
-		if defined($drow[14]) && (int($drow[14]) != 0);
-	    $dentry->{'drvcolor'} = int($drow[15])
-		if defined($drow[15] && ($drow[15] ne ""));
-	    $dentry->{'text'} = int($drow[16])
-		if defined($drow[16]) && ($drow[16] ne "");
-	    $dentry->{'lineart'} = int($drow[17])
-		if defined($drow[17]) && ($drow[17] ne "");
-	    $dentry->{'graphics'} = int($drow[18])
-		if defined($drow[18]) && ($drow[18] ne "");
-	    $dentry->{'photo'} = int($drow[19])
+	    $dentry->{'free'} = (int($drow[13]) == 0 ? 1 : 0)
+		if defined($drow[13]);
+	    $dentry->{'patents'} = int($drow[14])
+		if defined($drow[14]) && ($drow[14] ne "");
+	    $dentry->{'shortdescription'} = $drow[15]
+		if defined($drow[15]) && ($drow[15] ne "");
+	    $dentry->{'drvmaxresx'} = int($drow[16])
+		if defined($drow[16]) && (int($drow[16]) != 0);
+	    $dentry->{'drvmaxresy'} = int($drow[17])
+		if defined($drow[17]) && (int($drow[17]) != 0);
+	    $dentry->{'drvcolor'} = int($drow[18])
+		if defined($drow[18] && ($drow[18] ne ""));
+	    $dentry->{'text'} = int($drow[19])
 		if defined($drow[19]) && ($drow[19] ne "");
-	    $dentry->{'load'} = int($drow[20])
+	    $dentry->{'lineart'} = int($drow[20])
 		if defined($drow[20]) && ($drow[20] ne "");
-	    $dentry->{'speed'} = int($drow[21])
+	    $dentry->{'graphics'} = int($drow[21])
 		if defined($drow[21]) && ($drow[21] ne "");
-	    if (defined($drow[22]) && ($drow[22] ne "")) {
-		my $type = $drow[22];
+	    $dentry->{'photo'} = int($drow[22])
+		if defined($drow[22]) && ($drow[22] ne "");
+	    $dentry->{'load'} = int($drow[23])
+		if defined($drow[23]) && ($drow[23] ne "");
+	    $dentry->{'speed'} = int($drow[24])
+		if defined($drow[24]) && ($drow[24] ne "");
+	    if (defined($drow[25]) && ($drow[25] ne "")) {
+		my $type = $drow[25];
 		$dentry->{'type'} =
 		    ($type eq 'cups' ? 'C' :
 		     ($type eq 'ijs' ? 'I' :
@@ -734,22 +759,27 @@ sub get_driver_from_sql_db {
 			  ($type eq 'postscript' ? 'P' :
 			   undef)))))));
 	    }
-	    $dentry->{'nopjl'} = $drow[23]
-		if defined($drow[23]) && ($drow[23] ne "");
-	    $dentry->{'nopageaccounting'} = $drow[24]
-		if defined($drow[24]) && ($drow[24] ne "");
-	    $dentry->{'cmd'} = $drow[25]
-		if defined($drow[25]) && ($drow[25] ne "");
-	    $dentry->{'cmd_pdf'} = $drow[26]
+	    $dentry->{'nopjl'} = $drow[26]
 		if defined($drow[26]) && ($drow[26] ne "");
-	    $dentry->{'ppdentry'} = $drow[27]
+	    $dentry->{'nopageaccounting'} = $drow[27]
 		if defined($drow[27]) && ($drow[27] ne "");
-	    $dentry->{'comment'} = $drow[28]
+	    $dentry->{'cmd'} = $drow[28]
 		if defined($drow[28]) && ($drow[28] ne "");
+	    $dentry->{'cmd_pdf'} = $drow[29]
+		if defined($drow[29]) && ($drow[29] ne "");
+	    $dentry->{'ppdentry'} = $drow[30]
+		if defined($drow[30]) && ($drow[30] ne "");
+	    $dentry->{'comment'} = $drow[31]
+		if defined($drow[31]) && ($drow[31] ne "");
 
 	    # Get unprintable margins from separate table
 	    my $margins = $this->get_margins_from_sql_db($driver, undef);
 	    $dentry->{'margins'} = $margins if defined($margins);
+
+	    # Get dependencies from separate table
+	    my @dependencies =
+		$this->get_driver_dependencies_from_sql_db($driver);
+	    $dentry->{'requires'} = \@dependencies if (@dependencies);
 
 	    # Get downloadable packages from separate table
 	    my @packages = $this->get_driver_packages_from_sql_db($driver);
@@ -762,7 +792,7 @@ sub get_driver_from_sql_db {
 		\@supportcontacts if (@supportcontacts);
 	} else {
 	    $dentry = undef;
-	}	
+	}
     } else {
 	$dentry = undef;
     }
@@ -882,7 +912,6 @@ sub get_combo_data_from_sql_db {
 	    my $driver = $this->get_driver_from_sql_db($drv);
 	    return undef if !defined($driver);
 	    for my $k (keys %{$printer}) {
-		#print "XXX 1 |$k|$printer->{$k}|";
 		if ($k eq "driver") {
 		    $dat->{'recdriver'} = $printer->{$k};
 		} elsif ($k eq "ppdentry") {
@@ -894,11 +923,9 @@ sub get_combo_data_from_sql_db {
 		} else {
 		    $dat->{$k} = $printer->{$k};
 		}
-		#print "$dat->{$k}|\n"; # XXX
 	    }
 	    $printer = undef;
 	    for my $k (keys %{$driver}) {
-		#print "XXX 2 |$k|$driver->{$k}|";
 		if ($k eq "id") {
 		    # Do nothing
 		} elsif ($k eq "name") {
@@ -910,7 +937,6 @@ sub get_combo_data_from_sql_db {
 		} else {
 		    $dat->{$k} = $driver->{$k};
 		}
-		#print "$dat->{$k}|\n"; # XXX
 	    }
 	    $driver = undef;
 
@@ -1037,7 +1063,6 @@ sub get_combo_data_from_sql_db {
 		if ($clrow[0] ne $option) {
 		    $option = $clrow[0];
 		    while (@olrow = $olsth->fetchrow_array) {
-			#print "XXX O: " .join('|', @olrow) . "\n";
 			$defaultset = 0;
 			$arg = undef;
 			$arg->{'idx'} = "opt/$olrow[0]"
@@ -1098,7 +1123,6 @@ sub get_combo_data_from_sql_db {
 			last if $clrow[0] eq $olrow[0];
 		    }
 		}
-		#print "XXX C: " .join('|', @clrow) . "\n";
 		my $choice = undef;
 		$choice->{'idx'} = "ev/$clrow[1]"
 		    if defined($clrow[1]) && ($clrow[1] ne "");
@@ -1230,13 +1254,6 @@ sub get_overview {
 	!$rebuild;
     $this->{'overview'} = undef;
 
-    #if ($this->{'dbh'}) { # XXX
-	#print STDERR "XXX Database connected!\n";
-	#$this->get_overview_from_sql_db($cupsppds); #XXX
-	#print STDERR "XXX Overview generated!\n";
-	#return $this->{'overview'}; #XXX
-    #} #XXX
-    
     # Get overview from an SQL database if we have one
     return $this->get_overview_from_sql_db($cupsppds) if $this->{'dbh'};
 

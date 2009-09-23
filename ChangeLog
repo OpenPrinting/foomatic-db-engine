@@ -4,6 +4,10 @@
 	  printer_exists_in_sql_db(), driver_exists_in_sql_db(),
 	  make_exists(), and driver_exists().
 
+	  Added support for additional MySQL database fields in the driver
+	  entries: group, locale, licenselink. Added also support for the
+	  additional MySQL table for dependencies between drivers.
+
 2009-09-18  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppdfile.in: When generating a PPD file, do only generate
