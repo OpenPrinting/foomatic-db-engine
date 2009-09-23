@@ -1,3 +1,9 @@
+2009-09-23  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added methods make_exists_in_sql_db(),
+	  printer_exists_in_sql_db(), driver_exists_in_sql_db(),
+	  make_exists(), and driver_exists().
+
 2009-09-18  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppdfile.in: When generating a PPD file, do only generate
@@ -8,7 +14,7 @@
 	  method. Now PPDs can be generated based on an SQL database.
 	  Added new methods get_makes_from_sql_db(),
 	  get_models_by_make_from_sql_db(),
-	  get_printer_from_make_model_from_sql_db.
+	  get_printer_from_make_model_from_sql_db().
 
 2009-09-17  Till Kamppeter <till.kamppeter@gmail.com>
 

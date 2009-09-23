@@ -769,6 +769,25 @@ sub get_driver_from_sql_db {
     return $dentry;
 }
 
+sub make_exists_in_sql_db {
+    my ($this, $make) = @_;
+    # Check whether a printer entry for this make exists in the database
+    if ($this->{'dbh'}) {
+	# Get printer record
+	my $printerquerystr =
+	    "SELECT id " .
+	    "FROM printer " .
+	    "WHERE make=\"$make\";";
+	my $sth = $this->{'dbh'}->prepare($printerquerystr);
+	$sth->execute();
+	my @prow = $sth->fetchrow_array;
+	return 1 if @prow;
+	return undef;
+    } else {
+	return undef;
+    }
+}
+
 sub printer_exists_in_sql_db {
     my ($this, $poid) = @_;
     # Check whether a printer entry exists in the database
@@ -782,6 +801,25 @@ sub printer_exists_in_sql_db {
 	$sth->execute();
 	my @prow = $sth->fetchrow_array;
 	return 1 if @prow;
+	return undef;
+    } else {
+	return undef;
+    }
+}
+
+sub driver_exists_in_sql_db {
+    my ($this, $drv) = @_;
+    # Check whether a driver entry exists in the database
+    if ($this->{'dbh'}) {
+	# Get driver record
+	my $driverquerystr =
+	    "SELECT id " .
+	    "FROM driver " .
+	    "WHERE id=\"$drv\";";
+	my $sth = $this->{'dbh'}->prepare($driverquerystr);
+	$sth->execute();
+	my @drow = $sth->fetchrow_array;
+	return 1 if @drow;
 	return undef;
     } else {
 	return undef;
@@ -1308,11 +1346,28 @@ sub get_printer {
     return $VAR1;
 }
 
+sub make_exists {
+    my ($this, $make) = @_;
+    return $this->make_exists_in_sql_db($make) if $this->{'dbh'};
+    # Check whether an XML file for the given make exists in the database
+    return 1 if 
+	`ls -1 $libdir/db/source/printer/ | grep -c ^$make-` !~ /^0$/;
+    return undef;
+}
+
 sub printer_exists {
     my ($this, $poid) = @_;
     return $this->printer_exists_in_sql_db($poid) if $this->{'dbh'};
     # Check whether a printer XML file exists in the database
     return 1 if (-r "$libdir/db/source/printer/$poid.xml");
+    return undef;
+}
+
+sub driver_exists {
+    my ($this, $drv) = @_;
+    return $this->driver_exists_in_sql_db($drv) if $this->{'dbh'};
+    # Check whether a driver XML file exists in the database
+    return 1 if (-r "$libdir/db/source/driver/$drv.xml");
     return undef;
 }
 
