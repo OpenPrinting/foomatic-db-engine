@@ -1,3 +1,9 @@
+2009-09-24  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Let an SQL-based driver query also show the
+	  list of supported printers and a printer query also the list of
+	  suitable drivers, as the XML-based queries do.
+
 2009-09-23  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added methods make_exists_in_sql_db(),

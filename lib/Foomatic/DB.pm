@@ -517,7 +517,7 @@ sub get_printerlist_from_sql_db {
 }
 
 sub get_printer_from_sql_db {
-    my ($this, $poid) = @_;
+    my ($this, $poid, $nodriverlist) = @_;
     my $pentry;
     if ($this->{'dbh'}) {
 	# Get printer record
@@ -680,6 +680,30 @@ sub get_printer_from_sql_db {
 	my ($mfg, $mdl) = get_make_model_from_id($poid);
 	$pentry->{'make'} = $mfg if !defined($pentry->{'make'});
 	$pentry->{'model'} = $mdl if !defined($pentry->{'model'});
+	if (!$nodriverlist) {
+	    my $driverquerystr = "SELECT driver_printer_assoc.driver_id, " .
+		"driver_printer_assoc.ppd, " .
+		"driver_printer_assoc.comments " .
+		"FROM driver_printer_assoc " .
+		"WHERE driver_printer_assoc.printer_id=\"$poid\" " .
+		"ORDER BY BINARY(driver_printer_assoc.driver_id);";
+	    my $sthd = $this->{'dbh'}->prepare($driverquerystr);
+	    $sthd->execute();
+	    my @driverlist = ();
+	    while (my @drow = $sthd->fetchrow_array) {
+		my $d = undef;
+		$d->{'id'} = $drow[0]
+		    if defined($drow[0]) && ($drow[0] ne "");
+		$d->{'name'} = $drow[0]
+		    if defined($drow[0]) && ($drow[0] ne "");
+		$d->{'ppd'} = $drow[1]
+		    if defined($drow[1]) && ($drow[1] ne "");
+		$d->{'comment'} = $drow[2]
+		    if defined($drow[2]) && ($drow[2] ne "");
+		push(@driverlist, $d) if defined($d);
+	    }
+	    $pentry->{'drivers'} = \@driverlist if (@driverlist);
+	}
     } else {
 	$pentry = undef;
     }
@@ -687,7 +711,7 @@ sub get_printer_from_sql_db {
 }
 
 sub get_driver_from_sql_db {
-    my ($this, $driver) = @_;
+    my ($this, $driver, $noprinterlist) = @_;
     my $dentry;
     if ($this->{'dbh'}) {
 	# Get driver record
@@ -790,6 +814,58 @@ sub get_driver_from_sql_db {
 		$this->get_driver_support_contacts_from_sql_db($driver);
 	    $dentry->{'supportcontacts'} =
 		\@supportcontacts if (@supportcontacts);
+
+	    # Get the list of printers which work with this driver
+	    if (!$noprinterlist) {
+		my $printerquerystr =
+		    "SELECT driver_printer_assoc.printer_id, " .
+		    "driver_printer_assoc.comments, " .
+		    "driver_printer_assoc.max_res_x, " .
+		    "driver_printer_assoc.max_res_y, " .
+		    "driver_printer_assoc.color, " .
+		    "driver_printer_assoc.text, " .
+		    "driver_printer_assoc.lineart, " .
+		    "driver_printer_assoc.graphics, " .
+		    "driver_printer_assoc.photo, " .
+		    "driver_printer_assoc.load_time, " .
+		    "driver_printer_assoc.speed, " .
+		    "driver_printer_assoc.ppd " .
+		    "FROM driver_printer_assoc " .
+		    "WHERE driver_printer_assoc.driver_id=\"$driver\" " .
+		    "ORDER BY BINARY(driver_printer_assoc.printer_id);";
+		my $sthp = $this->{'dbh'}->prepare($printerquerystr);
+		$sthp->execute();
+		my @printerlist = ();
+		while (my @prow = $sthp->fetchrow_array) {
+		    my $p = undef;
+		    $p->{'id'} = $prow[0]
+			if defined($prow[0]) && ($prow[0] ne "");
+		    $p->{'comment'} = $prow[1]
+			if defined($prow[1]) && ($prow[1] ne "");
+		    $p->{'excmaxresx'} = int($prow[2])
+			if defined($prow[2]) && ($prow[2] ne "");
+		    $p->{'excmaxresy'} = int($prow[3])
+			if defined($prow[3]) && ($prow[3] ne "");
+		    $p->{'exccolor'} = int($prow[4])
+			if defined($prow[4]) && ($prow[4] ne "");
+		    $p->{'exctext'} = int($prow[5])
+			if defined($prow[5]) && ($prow[5] ne "");
+		    $p->{'exclineart'} = int($prow[6])
+			if defined($prow[6]) && ($prow[6] ne "");
+		    $p->{'excgraphics'} = int($prow[7])
+			if defined($prow[7]) && ($prow[7] ne "");
+		    $p->{'excphoto'} = int($prow[8])
+			if defined($prow[8]) && ($prow[8] ne "");
+		    $p->{'excload'} = int($prow[9])
+			if defined($prow[9]) && ($prow[9] ne "");
+		    $p->{'excspeed'} = int($prow[10])
+			if defined($prow[10]) && ($prow[10] ne "");
+		    $p->{'ppd'} = $prow[11]
+			if defined($prow[11]) && ($prow[11] ne "");
+		    push(@printerlist, $p) if defined($p);
+		}
+		$dentry->{'printers'} = \@printerlist if (@printerlist);
+	    }
 	} else {
 	    $dentry = undef;
 	}
@@ -907,9 +983,9 @@ sub get_combo_data_from_sql_db {
 	my @row = $sth->fetchrow_array;
 	if (@row) {
 	    # Get data for printer and driver
-	    my $printer = $this->get_printer_from_sql_db($poid);
+	    my $printer = $this->get_printer_from_sql_db($poid, 1);
 	    return undef if !defined($printer);
-	    my $driver = $this->get_driver_from_sql_db($drv);
+	    my $driver = $this->get_driver_from_sql_db($drv, 1);
 	    return undef if !defined($driver);
 	    for my $k (keys %{$printer}) {
 		if ($k eq "driver") {
