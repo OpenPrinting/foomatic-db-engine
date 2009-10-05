@@ -1,3 +1,8 @@
+2009-10-05  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added support for internationalization by
+	  querying the translation tables of the MySQL database.
+
 2009-09-24  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Let an SQL-based driver query also show the

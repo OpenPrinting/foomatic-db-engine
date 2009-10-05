@@ -101,6 +101,33 @@ sub disconnect_from_sql_db {
     }
 }
 
+sub get_translation_from_sql_db {
+    my ($this, $table, $pkeys, $fields) = @_;
+    if ($this->{'dbh'} &&
+	defined($this->{'language'}) &&
+	($this->{'language'} !~ /^(en|C|POSIX)$/)) {
+	my $lang_country = $this->{'language'};
+	my $lang = $this->{'language'};
+	$lang =~ s/_.*$//;
+	foreach my $attempt ("lang=\"$lang_country\"",
+			     "lang=\"$lang\"",
+			     "lang LIKE \"$lang\\_\%\"") {
+	    my $fieldsstr = join(", ", @{$fields});
+	    my $querystr =
+		"SELECT $fieldsstr FROM ${table}_translation WHERE $attempt";
+	    foreach my $pkey (keys %{$pkeys}) {
+		$querystr .= " AND $pkey=\"$pkeys->{$pkey}\"";
+	    }
+	    $querystr .= ";";
+	    my $sth = $this->{'dbh'}->prepare($querystr);
+	    $sth->execute();
+	    my @row = $sth->fetchrow_array;
+	    return @row if $#row >= 0;
+	}
+    }
+    return undef;
+}
+
 sub get_driver_dependencies_from_sql_db {
     my ($this, $driver) = @_;
     my @dependencies;
@@ -142,8 +169,20 @@ sub get_driver_support_contacts_from_sql_db {
 	    $sc->{'level'} = $srow[1] if defined($srow[1]) && ($srow[1] ne "");
 	    $sc->{'description'} = $srow[2]
 		if defined($srow[2]) && ($srow[2] ne "");
-	    push(@supportcontacts, $sc)
-		if defined($sc);
+	    if (defined($sc)) {
+		# Request translations
+		if (defined($sc->{'url'}) && defined($sc->{'level'})) {
+		    my @tr = 
+			$this->get_translation_from_sql_db
+			("driver_support_contact",
+			 {'driver_id' => $driver,
+			  'url' => $sc->{'url'},
+			  'level' => $sc->{'level'}},
+			 ["description"]);
+		    $sc->{'description'} = $tr[0] if defined($tr[0]);
+		}
+		push(@supportcontacts, $sc)
+	    }
 	}
     } else {
 	@supportcontacts = ();
@@ -254,7 +293,7 @@ sub get_overview_from_sql_db {
 	    "driver_printer_assoc.load_time AS exc_load_time, " .
 	    "driver_printer_assoc.speed AS exc_speed, " .
 	    "driver_printer_assoc.ppd, driver.obsolete, " .
-	    "driver.driver_group, driver.locales, driver.licenselink " .
+	    "driver.driver_group, driver.locales " .
 	    "FROM driver_printer_assoc, driver " .
 	    "WHERE (" .
 	    ($cupsppds ?
@@ -435,8 +474,19 @@ sub get_overview_from_sql_db {
 			if defined($drow[31]) && ($drow[31] ne "");
 		    $properties->{'locales'} = $drow[32]
 			if defined($drow[32]) && ($drow[32] ne "");
-		    $properties->{'licenselink'} = $drow[33]
-			if defined($drow[33]) && ($drow[33] ne "");
+
+		    # Request translations
+		    my @tr = 
+			$this->get_translation_from_sql_db
+			("driver",
+			 {'id' => $driver},
+			 ["supplier", "license", "shortdescription"]);
+		    $properties->{'supplier'} = $tr[0]
+			if defined($tr[0]) && ($tr[0] ne "");
+		    $properties->{'license'} = $tr[1]
+			if defined($tr[1]) && ($tr[1] ne "");
+		    $properties->{'shortdescription'} = $tr[2]
+			if defined($tr[2]) && ($tr[2] ne "");
 
 		    # Get dependencies from separate table
 		    my @dependencies =
@@ -668,6 +718,15 @@ sub get_printer_from_sql_db {
 	    $pentry->{'comment'} = $prow[53]
 		if defined($prow[53]) && ($prow[53] ne "");
 
+	    # Request translations
+	    my @tr = 
+		$this->get_translation_from_sql_db
+		("printer",
+		 {'id' => $poid},
+		 ["comments"]);
+	    $pentry->{'comment'} = $tr[0]
+		if defined($tr[0]) && ($tr[0] ne "");
+
 	    # Get unprintable margins from separate table
 	    my $margins = $this->get_margins_from_sql_db(undef, $poid);
 	    $pentry->{'margins'} = $margins if defined($margins);
@@ -700,7 +759,20 @@ sub get_printer_from_sql_db {
 		    if defined($drow[1]) && ($drow[1] ne "");
 		$d->{'comment'} = $drow[2]
 		    if defined($drow[2]) && ($drow[2] ne "");
-		push(@driverlist, $d) if defined($d);
+		if (defined($d)) {
+		    # Request translations
+		    if (defined($d->{'id'})) {
+			my @tr = 
+			    $this->get_translation_from_sql_db
+			    ("driver_printer_assoc",
+			     {'printer_id' => $poid,
+			      'driver_id' => $d->{'id'}},
+			     ["comments"]);
+			$d->{'comment'} = $tr[0]
+			    if defined($tr[0]) && ($tr[0] ne "");
+		    }
+		    push(@driverlist, $d);
+		}
 	    }
 	    $pentry->{'drivers'} = \@driverlist if (@driverlist);
 	}
@@ -796,6 +868,35 @@ sub get_driver_from_sql_db {
 	    $dentry->{'comment'} = $drow[31]
 		if defined($drow[31]) && ($drow[31] ne "");
 
+	    # Request translations
+	    my @tr = 
+		$this->get_translation_from_sql_db
+		("driver",
+		 {'id' => $driver},
+		 ["supplier", "license", "licensetext",
+		  "licenselink", "shortdescription", "comments"]);
+	    $dentry->{'supplier'} = $tr[0]
+		if defined($tr[0]) && ($tr[0] ne "");
+	    $dentry->{'license'} = $tr[1]
+		if defined($tr[1]) && ($tr[1] ne "");
+	    if ((defined($tr[2]) && ($tr[2] ne "")) ||
+		(defined($tr[3]) && ($tr[3] ne ""))) {
+		$dentry->{'origlicensetext'} =
+		    $dentry->{'licensetext'};
+		delete($dentry->{'licensetext'});
+		$dentry->{'origlicenselink'} =
+		    $dentry->{'licenselink'};
+		delete($dentry->{'licenselink'});
+		$dentry->{'licensetext'} = $tr[2]
+		    if defined($tr[2]) && ($tr[2] ne "");
+		$dentry->{'licenselink'} = $tr[3]
+		    if defined($tr[3]) && ($tr[3] ne "");
+	    }
+	    $dentry->{'shortdescription'} = $tr[4]
+		if defined($tr[4]) && ($tr[4] ne "");
+	    $dentry->{'comment'} = $tr[5]
+		if defined($tr[5]) && ($tr[5] ne "");
+
 	    # Get unprintable margins from separate table
 	    my $margins = $this->get_margins_from_sql_db($driver, undef);
 	    $dentry->{'margins'} = $margins if defined($margins);
@@ -862,7 +963,20 @@ sub get_driver_from_sql_db {
 			if defined($prow[10]) && ($prow[10] ne "");
 		    $p->{'ppd'} = $prow[11]
 			if defined($prow[11]) && ($prow[11] ne "");
-		    push(@printerlist, $p) if defined($p);
+		    if (defined($p)) {
+			# Request translations
+			if (defined($p->{'id'})) {
+			    my @tr = 
+				$this->get_translation_from_sql_db
+				("driver_printer_assoc",
+				 {'printer_id' => $p->{'id'},
+				  'driver_id' => $driver},
+				 ["comments"]);
+			    $p->{'comment'} = $tr[0]
+				if defined($tr[0]) && ($tr[0] ne "");
+			}
+			push(@printerlist, $p);
+		    }
 		}
 		$dentry->{'printers'} = \@printerlist if (@printerlist);
 	    }
@@ -1192,6 +1306,18 @@ sub get_combo_data_from_sql_db {
 			    $arg->{'default'} = "ev/" . $arg->{'default'};
 			}
 			if (defined($arg)) {
+			    # Request translations
+			    if (defined($arg->{'idx'})) {
+				my @tr = 
+				    $this->get_translation_from_sql_db
+				    ("options",
+				     {'id' => $olrow[0]},
+				     ["longname", "comments"]);
+				$arg->{'comment'} = $tr[0]
+				    if defined($tr[0]) && ($tr[0] ne "");
+				$arg->{'help'} = $tr[1]
+				    if defined($tr[1]) && ($tr[1] ne "");
+			    }
 			    push(@{$dat->{'args'}}, $arg);
 			    $dat->{'args_byname'}{$olrow[2]} =
 				$dat->{'args'}[scalar(@{$dat->{'args'}})-1];
@@ -1211,6 +1337,17 @@ sub get_combo_data_from_sql_db {
 		$choice->{'driverval'} = $clrow[4]
 		    if defined($clrow[4]);
 		if (defined($choice)) {
+		    # Request translations
+		    if (defined($choice->{'idx'})) {
+			my @tr = 
+			    $this->get_translation_from_sql_db
+			    ("option_choice",
+			     {'id' => $clrow[0],
+			      'option_id' => $olrow[0]},
+			     ["longname"]);
+			$choice->{'comment'} = $tr[0]
+			    if defined($tr[0]) && ($tr[0] ne "");
+		    }
 		    $arg->{'vals_byname'}{$clrow[2]} = $choice;
 		    push(@{$arg->{'vals'}}, $arg->{'vals_byname'}{$clrow[2]});
 		    if (($defaultset == 0) &&
