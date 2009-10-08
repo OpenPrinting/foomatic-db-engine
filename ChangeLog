@@ -1,3 +1,13 @@
+2009-10-08  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Set "*ColorDevice:" in the Foomatic PPD
+	  files not only based on whether the printer is a color printer
+	  but also on whether the driver is capable of generating color
+	  output (if appropriate information about the driver is
+	  available).
+
+	* README: Typo corrections and some updates.
+
 2009-10-05  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added support for internationalization by

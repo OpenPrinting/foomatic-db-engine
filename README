@@ -698,7 +698,7 @@ foomatic-searchprinter
   name and how it is written in the database. foomatic-searchprinter
   matches what is closest to your search term. You can even use the
   IEEE-1284 device ID read from your printer as search term. This
-  toool together with foomatic-configure allows to write printer setup
+  tool together with foomatic-configure allows to write printer setup
   tools for fully automatic print queue setup. Results are shown
   sorted by relevance and the threshold for accepting results and the
   amount of results to be shown is adjustable. See
@@ -912,19 +912,19 @@ foomatic-rip
 
   See the documentation of the "foomatic-filters" package for more info.
 
-  This is a universal print filter which works with all printer spoolers
-  auto-detecting the spooler from which it is called. Its job is to
-  translate the incoming data (PostScript in most cases) to the
-  printer's native language taking into account all option settings,
-  either defaults or job-specific ones. It reads the PPD file assigned
-  to the print queue, either a Foomatic-generated one or a 
-  manufacturer-supplied PPD file of a PostScript printer, uses the
+  This is a universal print filter which works with all printer
+  spoolers auto-detecting the spooler from which it is called. Its job
+  is to translate the incoming data (PostScript or PDF in most cases)
+  to the printer's native language taking into account all option
+  settings, either defaults or job-specific ones. It reads the PPD
+  file assigned to the print queue, either a Foomatic-generated one or
+  a manufacturer-supplied PPD file of a PostScript printer, uses the
   information to find the default option settings and to build the
   renderer's (usually Ghostscript, "cat" for PostScript printers)
   command line, and applies the user-supplied options. Then it builds
   the renderer's command line and passes the data through it. If the
-  data is not PostScript, a pre-filter ("a2ps", "enscript", "mpage",
-  ...) is added.
+  data is not PostScript or PDF, a pre-filter ("a2ps", "enscript",
+  "mpage", ...) is added.
 
 
 
@@ -932,7 +932,7 @@ About the database
 ------------------
 
 The database is provided by the "foomatic-db" package, additional
-database entries are in "foomatic-db-hpijs", drivers can also supply
+database entries are in "foomatic-db-nonfree", drivers can also supply
 Foomatic XML files. "foomatic-db" is required for using the programs
 provided by this package.
 
@@ -943,7 +943,8 @@ auto-detected):
 
  db/                             - the database
  db/oldprinterids                - translation table for old numerical
-				   printer IDs
+				   printer IDs and for printer IDs which
+				   go changed
  db/kitload.log                  - list of third-party "kit" files, logged
                                    by foomatic-kitload
  db/source/                      - "source" data, provided by humans, etc
@@ -1326,7 +1327,7 @@ source/opt/2.xml
   </enum_vals>
 </option>
 
-# To allow custom page sizes to be used one has add a choice with the
+# To allow custom page sizes to be used one has to add a choice with the
 # "<ev_shortname>" being "Custom" to the "PageSize" option (example
 # below). This choice will be treated as the custom page size. When
 # the user selects this choice, he has to provide the width and the
@@ -2731,7 +2732,7 @@ structure in the Foomatic database entries:
        <!-- which there is no "exception" section -->
        <!-- ---------- -->
        <!-- possible units: -->
-       <!-- pt, inches, mm, cm,
+       <!-- pt, in, mm, cm,
        <!-- dotsNNNdpi (NNN: resolution in which dots are counted) -->
        <!-- if "unit" not present, default unit is pt -->
        <!-- ---------- -->
