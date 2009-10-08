@@ -1125,284 +1125,9 @@ See the USAGE file for compilation details.
 Data
 ----
 
-There are three main source datafiles; annotated examples:
+There are three main source datafiles (printers, drivers, and options;
+annotated examples:
 
-source/opt/2.xml
-================
-
-# Every option exists independently from printers or drivers, because
-# they might apply to arbitrary combinations of printers and/or
-# drivers.  In practice, some drivers have wholly unique options
-# (gutenprint for example), while others (lots of generic basic
-# Ghostscript drivers, for example) share some options.
-
-<option type="enum" id="opt/2">
-
-# Options are of a type "enum", "bool", "int", "float", "string", or
-# "password", options have an ID.  The id is also the filename.
-
-# The shortname is a spaceless short name for the thing.  It must not
-# contain / or : (otherwise it will not be handled correctly in PPD
-# files). It should be one of the standard Adobe PPD option names if
-# apropriate
-
-  <arg_shortname>
-
-# Various things here, and all <comments>, are internationalized.
-# They take the usual posix locale codes in the form xx[_YY], where xx
-# is a two-letter iso language code, and YY is two-letter country code
-# to distinguish differing national dialects.
-#
-# Generally the national dialects won't be very common or necessary
-# here.  The backends currently require that <en> content be provided.
-
-   <en>PageSize</en><!-- backends only know <en> shortnames! -->
-  </arg_shortname>
-
-# The longname is a short phrase describing the thing in more detail
-# GUI tools usually show longnames
-
-  <arg_longname>
-   <en>Page Size</en>
-  </arg_longname>
-
-# The comments are used to form documentation.  In theory these can
-# become man pages or the like.
-
-  <!-- A multilingual <comments> block can appear here, too;
-       it should be treated as documentation for the user. -->
-
-# The execution section describe how the backend should execute this
-# option. The order and spot apply to the *driver*'s prototype for
-# <arg_substitution /> (once called commandline) style options, or
-# just the order applies for <arg_postscript /> and <arg_pjl />
-# options. The order and the <arg_section> go into the "*OrderDependency"
-# line of the appropriate option entry in the PPD file, for this example
-# one would get
-
-#    *OrderDependency: 100 DocumentSetup *PageSize
-
-# When no <arg_section> is given, "AnySetup" is used as a default.
-
-# For <arg_substitution /> options the <arg_proto> is inserted into
-# the driver's command line, at the spot (e. g. "%A") whose letter is
-# given between the <arg_spot>...</arg_spot> tags, the <arg_proto> of
-# an <arg_postscript /> option is a snippet of PostScript code which
-# is inserted into the PostScript data stream of the job, for
-# DSC-conforming PostScript into the section specified with
-# <arg_section>, otherwise in the beginning. The <arg_proto> lines of
-# <arg_pjl /> options are PJL commands which are sent to the printer
-# before the output of the driver's command line is sent. Because this
-# only works reliably when the driver output does not have its own PJL
-# command header, these options are ignored when the driver's XML file
-# is marked with a <nopjl /> tag in its <execution> section. Drivers
-# which produce their own PJL and therefore are marked with <nopjl />
-# are for example "hpijs" and "hl1250". There is also the
-# <arg_composite /> execution style for composite options, see the
-# "Composite Options" section below. The user's value gets put into
-# the <arg_proto>'s %s location. 
-
-# The <arg_group>...</arg_group> tags put the option into the PPD
-# option group named here. In many PPD-based GUIs ("kprinter", "xpp",
-# OpenOffice.org, ...) every group is shown as a tab or a tree branch
-# containing the member options of this group. You can also specify
-# subgroups. Then you have to use a "group path" similar to directory
-# paths, with the group and subgroup names separated by slashes
-# (<arg_group>General/Paper</arg_group> is the "Paper" subgroup in the
-# "General" group). Subgroups are not recommended as there is no GUI
-# supporting them. If an option is member of a composite option (See
-# "Composite Options" section below), the <arg_group>...</arg_group>
-# tags will be ignored.
-
-  <arg_execution>
-   <arg_group>General</arg_group>
-   <arg_order>100</arg_order>
-   <arg_section>DocumentSetup</arg_section>
-   <arg_spot>Z</arg_spot>
-   <arg_postscript />
-   <arg_proto>&lt;&lt;/PageSize[%s]/ImagingBBox null&gt;&gt;setpagedevice</arg_proto>
-  </arg_execution>
-
-# The constraints define what printer/driver combinations this option
-# applies to.  The *most specific* constraint rules the day; it's
-# "sense" says whether or not the option is "in".  The winning
-# constraint also provides the default value used when this option
-# applies to that printer and driver.
-
-# Constraint elements are: driver, make, model.  The driver is the
-# driver name, or not present to apply to any driver.  The make is the
-# printer make, or not present to apply to any printer make.  The
-# model is the driver model, or not present to apply to any printer.
-# Instead of make/model, you can also specify <printer>id</printer>.
-
-# IMPORTANT: The make and model must match the one in the printer xml
-# definition, and everywhere else in the other options. One needs to
-# write a utility to change printer names sensibly.
-
-# It is illegal to have a model with no make.
-
-# It is illegal to have none of make/model/driver.
-
-# It is illegal to have *no* constraints, or at least such options are
-# never used.
-
-# For enum options, the defval is the id of the enum_val that is the
-# default.  For other option types, it is the actual default value
-# (ie, a number, or 1 or 0 for boolean, etc).
-
-  <constraints>
-     <constraint sense="true">
-      <driver>sj48</driver>
-      <arg_defval>ev/1</arg_defval>
-     </constraint>
-     <constraint sense="true">
-      <driver>r4081</driver>
-      <arg_defval>ev/1</arg_defval>
-     </constraint>
-# A gajillion constraints deleted
-  </constraints>
-  <enum_vals>
-   <enum_val id="ev/1">
-    <ev_longname>
-     <en>US Letter</en>
-    </ev_longname>
-    <!-- A multilingual <comments> block can appear here, too;
-         it should be treated as documentation for the user. -->
-    <ev_shortname>
-     <en>Letter</en>
-     <!-- Until someone tells me how to learn the user locale in 
-          backends, the shortname must be monolingual in <en>! -->
-    </ev_shortname>
-
-# If present, the driverval is what gets substituted in for the %s in
-# the option's prototype.  This way the user-visible stuff can be
-# anything.
-
-    <ev_driverval>612 792</ev_driverval>
-
-# This enum_val has no constraints.  It *is* OK for enum_vals to
-# have no constraints; they are assumed to apply unless
-# constrained otherwise.
-
-   </enum_val>
-   <enum_val id="ev/115">
-    <ev_longname>
-     <en>A3</en>
-    </ev_longname>
-    <!-- A multilingual <comments> block can appear here, too;
-         it should be treated as documentation for the user. -->
-    <ev_shortname>
-     <en>A3</en>
-     <!-- Until someone tells me how to learn the user locale in 
-          backends, the shortname must be monolingual in <en>! -->
-    </ev_shortname>
-    <ev_driverval>842 1191</ev_driverval>
-
-# Here are some example constraints for an enum_val.  The A3 size
-# paper doesn't fit on lots of printers, so there are various
-# constraints to make the right thing happen.
-
-    <constraints>
-     <constraint sense="true">
-      <driver>ml85p</driver>
-      <arg_defval>na</arg_defval>
-     </constraint>
-     <constraint sense="true">
-      <make>HP</make>
-      <model>DeskJet 1000C</model>
-      <driver>pnm2ppa</driver>
-      <arg_defval>na</arg_defval>
-     </constraint>
-     <constraint sense="false">
-      <make>HP</make>
-      <model>DeskJet 820C</model>
-      <driver>pnm2ppa</driver>
-      <arg_defval>na</arg_defval>
-     </constraint>
-
-     # lots more...
-
-    </constraints>
-   </enum_val>
-  </enum_vals>
-</option>
-
-# To allow custom page sizes to be used one has to add a choice with the
-# "<ev_shortname>" being "Custom" to the "PageSize" option (example
-# below). This choice will be treated as the custom page size. When
-# the user selects this choice, he has to provide the width and the
-# height of the page in addition. These values are converted into
-# PostScript points (1/72 inches) and inserted into placeholders in
-# the "<ev_driverval>" of this choice. The "<ev_driverval>" should
-# contain a placeholder "%0" for the page width and "%1" for the page
-# height. Alternatively the "<ev_driverval>" can contain two zeros
-# ("0") from which the first will be replaced by the page width and
-# the second by the page height. Then one gets Adobe-compliant entries
-# for the custom page size in the PPD files and one can set a custom
-# page size with the following commands:
-
-# CUPS: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
-# LPRng: lpr -P huge -Z PageSize=Custom.500x750cm bigposter.ps
-# GNUlpr: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
-# LPD: lpr -P huge -JPageSize=Custom.500x750cm bigposter.ps
-# PPR (RIP): ppr -P huge -F "*PageSize Custom" --ripopts 500x750cm
-#          bigposter.ps
-# PPR (Int.): ppr -P huge -F "*PageSize Custom" -i 500x750cm bigposter.ps
-# PDQ: pdq -P huge -oPageSize_Custom -aPageWidth=500
-#          -aPageHeight=750 -oPageSizeUnit_cm bigposter.ps
-# No spooler: foomatic-rip -P huge -o PageSize=Custom.500x750cm
-#	   bigposter.ps
-
-# Here is an example for a custom page size setting:
-
-#   <enum_val id="ev/PageSize-Custom">
-#    <ev_longname>
-#     <en>Custom size</en>
-#    </ev_longname>
-#    <!-- A multilingual <comments> block can appear here, too;
-#         it should be treated as documentation for the user. -->
-#    <ev_shortname>
-#     <en>Custom</en>
-#     <!-- Until someone tells me how to learn the user locale in 
-#          backends, the shortname must be monolingual in <en>! -->
-#    </ev_shortname>
-#    <ev_driverval>%0 %1</ev_driverval>
-#   </enum_val>
-
-# The entry
-
-#    <ev_driverval>0 0</ev_driverval>
-
-# would have the same effect as the <ev_driverval> of the example.
-
-# For numerical (int, float) and bool options there is no <enum_vals>
-# section. Instead of this section numerical options have tags to
-# specify minimum and maximum value:
-
-#  <arg_max>10.0</arg_max>
-#  <arg_min>0.0</arg_min>
-
-# For the %s in the <arg_proto> a number, either the user's choice
-# when he has specified this option or the default value is
-# inserted. Only numbers between the minimum and the maximum and in
-# case of int options only integer numbers are allowed.
-
-# Bool options can be set or not be set. There <arg_proto> will be
-# inserted if they are set, nothing if they are not set. A %s in the
-# <arg_proto> is not allowed, there is nothing to insert for it. As
-# <arg_defval> in the option's constraints one can use 0 for not
-# setting the option by default or 1 for setting it by default.
-
-# Bool options need the specification of a name for the case when they
-# are not set. This will be used by GUIs and in PPD files:
-
-#  <arg_shortname_false>
-#    <en>CorrectBlack</en><!-- Backends only know <en> shortnames! -->
-#  </arg_shortname_false>
-
-# This name should not contain spaces, ":", or "/".
-
-# See below for string and password options.
 
 printer/HP-LaserJet_4000.xml
 ============================
@@ -1439,9 +1164,9 @@ printer/HP-LaserJet_4000.xml
   <mechanism>
 
 # Printer types can be <laser />, <led />, <inkjet />, <dotmatrix />,
-# <impact />, <sublimation />, <transfer />. Other types we have to
-# add to the CGI script on OpenPrinting to make the web interface
-# displaying them properly.
+# <impact />, <sublimation />, <transfer />, <thermal />. Other types
+# we have to add to the CGI script on OpenPrinting to make the web
+# interface displaying them properly.
 
     <laser/>
 
@@ -1452,8 +1177,10 @@ printer/HP-LaserJet_4000.xml
     <resolution>
 
 # In theory this is a list.  In practice We've only got one per
-# printer which is the maximum resolution the manufacturer claims
-# for this printer.
+# printer which is the maximum resolution the manufacturer claims for
+# this printer. Do not put empty tags (like "<x></x>" or "<x />" here
+# if the resolution is not known. Leave out the tags (or the whole
+# <resolution> section).
 
       <dpi>
         <x>1200</x>
@@ -1529,6 +1256,12 @@ printer/HP-LaserJet_4000.xml
 #    </general>
 #  </autodetect>
 #
+
+# If you use CUPS, you get the device IDs of all locally connected
+# (USB, parallel) printers and of printers in the local network by
+# running:
+
+lpinfo -l -m
 
 # On Linux you find this info for the parallel ports (/dev/lp<N>, <N>
 # = 0, 1, 2, ...) in the files
@@ -1688,7 +1421,10 @@ $ like this:
 # The driver list in the printer XML files was introduced for once
 # defining links to ready-made PPD files (relative paths without "/",
 # "http:", "https:", or "ftp:" in the beginning are relative to
-# $libdir/db/source/) and second, listing the supported drivers for
+# $libdir/db/source/, absolute links can point to external sites, as
+# for example the site of a printer manufacturer, but they must always
+# provide the non-interactive download of the PPD file, for example
+# via "wget") and second, listing the supported drivers for
 # visitor-contributed printer entries (from web input form). The
 # comments section is for adding comments specific to the
 # printer/driver combo. As it is human-readable it is
@@ -1768,6 +1504,17 @@ things, but the two biggies are the prototype and the printers list
 # we let the last 2 characters being provided by the driver entry:
 
  <pcdriver>M2</pcdriver>
+
+# The drivers listed by the OpenPrinting database are usually not
+# developed by OpenPrinting.  Most free software printer drivers come
+# from independent projects, initiated by peopke who want to get their
+# printers to work under Linux, some other drivers come from the
+# printer manufacturers. So even if OpenPrinting hosts a downloadable
+# package of the driver the development of the driver is not part of
+# OpenPrinting. Therefore every driver entry has to contain a
+# reference to the developers of the driver, where the driver can be
+# actually downloaded. The appropriate link goes into the <url> tag:
+
  <url>http://plaza26.mbn.or.jp/~higamasa/gdevmd2k/</url>
 
 # The driver XML files can contain the following tags to describe the
@@ -1775,8 +1522,9 @@ things, but the two biggies are the prototype and the printers list
 # is most suitable for him. The properties are shown in the gray
 # driver info boxes on the OpenPrinting web site and they are also
 # supposed to be shown by printer setup tools when they offer to
-# download a driver from OpenPrinting. It is very important to supply
-# them if a downloadable driver package or PPD files are supplied.
+# download a driver from OpenPrinting. It is especially important to
+# supply them if a downloadable driver package or PPD files are
+# supplied.
 
 # Supplier's name, internationalization (with <en>...</en><de>...</de>...)
 # optional
@@ -1810,7 +1558,7 @@ things, but the two biggies are the prototype and the printers list
 #  - The driver has patent issues (<patents /> tag set, describe the
 #    patent issues here in that case)
 #  - The license of the driver is free but none of the common licenses
-#    (<freesoftware /> tag set)
+#    (<nonfreesoftware /> tag not set)
 
 #   <licensetext>
 #    <en>
@@ -1828,13 +1576,49 @@ things, but the two biggies are the prototype and the printers list
 
 # License texts have to be given always as plain text, UTF-8-encoded.
 
-# Mark with these tags whether the driver is free software
+# Mark with this tag whether the driver is non-free software
 
-#   <freesoftware />   OR   <nonfreesoftware />
+#   <nonfreesoftware />
 
-# These tags tell whether there are any patent issues with the driver
+# All driver entries without this tag are considered to be free
+# software.
 
-#   <patents />   OR   <nopatents />
+# This tag tells whether there are any patent issues with the driver
+
+#   <patents />
+
+# The absence of the tag tells that the driver is free of patent
+# issues.
+
+# If a driver entry provides a <licensetext> and is <nonfreesoftware
+# /> or with <patents /> printer setup tools which download this
+# driver are supposed to present the license text and ask the user
+# whether he agrees with it.
+
+# Printer manufacturers could want to package their drivers for
+# different market regions (Europe, Asia/Pacific, Americas, ...) as
+# the markets demand different capabilities of printer drivers and
+# different user-settable options (CJK-language-related stufff for
+# example). So there could even be two different driver flavors for
+# the same printer but adapted to different regions. To express these
+# driver properties there are special tags.
+
+# For each flavor of the driver a separate driver entry (driver XML
+# file) has to be supplied. There is no requirement of certain
+# properties of the driver flavors to be equal or not. Especially the
+# printer lists can contain printers which are not in all flavors, for
+# example if printers are only sold in certain regions. To mark which
+# entries are belonging together one adds a group tag to each XML
+# file, with the same group name, but the name must be different to
+# the names of all already existing groups. A locales tag contains all
+# language/country codes for which the driver flavor is intended:
+
+#   <group>epson-inkjet</group>
+#   <locales>de en_UK en_IE fr_FR es_ES</locales>
+
+# The codes in the locales taghs should be different for the group
+# members, to allow to automatically select the most suitable flavor
+# if the detected printer is supported by more than one flavor.
 
 # For downloadable drivers support contacts should be given, so that
 # users get informed before they do the download and do not complain
@@ -1880,6 +1664,22 @@ things, but the two biggies are the prototype and the printers list
 #    <package scope="general">*splix*1.[0-9].[0-9]*</package>
 #   </packages>
 
+# It is possible to give absolute paths which can point to external
+# sites, as for example the site of a printer manufacturer, so that
+# the package can be hosted there but auto-downloaded via
+# OpenPrinting. Important is that these packages are auto-downloadable
+# LSB packages and that a non-interactive download is provided (should
+# also work with utilities like "wget"). Licenses which the users have
+# to agree on have to get supplied in the driver XML file. Printer
+# setup tools are supposed to ask the user for agreeing if the driver
+# is marked as non-free or with patent issues.
+
+# Example for packages provided by an external site:
+
+#   <packages>
+#    <package scope="general">http://download.example.com/printerdrivers/*canon-inkjet*</package>
+#   </packages>
+
 # The <functionality> section should make it easier for a user to
 # compare different drivers by giving some technical properties and
 # ratings (0...100) for common document types, system load, and
@@ -1904,7 +1704,38 @@ things, but the two biggies are the prototype and the printers list
 #    <speed>90</speed>
 #   </functionality>
 
+# Not all tags are required here, if the valur for a tag is not known,
+# the tag has to be left out. Do not put empty tags (like
+# "<text></text>" or "<text />" here.
+
+# The <execution> section describes everything needed to execute the
+# driver.
+
  <execution>
+
+# Sometimes it is possible that a driver depends on another driver,
+# for example a manufacturer publishes a core driver which is
+# completely free software and supports most of their printer. In
+# addition, he publishes closed-source plugins for the core driver to
+# support additional printers where they cannot open the driver code
+# for IP reasons. He wants to link in all his driver packages for
+# automatic download with the <packages> tags. To make everything work
+# correctly he creates one driver entry for the core driver and one
+# for each plugin. The printers which do not need the plugin get
+# listed as supported by the core driver, the printers needing a
+# plugin are listed as supported by the plugin. To avoid that then
+# only a plugin gets automatically downloaded one adds a <requires>
+# tag to each entry of a plugin, to the beginning of the <execution>
+# section:
+
+#    <requires version="&gt;= 5.0.1">gutenprint</requires>
+#    <requires version="&gt;= 2.7.10">hpijs</requires>
+ 
+# The version attribute is optional, without, every version is
+# accepted. Optional relationships (>=, <=, =, <, >) allow to not only
+# accept the given version. The '>´ and '<' have to be replaced by the
+# appropriate XML entities, as described earlier here for other text
+# in the XML files. More than one <requires> tag is allowed.
 
 # Driver types are 
 #
@@ -1946,6 +1777,8 @@ things, but the two biggies are the prototype and the printers list
 # driver auto-download facilities of printer setup tools), it is not
 # used when generating PPD files.
 
+   <ghostscript />
+
 # The driver's <execution> section can also contain a
 #
 # <nopjl />
@@ -1959,7 +1792,7 @@ things, but the two biggies are the prototype and the printers list
 
 # And the driver's <execution> section can also contain a
 #
-# <nopageaccounting/>
+# <nopageaccounting />
 #
 # This suppresses the inserting of page accounting code (for CUPS)
 # into the PostScript data stream. Some drivers lead to unexpected
@@ -2034,6 +1867,295 @@ things, but the two biggies are the prototype and the printers list
 #    <monochrome />
 #   </functionality>
 #  </printer>
+
+# Note that printer/driver relationships can also be expressed by
+# adding the driver to the <drivers> lists of the appropriate printer
+# XML files.
+
+
+source/opt/2.xml
+================
+
+# Every option exists independently from printers or drivers, because
+# they might apply to arbitrary combinations of printers and/or
+# drivers.  In practice, some drivers have wholly unique options
+# (gutenprint for example), while others (lots of generic basic
+# Ghostscript drivers, for example) share some options.
+
+<option type="enum" id="opt/2">
+
+# Options are of a type "enum", "bool", "int", "float", "string", or
+# "password", options have an ID.  The id is also the filename.
+
+# The shortname is a spaceless short name for the thing.  It must not
+# contain / or : (otherwise it will not be handled correctly in PPD
+# files). It should be one of the standard Adobe PPD option names if
+# apropriate
+
+  <arg_shortname>
+
+# Various things here, and all <comments>, are internationalized.
+# They take the usual posix locale codes in the form xx[_YY], where xx
+# is a two-letter iso language code, and YY is two-letter country code
+# to distinguish differing national dialects.
+#
+# Generally the national dialects won't be very common or necessary
+# here.  The backends currently require that <en> content be provided.
+
+   <en>PageSize</en><!-- backends only know <en> shortnames! -->
+  </arg_shortname>
+
+# The longname is a short phrase describing the thing in more detail
+# GUI tools usually show longnames
+
+  <arg_longname>
+   <en>Page Size</en>
+  </arg_longname>
+
+# The <comments> are used to form documentation.  In theory these can
+# become man pages or the like. Example:
+
+#   <comments>
+#    <en>
+#     This option allows the user to get a lighter or darker printout, but
+#     keeping totally black areas black and not making white areas gray.
+#    </en>
+#   </comments>
+
+  <!-- A multilingual <comments> block can appear here, too;
+       it should be treated as documentation for the user. -->
+
+# The execution section describe how the backend should execute this
+# option. The order and spot apply to the *driver*'s prototype for
+# <arg_substitution /> (once called commandline) style options, or
+# just the order applies for <arg_postscript /> and <arg_pjl />
+# options. The order and the <arg_section> go into the "*OrderDependency"
+# line of the appropriate option entry in the PPD file, for this example
+# one would get
+
+#    *OrderDependency: 100 DocumentSetup *PageSize
+
+# When no <arg_section> is given, "AnySetup" is used as a default.
+
+# For <arg_substitution /> options the <arg_proto> is inserted into
+# the driver's command line, at the spot (e. g. "%A") whose letter is
+# given between the <arg_spot>...</arg_spot> tags, the <arg_proto> of
+# an <arg_postscript /> option is a snippet of PostScript code which
+# is inserted into the PostScript data stream of the job, for
+# DSC-conforming PostScript into the section specified with
+# <arg_section>, otherwise in the beginning. The <arg_proto> lines of
+# <arg_pjl /> options are PJL commands which are sent to the printer
+# before the output of the driver's command line is sent. Because this
+# only works reliably when the driver output does not have its own PJL
+# command header, these options are ignored when the driver's XML file
+# is marked with a <nopjl /> tag in its <execution> section. Drivers
+# which produce their own PJL and therefore are marked with <nopjl />
+# are for example "hpijs" and "hl1250". There is also the
+# <arg_composite /> execution style for composite options, see the
+# "Composite Options" section below. The user's value gets put into
+# the <arg_proto>'s %s location. 
+
+# The <arg_group>...</arg_group> tags put the option into the PPD
+# option group named here. In many PPD-based GUIs ("kprinter", "xpp",
+# OpenOffice.org, ...) every group is shown as a tab or a tree branch
+# containing the member options of this group. You can also specify
+# subgroups. Then you have to use a "group path" similar to directory
+# paths, with the group and subgroup names separated by slashes
+# (<arg_group>General/Paper</arg_group> is the "Paper" subgroup in the
+# "General" group). Subgroups are not recommended as there is no GUI
+# supporting them. If an option is member of a composite option (See
+# "Composite Options" section below), the <arg_group>...</arg_group>
+# tags will be ignored.
+
+  <arg_execution>
+   <arg_group>General</arg_group>
+   <arg_order>100</arg_order>
+   <arg_section>DocumentSetup</arg_section>
+   <arg_spot>Z</arg_spot>
+   <arg_postscript />
+   <arg_proto>&lt;&lt;/PageSize[%s]/ImagingBBox null&gt;&gt;setpagedevice</arg_proto>
+  </arg_execution>
+
+# The constraints define what printer/driver combinations this option
+# applies to.  The *most specific* constraint rules the day; it's
+# "sense" says whether or not the option is "in".  The winning
+# constraint also provides the default value used when this option
+# applies to that printer and driver.
+
+# Constraint elements are: driver, make, model.  The driver is the
+# driver name, or not present to apply to any driver.  The make is the
+# printer make, or not present to apply to any printer make.  The
+# model is the driver model, or not present to apply to any printer.
+# Instead of make/model, you can also specify <printer>id</printer>.
+
+# IMPORTANT: The make and model must match the one in the printer xml
+# definition, and everywhere else in the other options. One needs to
+# write a utility to change printer names sensibly.
+
+# It is illegal to have a model with no make.
+
+# It is illegal to have none of make/model/driver.
+
+# It is illegal to have *no* constraints, or at least such options are
+# never used.
+
+# For enum options, the defval is the id of the enum_val that is the
+# default.  For other option types, it is the actual default value
+# (ie, a number, or 1 or 0 for boolean, etc).
+
+  <constraints>
+     <constraint sense="true">
+      <driver>sj48</driver>
+      <arg_defval>ev/1</arg_defval>
+     </constraint>
+     <constraint sense="true">
+      <driver>r4081</driver>
+      <arg_defval>ev/1</arg_defval>
+     </constraint>
+# A gajillion constraints deleted
+  </constraints>
+  <enum_vals>
+   <enum_val id="ev/1">
+    <ev_longname>
+     <en>US Letter</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>Letter</en>
+     <!-- Until someone tells me how to learn the user locale in 
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+
+# If present, the driverval is what gets substituted in for the %s in
+# the option's prototype.  This way the user-visible stuff can be
+# anything.
+
+    <ev_driverval>612 792</ev_driverval>
+
+# This enum_val has no constraints.  It *is* OK for enum_vals to
+# have no constraints; they are assumed to apply unless
+# constrained otherwise.
+
+   </enum_val>
+   <enum_val id="ev/115">
+    <ev_longname>
+     <en>A3</en>
+    </ev_longname>
+    <!-- A multilingual <comments> block can appear here, too;
+         it should be treated as documentation for the user. -->
+    <ev_shortname>
+     <en>A3</en>
+     <!-- Until someone tells me how to learn the user locale in 
+          backends, the shortname must be monolingual in <en>! -->
+    </ev_shortname>
+    <ev_driverval>842 1191</ev_driverval>
+
+# Here are some example constraints for an enum_val.  The A3 size
+# paper doesn't fit on lots of printers, so there are various
+# constraints to make the right thing happen.
+
+    <constraints>
+     <constraint sense="true">
+      <driver>ml85p</driver>
+      <arg_defval>na</arg_defval>
+     </constraint>
+     <constraint sense="true">
+      <make>HP</make>
+      <model>DeskJet 1000C</model>
+      <driver>pnm2ppa</driver>
+      <arg_defval>na</arg_defval>
+     </constraint>
+     <constraint sense="false">
+      <make>HP</make>
+      <model>DeskJet 820C</model>
+      <driver>pnm2ppa</driver>
+      <arg_defval>na</arg_defval>
+     </constraint>
+
+     # lots more...
+
+    </constraints>
+   </enum_val>
+  </enum_vals>
+</option>
+
+# To allow custom page sizes to be used one has add a choice with the
+# "<ev_shortname>" being "Custom" to the "PageSize" option (example
+# below). This choice will be treated as the custom page size. When
+# the user selects this choice, he has to provide the width and the
+# height of the page in addition. These values are converted into
+# PostScript points (1/72 inches) and inserted into placeholders in
+# the "<ev_driverval>" of this choice. The "<ev_driverval>" should
+# contain a placeholder "%0" for the page width and "%1" for the page
+# height. Alternatively the "<ev_driverval>" can contain two zeros
+# ("0") from which the first will be replaced by the page width and
+# the second by the page height. Then one gets Adobe-compliant entries
+# for the custom page size in the PPD files and one can set a custom
+# page size with the following commands:
+
+# CUPS: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+# LPRng: lpr -P huge -Z PageSize=Custom.500x750cm bigposter.ps
+# GNUlpr: lpr -P huge -o PageSize=Custom.500x750cm bigposter.ps
+# LPD: lpr -P huge -JPageSize=Custom.500x750cm bigposter.ps
+# PPR (RIP): ppr -P huge -F "*PageSize Custom" --ripopts 500x750cm
+#          bigposter.ps
+# PPR (Int.): ppr -P huge -F "*PageSize Custom" -i 500x750cm bigposter.ps
+# PDQ: pdq -P huge -oPageSize_Custom -aPageWidth=500
+#          -aPageHeight=750 -oPageSizeUnit_cm bigposter.ps
+# No spooler: foomatic-rip -P huge -o PageSize=Custom.500x750cm
+#	   bigposter.ps
+
+# Here is an example for a custom page size setting:
+
+#   <enum_val id="ev/PageSize-Custom">
+#    <ev_longname>
+#     <en>Custom size</en>
+#    </ev_longname>
+#    <!-- A multilingual <comments> block can appear here, too;
+#         it should be treated as documentation for the user. -->
+#    <ev_shortname>
+#     <en>Custom</en>
+#     <!-- Until someone tells me how to learn the user locale in 
+#          backends, the shortname must be monolingual in <en>! -->
+#    </ev_shortname>
+#    <ev_driverval>%0 %1</ev_driverval>
+#   </enum_val>
+
+# The entry
+
+#    <ev_driverval>0 0</ev_driverval>
+
+# would have the same effect as the <ev_driverval> of the example.
+
+# For numerical (int, float) and bool options there is no <enum_vals>
+# section. Instead of this section numerical options have tags to
+# specify minimum and maximum value:
+
+#  <arg_max>10.0</arg_max>
+#  <arg_min>0.0</arg_min>
+
+# For the %s in the <arg_proto> a number, either the user's choice
+# when he has specified this option or the default value is
+# inserted. Only numbers between the minimum and the maximum and in
+# case of int options only integer numbers are allowed.
+
+# Bool options can be set or not be set. There <arg_proto> will be
+# inserted if they are set, nothing if they are not set. A %s in the
+# <arg_proto> is not allowed, there is nothing to insert for it. As
+# <arg_defval> in the option's constraints one can use 0 for not
+# setting the option by default or 1 for setting it by default.
+
+# Bool options need the specification of a name for the case when they
+# are not set. This will be used by GUIs and in PPD files:
+
+#  <arg_shortname_false>
+#    <en>CorrectBlack</en><!-- Backends only know <en> shortnames! -->
+#  </arg_shortname_false>
+
+# This name should not contain spaces, ":", or "/".
+
+# See below for string, password, and composite options.
 
 
 Composite Options
@@ -2946,7 +3068,7 @@ The "DRV:" field in a device ID looks like this:
 PCLXL,POSTSCRIPT;DES:Hewlett-Packard LaserJet 4050 Series;DRV:Dljet4,R0,M0,F1,Sv,TG,X600,Y600,C0,t90,l90,g60,p30,s90;"
 
 If there is no device ID for a printer, the "*1284DeviceID" will
-contain only the "DRV:" firld.
+contain only the "DRV:" field.
 
 The PPDs contain the driver properties also in clear text, like this:
 
