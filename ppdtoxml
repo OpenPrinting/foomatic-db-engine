@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #PPD to XML translator/generator
 #Written by David Crosby
-version='0.20'
+version='0.21'
 
 import sys
 import os
@@ -13,6 +13,381 @@ import gtk
 from xml.dom import minidom
 
 class PPDtoXML:
+    __manufacturerlist__=[
+    'Alps', 
+    'Anitech', 
+    'Apollo', 
+    'Apple', 
+    'Avery', 
+    'Benq', 
+    'Brother', 
+    'Cltoh', 
+    'CalComp',
+    'Canon', 
+    'Casio', 
+    'Citizen', 
+    'Compaq', 
+    'DEC', 
+    'Dell', 
+    'Dymo', 
+    'Dymo-CoStar', 
+    'Epson', 
+    'Extech', 
+    'FenixImvico', 
+    'FujiXerox', 
+    'Fujifilm', 
+    'Fujitsu', 
+    'GCCPrinters', 
+    'Gestetner', 
+    'Heidelberg', 
+    'Hitachi', 
+    'HP', 
+    'IBM', 
+    'Imagen',
+    'Imagistics',
+    'InfoPrint',
+    'Infotec', 
+    'Kodak',
+    'KONICA MINOLTA', 
+    'Kyocera', 
+    'Lanier', 
+    'LaserMaster', 
+    'Lexmark', 
+    'Minolta', 
+    'Minolta QMS', 
+    'Mitsubishi', 
+    'NEC', 
+    'NRG', 
+    'Oce', 
+    'Oki',
+    'Olivetti', 
+    'Olympus', 
+    'Panasonic', 
+    'PCPI', 
+    'Pentax', 
+    'Printrex', 
+    'QMS', 
+    'Raven', 
+    'Ricoh', 
+    'RisoKagaku', 
+    'Samsung', 
+    'Savin', 
+    'Seiko', 
+    'Sharp',
+    'SiPix', 
+    'Siemens', 
+    'Sony', 
+    'Star', 
+    'Tally', 
+    'Tektronix',
+    'Texas Instruments',
+    'TohokuRicoh', 
+    'Toshiba',
+    'Xante'
+    'Xerox']
+
+    __driverlist__=[
+    'ap3250', 
+    'appledmp', 
+    'bj10', 
+    'bj10e', 
+    'bj10v', 
+    'bj10vh', 
+    'bj200', 
+    'bj8gc12f.upp', 
+    'bj8hg12f.upp', 
+    'bj8oh06n.upp', 
+    'bj8pa06n.upp', 
+    'bj8pp12f.upp', 
+    'bj8ts06n.upp', 
+    'bjc250gs', 
+    'bjc600', 
+    'bjc6000a1.upp', 
+    'bjc6000b1.upp', 
+    'bjc610a0.upp', 
+    'bjc610a1.upp', 
+    'bjc610a2.upp', 
+    'bjc610a3.upp', 
+    'bjc610a4.upp', 
+    'bjc610a5.upp', 
+    'bjc610a6.upp', 
+    'bjc610a7.upp', 
+    'bjc610a8.upp', 
+    'bjc610b1.upp', 
+    'bjc610b2.upp', 
+    'bjc610b3.upp', 
+    'bjc610b4.upp', 
+    'bjc610b6.upp', 
+    'bjc610b7.upp', 
+    'bjc610b8.upp', 
+    'bjc800', 
+    'bjc800j', 
+    'bjc880j', 
+    'c2050', 
+    'c2070', 
+    'cZ11', 
+    'cZ11somsom', 
+    'capt', 
+    'cdj1600', 
+    'cdj500', 
+    'cdj550', 
+    'cdj550.upp', 
+    'cdj670', 
+    'cdj850', 
+    'cdj880', 
+    'cdj890', 
+    'cdj970', 
+    'chp2200', 
+    'cjet', 
+    'cljet5', 
+    'cljet5c', 
+    'cp50', 
+    'declj250', 
+    'deskjet', 
+    'dj505j', 
+    'djet500', 
+    'dnj650c', 
+    'drv_x125', 
+    'drv_z42', 
+    'eplaser', 
+    'ep-laser', 
+    'eps9high', 
+    'eps9mid', 
+    'epson', 
+    'epsonc', 
+    'epsonepl', 
+    'escpage', 
+    'fmlbp', 
+    'fmpr', 
+    'foo2hp', 
+    'foo2kyo', 
+    'foo2lava', 
+    'foo2qpdl', 
+    'foo2xqx', 
+    'foo2zjs', 
+    'gdi', 
+    'gimp-print', 
+    'gutenprint', 
+    'gutenprint52', 
+    'hl1250', 
+    'hl7x0', 
+    'hpdj', 
+    'hpijs-pcl3', 
+    'hpijs-pcl5c',
+    'hpijs-pcl5e',
+    'hplip',
+    'ibmpro', 
+    'imagen', 
+    'iwhi', 
+    'iwlo', 
+    'iwlq', 
+    'jetp3852', 
+    'jj100', 
+    'la50', 
+    'la70', 
+    'la75', 
+    'la75plus', 
+    'laserjet', 
+    'lbp310', 
+    'lbp320', 
+    'lbp660', 
+    'lbp8', 
+    'lex5700', 
+    'lex7000', 
+    'lips2p', 
+    'lips3', 
+    'lips4', 
+    'lips4v', 
+    'lj250', 
+    'lj4dith', 
+    'lj4dithp', 
+    'lj5gray', 
+    'lj5mono', 
+    'ljet2p', 
+    'ljet3', 
+    'ljet3d', 
+    'ljet4', 
+    'ljet4d', 
+    'ljetplus', 
+    'lm1100', 
+    'ln03', 
+    'lp2000', 
+    'lp2563', 
+    'lp8000', 
+    'lpstyl', 
+    'lq850', 
+    'lx5000', 
+    'lxm3200', 
+    'lxm3200-tweaked', 
+    'lxm3200x', 
+    'lxm3200m', 
+    'lxm3200p', 
+    'lxm5700m', 
+    'lxx74', 
+    'lz11-V2', 
+    'm2300w', 
+    'm2400w', 
+    'm8510', 
+    'mdx1Mono', 
+    'md2k', 
+    'md50Eco', 
+    'md50Mono', 
+    'md5k', 
+    'min12xxw', 
+    'mj500c', 
+    'mj6000c', 
+    'mj700v2c', 
+    'mj8000c', 
+    'ml600', 
+    'ml85p', 
+    'necp2x.upp', 
+    'necp2x6.upp', 
+    'necp6', 
+    'npdl', 
+    'nwp533', 
+    'oce9050', 
+    'oki182', 
+    'oki4drv', 
+    'oki4w', 
+    'okiibm', 
+    'omni', 
+    'paintjet', 
+    'pbm2l2030', 
+    'pbm2l7k', 
+    'pbm2lwxl', 
+    'pbm2ppa', 
+    'pbmtozjs', 
+    'pcl3', 
+    'pegg', 
+    'pentaxpj', 
+    'picty180', 
+    'pj', 
+    'pjetxl', 
+    'pjxl', 
+    'pjxl300', 
+    'PM760p.upp', 
+    'PM760pl.upp', 
+    'PM820p.upp', 
+    'PM820pl.upp', 
+    'pnm2ppa', 
+    'Postscript',
+    'Postscript-Brother',
+    'Postscript-Epson',
+    'Postscript-Gestetner',
+    'Postscript-HP',
+    'Postscript-InfoPrint',
+    'Postscript-Infotec',
+    'Postscript-KONICA_MINOLTA',
+    'Postscript-Kyocera',
+    'Postscript-Lanier',
+    'Postscript-NRG',
+    'Postscript-Oce',
+    'Postscript-Oki',
+    'Postscript-Ricoh',
+    'Postscript-Savin',
+    'Postscript-Sharp',
+    'Postscript-Toshiba',
+    'Postscript1',
+    'Postscript2-Oce',
+    'ppmtocpva', 
+    'ppmtomd', 
+    'pr150', 
+    'pr201', 
+    'ptouch', 
+    'pxl1010', 
+    'pxlcolor',
+    'pxlcolor-Gestetner',
+    'pxlcolor-InfoPrint',
+    'pxlcolor-Infotex',
+    'pxlcolor-Lanier',
+    'pxlcolor-NRG',
+    'pxlcolor-Ricoh',
+    'pxlcolor-Savin',
+    'pxldpl',
+    'pxljr', 
+    'pxlmono',
+    'pxlmono-Gestetner',
+    'pxlmono-InfoPrint',
+    'pxlmono-Infotex',
+    'pxlmono-Lanier',
+    'pxlmono-NRG',
+    'pxlmono-Ricoh',
+    'pxlmono-Savin',
+    'r4081', 
+    'ras1.upp', 
+    'ras24.upp', 
+    'ras3.upp', 
+    'ras32.upp', 
+    'ras4.upp', 
+    'ras8m.upp', 
+    'rastertokmXXXXdl', 
+    'rpdl', 
+    's400a1.upp', 
+    's400b1.upp', 
+    'sharp.upp', 
+    'sipixa6.upp', 
+    'slap',
+    'sparc',
+    'splix', 
+    'st640ih.upp', 
+    'st640igh.upp', 
+    'st640p.upp', 
+    'st640pg.upp', 
+    'st640pl.upp', 
+    'st640plg.upp', 
+    'st800', 
+    'stc.upp', 
+    'stc1520h.upp', 
+    'stc2.upp', 
+    'stc2_h.upp', 
+    'stc2s_h.upp', 
+    'stc300.upp', 
+    'stc300bl.upp', 
+    'stc300bm.upp', 
+    'stc500p.upp', 
+    'stc500ph.upp', 
+    'stc600ih.upp', 
+    'stc600p.upp', 
+    'stc600pl.upp', 
+    'stc640p.upp', 
+    'Stc670p.upp', 
+    'Stc670pl.upp', 
+    'Stc680p.upp', 
+    'Stc680pl.upp', 
+    'stc740ih.upp', 
+    'stc740p.upp', 
+    'stc740il.upp', 
+    'Stc760p.upp', 
+    'Stc760pl.upp', 
+    'Stc777p.upp', 
+    'Stc777pl.upp', 
+    'stc800ih.upp', 
+    'stc800p.upp', 
+    'stc800pl.upp', 
+    'stc_h.upp', 
+    'stc_l.upp', 
+    'stcany.upp', 
+    'stcolor', 
+    'Stp720p.upp', 
+    'Stp720pl.upp', 
+    'Stp870p.upp', 
+    'Stp870pl.upp', 
+    't4693d2', 
+    't4693d4', 
+    't4693d8', 
+    'tek4696', 
+    'xes']
+
+    __mechanismlist__=[
+    'Mechanism',
+    'laser',
+    'inkjet',
+    'led',
+    'dotmatrix',
+    'impact',
+    'sublimation',
+    'transfer']
+
     def __init__(self):
 
         window = gtk.Window()
@@ -25,13 +400,14 @@ class PPDtoXML:
         vbox.pack_start(make_label)
         make_label.show()
 
+
    #This is for the make and model of the printer
         p_make = gtk.Entry()
         p_make.set_text('Make')
         p_make_dropdown = gtk.EntryCompletion()
         self.makelist = gtk.ListStore(str)
-        for m in ['Alps', 'Anitech', 'Apollo', 'Apple', 'Avery', 'Benq', 'Brother', 'Cltoh', 'CalComp', 'Canon', 'Casio', 'Citizen', 'Compaq', 'DEC', 'Dell', 'Dymo', 'Dymo-CoStar', 'Epson', 'Extech', 'FenixImvico', 'FujiXerox', 'Fujifilm', 'Fujitsu', 'GCCPrinters', 'Gestetner', 'Heidelberg', 'Hitachi', 'HP', 'IBM', 'Imagen', 'Infotec', 'KONICA MINOLTA', 'Kodak', 'Kyocera', 'Lanier', 'LaserMaster', 'Lexmark', 'Minolta', 'Minolta QMS', 'Mitsubishi', 'NEC', 'NRG', 'Oce', 'Okidata', 'Olivetti', 'Olympus', 'Panasonic', 'PCPI', 'Pentax', 'Printrex', 'QMS', 'Raven', 'Ricoh', 'RisoKagaku', 'Samsung', 'Savin', 'Seiko', 'Sharp', 'Siemens', 'Sony', 'Star', 'Tally', 'Tektronix', 'TohokuRicoh', 'Toshiba', 'Xerox']:
-            self.makelist.append([m])
+        for manufacturer in self.__manufacturerlist__:
+            self.makelist.append([manufacturer])
         p_make_dropdown.set_model(self.makelist)
         p_make.set_completion(p_make_dropdown)
         p_make_dropdown.set_text_column(0)
@@ -50,14 +426,8 @@ class PPDtoXML:
 
      #This is for selecting the printer mechanism
         p_mechanism_combo = gtk.combo_box_new_text()
-        p_mechanism_combo.append_text('Mechanism')
-        p_mechanism_combo.append_text('laser')
-        p_mechanism_combo.append_text('inkjet')
-        p_mechanism_combo.append_text('led')
-        p_mechanism_combo.append_text('dotmatrix')
-        p_mechanism_combo.append_text('impact')
-        p_mechanism_combo.append_text('sublimation')
-        p_mechanism_combo.append_text('transfer')
+        for mechanism in self.__mechanismlist__:
+            p_mechanism_combo.append_text(mechanism)
         p_mechanism_combo.set_active(0)
         vbox.pack_start(p_mechanism_combo)
         p_mechanism_combo.show()
@@ -97,11 +467,11 @@ class PPDtoXML:
     #Text box to enter what consumables are used in the printer (toner/drum/cartridge/blahblahblah)
         consumables_label = gtk.Label('Consumables')
         vbox.pack_start(consumables_label)
-        consumables_label.show()
+        #consumables_label.show()
 
         p_consumables = gtk.Entry()
         vbox.pack_start(p_consumables)
-        p_consumables.show()
+        #p_consumables.show()
 
     #The manufacturer URL for the printer
         url_label = gtk.Label('Manufacturer URL')
@@ -282,10 +652,10 @@ class PPDtoXML:
         p_recommended_driver.set_width_chars(12)
         vbdrcol1.pack_start(p_recommended_driver)
         p_recommended_driver_dropdown = gtk.EntryCompletion()
-        self.driverlist = gtk.ListStore(str)
-        for s in ['ap3250', 'appledmp', 'bj10', 'bj10e', 'bj10v', 'bj10vh', 'bj200', 'bj8gc12f.upp', 'bj8hg12f.upp', 'bj8oh06n.upp', 'bj8pa06n.upp', 'bj8pp12f.upp', 'bj8ts06n.upp', 'bjc250gs', 'bjc600', 'bjc6000a1.upp', 'bjc6000b1.upp', 'bjc610a0.upp', 'bjc610a1.upp', 'bjc610a2.upp', 'bjc610a3.upp', 'bjc610a4.upp', 'bjc610a5.upp', 'bjc610a6.upp', 'bjc610a7.upp', 'bjc610a8.upp', 'bjc610b1.upp', 'bjc610b2.upp', 'bjc610b3.upp', 'bjc610b4.upp', 'bjc610b6.upp', 'bjc610b7.upp', 'bjc610b8.upp', 'bjc800', 'bjc800j', 'bjc880j', 'c2050', 'c2070', 'cZ11', 'cZ11somsom', 'capt', 'cdj1600', 'cdj500', 'cdj550', 'cdj550.upp', 'cdj670', 'cdj850', 'cdj880', 'cdj890', 'cdj970', 'chp2200', 'cjet', 'cljet5', 'cljet5c', 'cp50', 'declj250', 'deskjet', 'dj505j', 'djet500', 'dnj650c', 'drv_x125', 'drv_z42', 'eplaser', 'ep-laser', 'eps9high', 'eps9mid', 'epson', 'epsonc', 'epsonepl', 'escpage', 'fmlbp', 'fmpr', 'foo2hp', 'foo2kyo', 'foo2lava', 'foo2qpdl', 'foo2xqx', 'foo2zjs', 'gdi', 'gimp-print', 'gutenprint', 'gutenprint52', 'hl1250', 'hl7x0', 'hpdj', 'hpijs', 'ibmpro', 'imagen', 'iwhi', 'iwlo', 'iwlq', 'jetp3852', 'jj100', 'la50', 'la70', 'la75', 'la75plus', 'laserjet', 'lbp310', 'lbp320', 'lbp660', 'lbp8', 'lex5700', 'lex7000', 'lips2p', 'lips3', 'lips4', 'lips4v', 'lj250', 'lj4dith', 'lj4dithp', 'lj5gray', 'lj5mono', 'ljet2p', 'ljet3', 'ljet3d', 'ljet4', 'ljet4d', 'ljetplus', 'lm1100', 'ln03', 'lp2000', 'lp2563', 'lp8000', 'lpstyl', 'lq850', 'lx5000', 'lxm3200', 'lxm3200-tweaked', 'lxm3200x', 'lxm3200m', 'lxm3200p', 'lxm5700m', 'lxx74', 'lz11-V2', 'm2300w', 'm2400w', 'm8510', 'mdx1Mono', 'md2k', 'md50Eco', 'md50Mono', 'md5k', 'min12xxw', 'mj500c', 'mj6000c', 'mj700v2c', 'mj8000c', 'ml600', 'ml85p', 'necp2x.upp', 'necp2x6.upp', 'necp6', 'npdl', 'nwp533', 'oce9050', 'oki182', 'oki4drv', 'oki4w', 'okiibm', 'omni', 'paintjet', 'pbm2l2030', 'pbm2l7k', 'pbm2lwxl', 'pbm2ppa', 'pbmtozjs', 'pcl3', 'pegg', 'pentaxpj', 'picty180', 'pj', 'pjetxl', 'pjxl', 'pjxl300', 'PM760p.upp', 'PM760pl.upp', 'PM820p.upp', 'PM820pl.upp', 'pnm2ppa', 'Postscript', 'ppmtocpva', 'ppmtomd', 'pr150', 'pr201', 'ptouch', 'pxl1010', 'pxlcolor', 'pxljr', 'pxlmono', 'r4081', 'ras1.upp', 'ras24.upp', 'ras3.upp', 'ras32.upp', 'ras4.upp', 'ras8m.upp', 'rastertokmXXXXdl', 'rpdl', 's400a1.upp', 's400b1.upp', 'sharp.upp', 'sipixa6.upp', 'slap', 'splix', 'st640ih.upp', 'st640igh.upp', 'st640p.upp', 'st640pg.upp', 'st640pl.upp', 'st640plg.upp', 'st800', 'stc.upp', 'stc1520h.upp', 'stc2.upp', 'stc2_h.upp', 'stc2s_h.upp', 'stc300.upp', 'stc300bl.upp', 'stc300bm.upp', 'stc500p.upp', 'stc500ph.upp', 'stc600ih.upp', 'stc600p.upp', 'stc600pl.upp', 'stc640p.upp', 'Stc670p.upp', 'Stc670pl.upp', 'Stc680p.upp', 'Stc680pl.upp', 'stc740ih.upp', 'stc740p.upp', 'stc740il.upp', 'Stc760p.upp', 'Stc760pl.upp', 'Stc777p.upp', 'Stc777pl.upp', 'stc800ih.upp', 'stc800p.upp', 'stc800pl.upp', 'stc_h.upp', 'stc_l.upp', 'stcany.upp', 'stcolor', 'Stp720p.upp', 'Stp720pl.upp', 'Stp870p.upp', 'Stp870pl.upp', 't4693d2', 't4693d4', 't4693d8', 'tek4696', 'xes']:
-            self.driverlist.append([s])
-        p_recommended_driver_dropdown.set_model(self.driverlist)
+        self.driverlistdropdown_r = gtk.ListStore(str)
+        for driver in self.__driverlist__:
+            self.driverlistdropdown_r.append([driver])
+        p_recommended_driver_dropdown.set_model(self.driverlistdropdown_r)
         p_recommended_driver.set_completion(p_recommended_driver_dropdown)        
         p_recommended_driver_dropdown.set_text_column(0)
         p_recommended_driver.show()
@@ -772,12 +1142,6 @@ class PPDtoXML:
            print "            <!--y unknown-->"
 
         print "         </dpi>"
-        print "      <consumables>"
-        if consumables_text is not '':
-           print "         <comments>"
-           print "            <en>%s</en>" %consumables_text
-           print "         </comments>"
-        print "      </consumables>"
         print "      </resolution>"
         print "   </mechanism>"
         print "   <url>%s</url>" %url_text
@@ -787,28 +1151,25 @@ class PPDtoXML:
 
         if p_is_postscript.get_active():
            if postscript_level_text is not "":
-              print "      <postscript level=\"%s\">" %postscript_level_text
-              if postscript_url_text is not "":
-                 print "       <ppd>%s</ppd>" %postscript_url_text
-              print "      </postscript>"
+              print "      <postscript level=\"%s\" />" %postscript_level_text
   
         if p_is_pcl.get_active():
-           print "      <pcl level=\"%s\"/>" %pcl_level_text
+           print "      <pcl level=\"%s\" />" %pcl_level_text
 
         if p_tiff.get_active():
-           print "      <tiff/>"
+           print "      <tiff />"
   
         if p_escp.get_active():
-           print "      <escp/>"
+           print "      <escp />"
 
         if p_hpgl2.get_active():
            print "      <hpgl2 />"
 
         if p_proprietary.get_active():
-           print "      <proprietary/>"
+           print "      <proprietary />"
 
         if p_pjl.get_active():
-           print "      <pjl/>"
+           print "      <pjl />"
         else: 
            print "      <!--no pjl-->"
 
@@ -861,22 +1222,37 @@ class PPDtoXML:
            print "   <drivers>"
            print "     <driver>"
            print "       <id>%s</id>" %recommended_driver_text
+           if recommended_driver_text.find('Postscript') != -1:
+              if postscript_url_text is not "":
+                 print "       <ppd>%s</ppd>" %postscript_url_text
            print "     </driver>"
            if extra_driver_text_1 is not "":
               print "     <driver>"
               print "       <id>%s</id>" %extra_driver_text_1
+              if extra_driver_text_1.find('Postscript') != -1:
+                 if postscript_url_text is not "":
+                    print "       <ppd>%s</ppd>" %postscript_url_text
               print "     </driver>" 
            if extra_driver_text_2 is not "":
               print "     <driver>"
               print "       <id>%s</id>" %extra_driver_text_2
+              if extra_driver_text_2.find('Postscript') != -1:
+                 if postscript_url_text is not "":
+                    print "       <ppd>%s</ppd>" %postscript_url_text
               print "     </driver>"
            if extra_driver_text_3 is not "":
               print "     <driver>"
               print "       <id>%s</id>" %extra_driver_text_3
+              if extra_driver_text_3.find('Postscript') != -1:
+                 if postscript_url_text is not "":
+                    print "       <ppd>%s</ppd>" %postscript_url_text
               print "     </driver>"
            if extra_driver_text_4 is not "":
               print "     <driver>"
               print "       <id>%s</id>" %extra_driver_text_4
+              if extra_driver_text_4.find('Postscript') != -1:
+                 if postscript_url_text is not "":
+                    print "       <ppd>%s</ppd>" %postscript_url_text
               print "     </driver>"
            print "   </drivers>"
 
