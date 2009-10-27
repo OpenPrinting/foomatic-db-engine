@@ -253,7 +253,7 @@ sub get_driver_packages_from_sql_db {
 }
 
 sub get_overview_from_sql_db {
-    my ($this, $cupsppds) = @_;
+    my ($this, $cupsppds, $nodrivers) = @_;
     if ($this->{'dbh'}) {
 	my $printerquerystr = "SELECT printer.id, " .
 	    "printer.make, printer.model, printer.functionality, " .
@@ -274,48 +274,52 @@ sub get_overview_from_sql_db {
 	    "ORDER BY BINARY(printer.id);";
 	my $sthp = $this->{'dbh'}->prepare($printerquerystr);
 	$sthp->execute();
-	my $driverquerystr = "SELECT driver_printer_assoc.printer_id, " .
-	    "driver_printer_assoc.driver_id, " .
-	    "driver.url, driver.supplier, driver.thirdpartysupplied, " .
-	    "driver.manufacturersupplied, driver.license, " .
-	    "driver.nonfreesoftware, driver.patents, driver.shortdescription, " .
-	    "driver.execution, " .
-	    "driver.max_res_x, driver.max_res_y, driver.color, " .
-	    "driver.text, driver.lineart, driver.graphics, driver.photo, " .
-	    "driver.load_time, driver.speed, " .
-	    "driver_printer_assoc.max_res_x AS exc_max_res_x, " .
-	    "driver_printer_assoc.max_res_y AS exc_max_res_y, " .
-	    "driver_printer_assoc.color AS exc_color, " .
-	    "driver_printer_assoc.text AS exc_text, " .
-	    "driver_printer_assoc.lineart AS exc_lineart, " .
-	    "driver_printer_assoc.graphics AS exc_graphics, " .
-	    "driver_printer_assoc.photo AS exc_photo, " .
-	    "driver_printer_assoc.load_time AS exc_load_time, " .
-	    "driver_printer_assoc.speed AS exc_speed, " .
-	    "driver_printer_assoc.ppd, driver.obsolete, " .
-	    "driver.driver_group, driver.locales " .
-	    "FROM driver_printer_assoc, driver " .
-	    "WHERE (" .
-	    ($cupsppds ?
-	     "NOT (driver.prototype = '' OR driver.prototype is NULL) AND " .
-	     ($cupsppds == 1 ?
-	      "(driver_printer_assoc.ppd = '' OR " .
-	      "driver_printer_assoc.ppd IS NULL) AND " : "") : "") .
-	    "driver_printer_assoc.driver_id=driver.id" .
-	    ")" .
-	    "ORDER BY BINARY(driver_printer_assoc.printer_id), " .
-	    "BINARY(driver_printer_assoc.driver_id);";
-	my $sthd = $this->{'dbh'}->prepare($driverquerystr);
-	$sthd->execute();
+	my $sthd;
+	my @drow;
+	if (!$nodrivers) {
+	    my $driverquerystr = "SELECT driver_printer_assoc.printer_id, " .
+		"driver_printer_assoc.driver_id, " .
+		"driver.url, driver.supplier, driver.thirdpartysupplied, " .
+		"driver.manufacturersupplied, driver.license, " .
+		"driver.nonfreesoftware, driver.patents, driver.shortdescription, " .
+		"driver.execution, " .
+		"driver.max_res_x, driver.max_res_y, driver.color, " .
+		"driver.text, driver.lineart, driver.graphics, driver.photo, " .
+		"driver.load_time, driver.speed, " .
+		"driver_printer_assoc.max_res_x AS exc_max_res_x, " .
+		"driver_printer_assoc.max_res_y AS exc_max_res_y, " .
+		"driver_printer_assoc.color AS exc_color, " .
+		"driver_printer_assoc.text AS exc_text, " .
+		"driver_printer_assoc.lineart AS exc_lineart, " .
+		"driver_printer_assoc.graphics AS exc_graphics, " .
+		"driver_printer_assoc.photo AS exc_photo, " .
+		"driver_printer_assoc.load_time AS exc_load_time, " .
+		"driver_printer_assoc.speed AS exc_speed, " .
+		"driver_printer_assoc.ppd, driver.obsolete, " .
+		"driver.driver_group, driver.locales " .
+		"FROM driver_printer_assoc, driver " .
+		"WHERE (" .
+		($cupsppds ?
+		 "NOT (driver.prototype = '' OR driver.prototype is NULL) AND " .
+		 ($cupsppds == 1 ?
+		  "(driver_printer_assoc.ppd = '' OR " .
+		  "driver_printer_assoc.ppd IS NULL) AND " : "") : "") .
+		  "driver_printer_assoc.driver_id=driver.id" .
+		  ")" .
+		  "ORDER BY BINARY(driver_printer_assoc.printer_id), " .
+		  "BINARY(driver_printer_assoc.driver_id);";
+	    $sthd = $this->{'dbh'}->prepare($driverquerystr);
+	    $sthd->execute();
+	    @drow = $sthd->fetchrow_array;
+	}
 	my @prow = $sthp->fetchrow_array;
-	my @drow = $sthd->fetchrow_array;
 	my $overview = [];
 	while ( 1 ) {
 	    last if !@prow && !@drow;
 	    # New printer entry in the overview data structure
 	    my $printer = "";
 	    my $pentry = {};
-	    if (!@prow || ($drow[0] lt $prow[0])) {
+	    if (@drow && (!@prow || ($drow[0] lt $prow[0]))) {
 		# printer/driver combo list contains a printer which is not 
 		# in the printer list, fill printer data with defaults, mainly
 		# empty fields. Do not touch $prow in this loop run.
@@ -515,14 +519,14 @@ sub get_overview_from_sql_db {
 		# There is no driver for this printer. Skip this printer
 		# if the overview was requested only to find out which
 		# PPDs/drivers are available.
-		next if $cupsppds;
+		# Do not skip if we do not request a driver list.
+		next if $cupsppds && !$nodrivers;
 	    }
 
 	    # Add printer record to data structure
 	    push(@{$overview}, $pentry);
 	}
-	$this->{'overview'} = $overview;
-	return $this->{'overview'};
+	return $overview;
     } else {
 	return undef;
     }
@@ -1468,7 +1472,10 @@ sub get_overview {
     $this->{'overview'} = undef;
 
     # Get overview from an SQL database if we have one
-    return $this->get_overview_from_sql_db($cupsppds) if $this->{'dbh'};
+    if ($this->{'dbh'}) {
+	$this->{'overview'} = $this->get_overview_from_sql_db($cupsppds) if $this->{'dbh'};
+	return $this->{'overview'};
+    }
 
     # Read on-disk cache file if we have one
     if (defined($this->{'overviewfile'})) {
@@ -1810,7 +1817,14 @@ sub find_printer {
     $output = 0 if $output < 0;
     $output = 2 if $output > 2;
 
-    my $over = $this->get_overview();
+    my $over;
+    if ($this->{'dbh'}) {
+	# Quick overview without driver lists
+	$over = $this->get_overview_from_sql_db(0, 1);
+    } else {
+	# No quick overview available for XML database
+	$over = $this->get_overview();
+    }
 
     my %results;
 

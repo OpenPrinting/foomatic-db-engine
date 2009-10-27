@@ -1,3 +1,13 @@
+2009-10-27  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added a "quick overview mode" generating a
+	  list of printer entries without driver info to the
+	  get_overview_from_sql_db() function. This mode is 10-20 times
+	  faster than the full overview taken from the MySQL database.
+	  Made the find_printer() function way faster when using a
+	  MySQL database and so the server load from driver queries by
+	  printer setup tools gets reduced a lot.
+
 2009-10-08  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README: Updated the README file for all recent changes and
