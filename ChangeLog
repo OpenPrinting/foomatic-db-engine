@@ -1,3 +1,9 @@
+2009-11-06  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Added support for separate comments from the
+	  printer entry and from the driver entry in the driver_printer_assoc
+	  table.
+
 2009-10-27  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added a "quick overview mode" generating a

@@ -746,7 +746,7 @@ sub get_printer_from_sql_db {
 	if (!$nodriverlist) {
 	    my $driverquerystr = "SELECT driver_printer_assoc.driver_id, " .
 		"driver_printer_assoc.ppd, " .
-		"driver_printer_assoc.comments " .
+		"driver_printer_assoc.pcomments " .
 		"FROM driver_printer_assoc " .
 		"WHERE driver_printer_assoc.printer_id=\"$poid\" " .
 		"ORDER BY BINARY(driver_printer_assoc.driver_id);";
@@ -771,7 +771,7 @@ sub get_printer_from_sql_db {
 			    ("driver_printer_assoc",
 			     {'printer_id' => $poid,
 			      'driver_id' => $d->{'id'}},
-			     ["comments"]);
+			     ["pcomments"]);
 			$d->{'comment'} = $tr[0]
 			    if defined($tr[0]) && ($tr[0] ne "");
 		    }
