@@ -1306,9 +1306,6 @@ sub get_combo_data_from_sql_db {
 			    if defined($olrow[17]) && ($olrow[17] ne "");
 			$arg->{'default'} = $olrow[18]
 			    if defined($olrow[18]) && ($olrow[18] ne "");
-			if ($olrow[1] eq "enum") {
-			    $arg->{'default'} = "ev/" . $arg->{'default'};
-			}
 			if (defined($arg)) {
 			    # Request translations
 			    if (defined($arg->{'idx'})) {

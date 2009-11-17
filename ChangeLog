@@ -1,3 +1,10 @@
+2009-11-17  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Do not add "ev/" to IDs of option default
+	  values from the MySQL database, we create the default value
+	  entries already with "ev/" now to distinguish them from
+	  string/password option defaults.
+
 2009-11-06  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Added support for separate comments from the
