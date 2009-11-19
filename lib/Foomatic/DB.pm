@@ -1171,9 +1171,9 @@ sub get_combo_data_from_sql_db {
 	    $optionchoicequerystr[0] =
 		"CREATE TEMPORARY TABLE o1 " .
 		"SELECT option_id, sense, defval, " .
-		"if(driver=\"$drv\", 2, if(driver=\"\", 0, -1)) + " .
+		"if(driver=\"$drv\", 2, if(driver=\"\", 0, -9)) + " .
 		"if(printer=\"$poid\", 4, if(printer=\"$mfg-\", 1, " .
-		"if(printer=\"\", 0, -1))) AS score " .
+		"if(printer=\"\", 0, -9))) AS score " .
 		"FROM option_constraint " .
 		"WHERE ((driver=\"$drv\" OR driver=\"\") " .
 		"AND (printer=\"$poid\" OR printer=\"$mfg-\" " .
@@ -1189,7 +1189,7 @@ sub get_combo_data_from_sql_db {
 		"SELECT o1.option_id, o1.defval " .
 		"FROM o1, o2 " .
 		"WHERE o1.score=o2.score " .
-		"AND o1.option_id=o2.option_id AND o1.sense=true;";
+		"AND o1.option_id=o2.option_id AND o1.sense=\"true\";";
 	    $optionchoicequerystr[3] =
 		"CREATE TEMPORARY TABLE needed_options " .
 		"SELECT id, option_type, shortname, longname, execution, " .
@@ -1205,8 +1205,8 @@ sub get_combo_data_from_sql_db {
 		"SELECT option_constraint.option_id, " .
 		"option_constraint.choice_id, sense, " .
 		"if(driver=\"$drv\", 2, " .
-		"if(driver=\"\", 0, -1)) + if(printer=\"$poid\", 4, " .
-		"if(printer=\"$mfg-\", 1, if(printer=\"\", 0, -1))) AS score " .
+		"if(driver=\"\", 0, -9)) + if(printer=\"$poid\", 4, " .
+		"if(printer=\"$mfg-\", 1, if(printer=\"\", 0, -9))) AS score " .
 		"FROM option_constraint, needed_options " .
 		"WHERE option_constraint.option_id=needed_options.id " .
 		"AND (driver=\"$drv\" OR driver=\"\") " .
@@ -1233,7 +1233,8 @@ sub get_combo_data_from_sql_db {
 		"driverval " .
 		"FROM o6 LEFT JOIN o5 " .
 		"ON o6.option_id=o5.option_id AND o6.choice_id=o5.choice_id " .
-		"WHERE o5.sense IS NULL OR o5.sense=false " .
+		"WHERE o5.sense IS NULL OR o5.sense=\"\" OR " .
+		"o5.sense=\"true\" " .
 		"ORDER BY o6.option_id, o6.choice_id;";
 	    $optionchoicequerystr[8] =
 		"DROP TABLE o1, o2, o3, o4, o5, o6;";
@@ -1253,9 +1254,14 @@ sub get_combo_data_from_sql_db {
 	    my @olrow;
 	    my $arg;
 	    my $defaultset = 0;
-	    while (my @clrow = $clsth->fetchrow_array) {
-		if ($clrow[0] ne $option) {
-		    $option = $clrow[0];
+	    while (1) {
+		my @clrow = $clsth->fetchrow_array;
+		if (!@clrow || ($clrow[0] ne $option)) {
+		    if (@clrow) {
+			$option = $clrow[0];
+		    } else {
+			$option = "";
+		    }
 		    while (@olrow = $olsth->fetchrow_array) {
 			$defaultset = 0;
 			$arg = undef;
@@ -1323,9 +1329,10 @@ sub get_combo_data_from_sql_db {
 			    $dat->{'args_byname'}{$olrow[2]} =
 				$dat->{'args'}[scalar(@{$dat->{'args'}})-1];
 			}
-			last if $clrow[0] eq $olrow[0];
+			last if $option eq $olrow[0];
 		    }
 		}
+		last if !@clrow;
 		my $choice = undef;
 		$choice->{'idx'} = "ev/$clrow[1]"
 		    if defined($clrow[1]) && ($clrow[1] ne "");
