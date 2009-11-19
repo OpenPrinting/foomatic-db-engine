@@ -3,12 +3,13 @@
 	* lib/Foomatic/DB.pm: Fixes on printer/driver combo data readout
 	  from the SQL database: Option constraint senses were read as
 	  boolean type but they are actually strings containing "true" and
-	  "false"; Reading of options stopped when the choice list got
-	  completely read, so if boolean or numerical options (they have
-	  no choices) are in the end of the option list, they got not
-	  considered. This broke many Foomatic PPDs, especially the ones
-	  for the "eplaser" and "eplaser-jp" drivers. Thanks to Hidenori
-	  Ishii from Avasys for finding this.
+	  "false"; For the choices the constraints with the highest score
+	  where not correctly selected; Reading of options stopped when
+	  the choice list got completely read, so if boolean or numerical
+	  options (they have no choices) are in the end of the option
+	  list, they got not considered. This broke many Foomatic PPDs,
+	  especially the ones for the "eplaser" and "eplaser-jp"
+	  drivers. Thanks to Hidenori Ishii from Avasys for finding this.
 
 2009-11-17  Till Kamppeter <till.kamppeter@gmail.com>
 

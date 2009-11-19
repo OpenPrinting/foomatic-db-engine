@@ -1217,27 +1217,33 @@ sub get_combo_data_from_sql_db {
 		"option_constraint.choice_id;";
 	    $optionchoicequerystr[5] =
 		"CREATE TEMPORARY TABLE o5 " .
-		"SELECT option_id, choice_id, sense, max(score) AS score " .
+		"SELECT option_id, choice_id, max(score) AS score " .
 		"FROM o4 " .
 		"GROUP BY option_id, choice_id;";
 	    $optionchoicequerystr[6] =
 		"CREATE TEMPORARY TABLE o6 " .
+		"SELECT o4.option_id, o4.choice_id, o4.sense, o4.score " .
+		"FROM o4 JOIN o5 " .
+		"ON o4.option_id=o5.option_id AND o4.choice_id=o5.choice_id " .
+		"AND o4.score=o5.score;";
+	    $optionchoicequerystr[7] =
+		"CREATE TEMPORARY TABLE o7 " .
 		"SELECT option_choice.option_id AS option_id, " .
 		"option_choice.id AS choice_id, option_choice.shortname, " .
 		"option_choice.longname, option_choice.driverval " .
 		"FROM option_choice, needed_options " .
 		"WHERE option_choice.option_id=needed_options.id;";
-	    $optionchoicequerystr[7] =
-		"CREATE TEMPORARY TABLE needed_choices " .
-		"SELECT o6.option_id, o6.choice_id, shortname, longname, " .
-		"driverval " .
-		"FROM o6 LEFT JOIN o5 " .
-		"ON o6.option_id=o5.option_id AND o6.choice_id=o5.choice_id " .
-		"WHERE o5.sense IS NULL OR o5.sense=\"\" OR " .
-		"o5.sense=\"true\" " .
-		"ORDER BY o6.option_id, o6.choice_id;";
 	    $optionchoicequerystr[8] =
-		"DROP TABLE o1, o2, o3, o4, o5, o6;";
+		"CREATE TEMPORARY TABLE needed_choices " .
+		"SELECT o7.option_id, o7.choice_id, shortname, longname, " .
+		"driverval " .
+		"FROM o7 LEFT JOIN o6 " .
+		"ON o7.option_id=o6.option_id AND o7.choice_id=o6.choice_id " .
+		"WHERE o6.sense IS NULL OR o6.sense=\"\" OR " .
+		"o6.sense=\"true\" " .
+		"ORDER BY o7.option_id, o7.choice_id;";
+	    $optionchoicequerystr[9] =
+		"DROP TABLE o1, o2, o3, o4, o5, o6, o7;";
 	    for my $q (@optionchoicequerystr) {
 		my $ocsth = $this->{'dbh'}->prepare($q);
 		$ocsth->execute();
