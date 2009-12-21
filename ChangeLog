@@ -1,3 +1,14 @@
+2009-12-21  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm, foomatic-ppd-to-xml.in: Allow supplying a
+	  PPD file to foomatic-ppd-to-xml which is not installed into the
+	  Foomatic database tree (then the standard location
+	  db/source/PPD/<make>/<PPD filename> is assumed for a PPD file
+	  link in the printer XML file). Added the "-x" option to
+	  foomatic-ppd-to-xml whichj lets printer XMLs be generated from
+	  the PPD without checking whether the appropriate printers
+	  already exist.
+
 2009-11-19  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Fixes on printer/driver combo data readout

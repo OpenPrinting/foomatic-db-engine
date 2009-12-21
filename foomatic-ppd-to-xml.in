@@ -19,7 +19,7 @@ my $progname = ($1 || $0);
 
 help() if !@ARGV;
 #my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
-getopts("d:r:p:lb:f:nh");
+getopts("d:r:p:lb:f:nxh");
 help() if $opt_h;
 my $drivers = $opt_d;
 my $rdriver = $opt_r;
@@ -28,6 +28,7 @@ my $ppdlink = $opt_l;
 my $basedir = $opt_b;
 my $destdir = $opt_f;
 my $nomod = $opt_n;
+my $nocheck = $opt_x;
 
 $ppdfile = $ARGV[0];
 
@@ -49,8 +50,7 @@ if ($basedir) {
 	    die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
 	}
     } else {
-	$ppdfile =~ m:$basedir/(.*)$:;
-	$ppddlpath = $1;
+	$ppddlpath = $1 if $ppdfile =~ m:$basedir/(.*)$:;
     }
 } else {
     if (! -r $ppdfile) {
@@ -69,23 +69,33 @@ my $parameters = {
 
 my $db = Foomatic::DB->new();
 my $dat = ppdtoperl($ppdfile, $parameters);
-my @existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
-foreach my $product (@{$dat->{ppdproduct}}) {
-    my @pids = $db->find_printer("$dat->{'make'}|$product", 4, 1);
+if ($ppddlpath eq "") {
+    $mk = $dat->{'id'};
+    $mk =~ s/^([^\-]+)\-.*$/$1/;
+    $ppd = $ppdfile;
+    $ppd =~ s:^.*/([^/]+):$1:;
+    $pdddlpath = "PPD/$mk/$ppd";    
+}
+my @existing = ();
+if (!$nocheck) {
+    @existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
+    foreach my $product (@{$dat->{ppdproduct}}) {
+	my @pids = $db->find_printer("$dat->{'make'}|$product", 4, 1);
+	push(@existing,
+	     grep {
+		 !Foomatic::DB::member($_, @existing);
+	     } @pids);
+    }
     push(@existing,
 	 grep {
 	     !Foomatic::DB::member($_, @existing);
-	 } @pids);
+	 } map {
+	   m:^(.*)\.xml$:; $1;
+	 } map {
+	   m:([^/]+)$:; $1;
+	 } split(/\n/s, 
+		 `find $libdir/db/source/printer -name "*.xml" -print0 | xargs -0 grep -l $ppddlpath`));
 }
-push(@existing,
-     grep {
-	 !Foomatic::DB::member($_, @existing);
-     } map {
-         m:^(.*)\.xml$:; $1;
-     } map {
-         m:([^/]+)$:; $1;
-     } split(/\n/s, 
-	     `find $libdir/db/source/printer -name "*.xml" -print0 | xargs -0 grep -l $ppddlpath`));
 my $entryfound = 0;
 foreach my $entry (@existing) {
     my $d = $db->get_printer($entry);
@@ -216,7 +226,7 @@ $progname -h
  <ppdfile>      : PPD file for which a printer XML file should be created
  -d <drivers>   : Comma-separated list of drivers with which the printer
                   works. First driver is the one for which the PPD file is.
-                  If not otherwise stated by the "-r" options, this is also
+                  If not otherwise stated by the "-r" option, this is also
                   the recommended driver.
  -r <driver>    : Recommended driver. Supply this option to specify another
                   driver than the driver from the PPD/the first one from the
@@ -236,8 +246,10 @@ $progname -h
                   name of the file will be the printer ID with the ".xml"
                   extension.
  -n             : Do not write modified versions of existing XML files,
-                  only create XML files for printer for which there is no
+                  only create XML files for printers for which there is no
                   XML file yet.
+ -x             : Create XML files independent of whether there are already
+                  XML files for the printers covered by the PPD or not.
  -h             : show help information
 
 
