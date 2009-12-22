@@ -2623,6 +2623,7 @@ sub apply_driver_and_pdl_info {
 		$ppd =~ s:^.*/([^/]+):$1:;
 		$ppddlpath = "PPD/$mk/$ppd";    
 	    }
+	    $ppddlpath =~ s/\.gz$//i;
 	}
     }
 
@@ -3580,6 +3581,14 @@ sub ppdfromvartoperl {
 	if !$dat->{'id'};
 
     # Find out printer's page description languages and suitable drivers
+    if (!defined($parameters->{'drivers'})) {
+	$parameters->{'drivers'} = [$dat->{'driver'}];
+    }
+    if (!defined($parameters->{'pdls'})) {
+	$parameters->{'pdls'} = [split(',', $dat->{'general_cmd'})];
+    } else {
+	push(@{$parameters->{'pdls'}}, split(',', $dat->{'general_cmd'}));
+    }
     apply_driver_and_pdl_info($dat, $parameters);
 
     # Find the maximum resolution

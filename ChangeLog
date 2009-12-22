@@ -1,3 +1,16 @@
+2009-12-22  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm, foomatic-ppd-to-xml.in: If the PPD file
+	  supplied to foomatic-ppd-to-xml is compressed and should be
+	  linked in the generated printer XML file, assume that it gets
+	  added to the OpenPrinting database uncompressed. Therefore
+	  remove the ".gz" extension from the link.
+
+	* lib/Foomatic/DB.pm: If a PPD file supplied to the ppdtoperl()
+	  function contains information about the page description
+	  languages in the device ID or a Foomatic driver ID, use this
+	  information for the generated printer data structure.
+
 2009-12-21  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm, foomatic-ppd-to-xml.in: Allow supplying a

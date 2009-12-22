@@ -76,6 +76,7 @@ if ($ppddlpath eq "") {
     $ppd =~ s:^.*/([^/]+):$1:;
     $pdddlpath = "PPD/$mk/$ppd";    
 }
+$ppddlpath =~ s/\.gz$//i;
 my @existing = ();
 if (!$nocheck) {
     @existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
