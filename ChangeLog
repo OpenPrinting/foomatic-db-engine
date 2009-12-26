@@ -1,3 +1,7 @@
+2009-12-26  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README: Mirrored changes from the README file of foomatic-db.
+
 2009-12-22  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm, foomatic-ppd-to-xml.in: If the PPD file
