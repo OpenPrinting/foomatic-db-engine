@@ -297,15 +297,16 @@ sub get_overview_from_sql_db {
 		"driver_printer_assoc.speed AS exc_speed, " .
 		"driver_printer_assoc.ppd, driver.obsolete, " .
 		"driver.driver_group, driver.locales " .
-		"FROM driver_printer_assoc, driver " .
-		"WHERE (" .
+		"FROM driver_printer_assoc LEFT JOIN driver " .
+		"ON driver_printer_assoc.driver_id=driver.id " .
 		($cupsppds ?
-		 "NOT (driver.prototype = '' OR driver.prototype is NULL) AND " .
-		 ($cupsppds == 1 ?
-		  "(driver_printer_assoc.ppd = '' OR " .
-		  "driver_printer_assoc.ppd IS NULL) AND " : "") : "") .
-		  "driver_printer_assoc.driver_id=driver.id" .
-		  ")" .
+		 "WHERE NOT ((driver.prototype = '' OR " .
+		 "driver.prototype is NULL)" .
+		 ($cupsppds == 2 ?
+		  " AND (driver_printer_assoc.ppd = '' OR " .
+		  "driver_printer_assoc.ppd IS NULL)" :
+		  " OR (driver_printer_assoc.ppd != '' AND " .
+		  "driver_printer_assoc.ppd IS NOT NULL)") . ") " : "") .
 		  "ORDER BY BINARY(driver_printer_assoc.printer_id), " .
 		  "BINARY(driver_printer_assoc.driver_id);";
 	    $sthd = $this->{'dbh'}->prepare($driverquerystr);
@@ -1102,37 +1103,40 @@ sub get_combo_data_from_sql_db {
 	if (@row) {
 	    # Get data for printer and driver
 	    my $printer = $this->get_printer_from_sql_db($poid, 1);
-	    return undef if !defined($printer);
 	    my $driver = $this->get_driver_from_sql_db($drv, 1);
-	    return undef if !defined($driver);
-	    for my $k (keys %{$printer}) {
-		if ($k eq "driver") {
-		    $dat->{'recdriver'} = $printer->{$k};
-		} elsif ($k eq "ppdentry") {
-		    $dat->{'printerppdentry'} = $printer->{$k};
-		} elsif ($k eq "margins") {
-		    $dat->{'printermargins'} = $printer->{$k};
-		} elsif ($k eq "comment") {
-		    $dat->{'printercomment'} = $printer->{$k};
-		} else {
-		    $dat->{$k} = $printer->{$k};
+	    return undef if !defined($driver) and !defined($printer);
+	    if (defined($printer)) {
+		for my $k (keys %{$printer}) {
+		    if ($k eq "driver") {
+			$dat->{'recdriver'} = $printer->{$k};
+		    } elsif ($k eq "ppdentry") {
+			$dat->{'printerppdentry'} = $printer->{$k};
+		    } elsif ($k eq "margins") {
+			$dat->{'printermargins'} = $printer->{$k};
+		    } elsif ($k eq "comment") {
+			$dat->{'printercomment'} = $printer->{$k};
+		    } else {
+			$dat->{$k} = $printer->{$k};
+		    }
 		}
+		$printer = undef;
 	    }
-	    $printer = undef;
-	    for my $k (keys %{$driver}) {
-		if ($k eq "id") {
-		    # Do nothing
-		} elsif ($k eq "name") {
-		    $dat->{'driver'} = $driver->{$k};
-		} elsif ($k eq "ppdentry") {
-		    $dat->{'driverppdentry'} = $driver->{$k};
-		} elsif ($k eq "margins") {
-		    $dat->{'drivermargins'} = $driver->{$k};
-		} else {
-		    $dat->{$k} = $driver->{$k};
+	    if (defined($driver)) {
+		for my $k (keys %{$driver}) {
+		    if ($k eq "id") {
+			# Do nothing
+		    } elsif ($k eq "name") {
+			$dat->{'driver'} = $driver->{$k};
+		    } elsif ($k eq "ppdentry") {
+			$dat->{'driverppdentry'} = $driver->{$k};
+		    } elsif ($k eq "margins") {
+			$dat->{'drivermargins'} = $driver->{$k};
+		    } else {
+			$dat->{$k} = $driver->{$k};
+		    }
 		}
+		$driver = undef;
 	    }
-	    $driver = undef;
 
 	    # Get data specific to printer/driver combo
 	    $dat->{'drvmaxresx'} = int($row[0])

@@ -1,3 +1,34 @@
+2010-01-25  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c, foomatic-ppdfile.in, lib/Foomatic/DB.pm:
+	  Made Foomatic generating Foomatic PPD files if there is no
+	  printer XML file for the given printer/driver combo (but the
+	  printer listed as supported in the driver XML) and made Foomatic
+	  also returning ready-made PPDs if the driver XML file for the
+	  combo does not exist (driver name mentioned only in the list of
+	  supporting drivers in the printer XML file).
+
+	* foomatic-ppdfile.in: Fixed bug of "list" output never including
+	  entries for ready-made PPDs, even if this is selected in
+	  /etc/cups/foomatic.conf.
+
+	* foomatic-combo-xml.c: Fixed bug of a driver without <prototype>
+	  tags at all (not only empty but existing <prototype> tags) being
+	  considered as producing Foomatic PPDs. Such driver entries came up
+	  after importing the whole Foomatic DB into MySQL and exporting it
+	  back to XML.
+
+	* foomatic-combo-xml.c, lib/Foomatic/DB.pm: If an overview is
+	  requested but only with PPD-producing printer/driver combos and
+	  without ready-made PPDs, combos with both a command line prototype
+	  in their driver XML and a PPD link in their printer XML got
+	  displayed. As Foomatic returns the ready-made PPD in such a case
+	  and not the Foomatic PPDs these entries get suppressed now.
+
+	* lib/Foomatic/DB.pm: When using an SQL database the selection
+	  whether only PPD-producing combos get shown and whether
+	  ready-made PPDs should be included works correctly now.
+
 2009-12-26  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README: Mirrored changes from the README file of foomatic-db.

@@ -73,6 +73,8 @@ sub cupslistppds {
     } else {
         $conffilename = "/etc/cups/foomatic.conf";
     }
+    my $onlyrecommended = 0;
+    my $listreadymadeppds = 0;
     if (-r $conffilename and
 	open CONF, "< $conffilename") {
 	while (my $line = <CONF>) {
@@ -96,7 +98,7 @@ sub cupslistppds {
     }
 
     my $db = Foomatic::DB->new();
-    $db->get_overview(1, 1 + listreadymadeppds);
+    $db->get_overview(1, 1 + $listreadymadeppds);
 
     for my $printer (@{$db->{'overview'}}) {
 	my $poid = $printer->{'id'};
@@ -188,10 +190,13 @@ sub generateppd {
 	my $ppdname = $1;
 	my @poidcomponents = split(/-/, $ppdname);
 	my @drivercomponents = ();
+	my @printers = $db->get_printerlist();
 	while ($#poidcomponents > 1) {
 	    unshift(@drivercomponents, pop(@poidcomponents));
 	    $driver = join('-', @drivercomponents);
-	    next if !Foomatic::DB::member($driver, @drivers);
+	    $printer = join('-', @poidcomponents);
+	    next if (!Foomatic::DB::member($driver, @drivers) and
+		     !Foomatic::DB::member($printer, @printers));
 	    $poid = join('-', @poidcomponents);
 	    last;
 	}
@@ -216,12 +221,14 @@ sub generateppd {
 	    print STDERR "DEBUG2: $progname: compare '$lcname' to '$name'\n" if $debug;
 	    if( $name eq $lcname ){
 		$pentry = $printer;
+		$poid = $pentry->{'id'};
+		print STDERR "DEBUG: $progname: Using printer entry '$poid'\n" if $debug;
 		last;
 	    }
 	}
     }
 
-    die "ERROR: Printer '$poid' not found!\n" if( not defined $pentry );
+    print STDERR "DEBUG: Printer '$poid' not found!\n" if ($debug && not defined $pentry );
     print STDERR "DEBUG: $progname: Found $pentry->{id}\nDEBUG2: $progname: " .
 	join ("\nDEBUG2: $progname: ", split(/\n/, Dumper($pentry))) .
 	"\n" if $debug;
@@ -246,7 +253,7 @@ sub generateppd {
 	last if ($found = ($driver eq $d));
     }
     if ( not $found ) {
-	die "ERROR: $progname: Driver '$driver' not in database!\n";
+	print STDERR "DEBUG: $progname: Driver '$driver' not in database!\n" if $debug;
     }
 
     # Get all the data about this driver/printer pair
