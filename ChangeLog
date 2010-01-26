@@ -1,3 +1,9 @@
+2010-01-26  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-compiledb.in: Do not check whether there is a printer
+	  database entry for a given printer/driver combo, we can generate
+	  PPDs also without printer entry.
+
 2010-01-25  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-combo-xml.c, foomatic-ppdfile.in, lib/Foomatic/DB.pm:

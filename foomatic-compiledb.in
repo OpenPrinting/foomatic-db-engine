@@ -155,11 +155,6 @@ sub spawn_child {
 		next;
 	    }
 
-	    # Skip on non-existing printer XML file (happens if in the
-	    # list of supported printers of a driver is a printer
-	    # which does not exist in the Foomatic database)
-	    next if !defined($db->get_printer($printer));
-
 	    ## Skip entirely if we can
 	    #next if (-f $filename);
 	    
