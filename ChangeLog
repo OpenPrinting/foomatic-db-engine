@@ -1,3 +1,9 @@
+2010-02-01  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README: Mirrored changes from foomatic-db: <packages> tags are
+	  now required for driver XML files where binary driver packages are
+	  provided on the OpenPrinting web server.
+
 2010-01-26  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-compiledb.in: Do not check whether there is a printer
