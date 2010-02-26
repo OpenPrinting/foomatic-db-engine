@@ -1,3 +1,9 @@
+2010-02-26  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-printermap-to-gutenprint-xml.in: Adjusted indenting of the
+	  generated XML code to match the indenting of the XML code exported
+	  from the MySQL database on the OpenPrinting web server.
+
 2010-02-05  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README: Corrected PPD keyword: It must read

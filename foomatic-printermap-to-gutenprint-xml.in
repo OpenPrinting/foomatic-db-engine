@@ -119,7 +119,7 @@ $gutenprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n  <!-- The following printers 
 print STDERR "Inserting printer entries of foomatic-printermap ";
 foreach my $printer (@printermap) {
     print STDERR ".";
-    $gutenprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n  <printer>\n   <id>$printer</id>\n  </printer>$1:s;
+    $gutenprintxml =~ s:(\n\s*<\s*/\s*printers\s*>):\n    <printer>\n      <id>$printer</id>\n    </printer>$1:s;
 }
 print STDERR "\n\n";
 
