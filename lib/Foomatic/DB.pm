@@ -2878,7 +2878,6 @@ sub apply_driver_and_pdl_info {
 		} else {
 		    $drivers{'pxlmono'} = 1;
 		    $drivers{'lj5gray'} = 1;
-		    $drivers{'lj5mono'} = 1;
 		}
 	    } elsif ($level eq "5e") {
 		$drivers{'ljet4d'} = 1;

@@ -1,3 +1,9 @@
+2010-03-16  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: apply_driver_and_pdl_info(): Do not add
+	  "lj5mono" to the list of suitable drivers any more, this driver
+	  entry was removed from the OpenPrinting database.
+
 2010-02-26  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-printermap-to-gutenprint-xml.in: Adjusted indenting of the
