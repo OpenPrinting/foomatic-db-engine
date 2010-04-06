@@ -1,3 +1,20 @@
+2010-04-06  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Implemented two acceleration modes to the
+	  overview request from the MySQL database
+	  get_overview_from_sql_db(): $speedmode = 0: Full overview;
+	  $speedmode = 1: Do not query auxiliary tables of the driver
+	  entries; $speedmode = 2: Do not query driver entries at
+	  all (former $nodrivers = 1). This is needed for the OpenPrinting
+	  web server. The web query interface uses the printer search
+	  find_printer() and this printer search requests an overview which
+	  needs to be accelerated to obtain reasonable response
+	  times. Before, we did not read driver entries, but as we nowadays
+	  allow to define a printer by only listing it in a driver entry, we
+	  must read driver entries to find all printers. So we accelerate by
+	  simply not reading auxiliary tables but only the printer and
+	  driver list tables.
+
 2010-03-16  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: apply_driver_and_pdl_info(): Do not add

@@ -353,7 +353,8 @@ sub get_driver_packages_from_sql_db {
 }
 
 sub get_overview_from_sql_db {
-    my ($this, $cupsppds, $nodrivers) = @_;
+    my ($this, $cupsppds, $speedmode) = @_;
+    $speedmode = 0 if !$speedmode;
     if ($this->{'dbh'}) {
 	my @upl = $this->get_unapproved_printers_from_sql_db();
 	my @udl = $this->get_unapproved_drivers_from_sql_db();
@@ -378,7 +379,7 @@ sub get_overview_from_sql_db {
 	$sthp->execute();
 	my $sthd;
 	my @drow;
-	if (!$nodrivers) {
+	if ($speedmode < 2) {
 	    my $driverquerystr = "SELECT driver_printer_assoc.printer_id, " .
 		"driver_printer_assoc.driver_id, " .
 		"driver.url, driver.supplier, driver.thirdpartysupplied, " .
@@ -589,38 +590,40 @@ sub get_overview_from_sql_db {
 		    $properties->{'locales'} = $drow[32]
 			if defined($drow[32]) && ($drow[32] ne "");
 
-		    # Request translations
-		    my @tr = 
-			$this->get_translation_from_sql_db
-			("driver",
-			 {'id' => $driver},
-			 ["supplier", "license", "shortdescription"]);
-		    $properties->{'supplier'} = $tr[0]
-			if defined($tr[0]) && ($tr[0] ne "");
-		    $properties->{'license'} = $tr[1]
-			if defined($tr[1]) && ($tr[1] ne "");
-		    $properties->{'shortdescription'} = $tr[2]
-			if defined($tr[2]) && ($tr[2] ne "");
+		    if (!$speedmode) {
+			# Request translations
+			my @tr = 
+			    $this->get_translation_from_sql_db
+			    ("driver",
+			     {'id' => $driver},
+			     ["supplier", "license", "shortdescription"]);
+			$properties->{'supplier'} = $tr[0]
+			    if defined($tr[0]) && ($tr[0] ne "");
+			$properties->{'license'} = $tr[1]
+			    if defined($tr[1]) && ($tr[1] ne "");
+			$properties->{'shortdescription'} = $tr[2]
+			    if defined($tr[2]) && ($tr[2] ne "");
 
-		    # Get dependencies from separate table
-		    my @dependencies =
-			$this->get_driver_dependencies_from_sql_db($driver);
-		    $properties->{'requires'} = \@dependencies
-			if (@dependencies);
+			# Get dependencies from separate table
+			my @dependencies =
+			    $this->get_driver_dependencies_from_sql_db($driver);
+			$properties->{'requires'} = \@dependencies
+			    if (@dependencies);
 
-		    # Get downloadable packages from separate table
-		    my @packages =
-			$this->get_driver_packages_from_sql_db($driver);
-		    $properties->{'packages'} = \@packages if (@packages);
+			# Get downloadable packages from separate table
+			my @packages =
+			    $this->get_driver_packages_from_sql_db($driver);
+			$properties->{'packages'} = \@packages if (@packages);
 
-		    # Get support contact list from separate table
-		    my @supportcontacts =
-			$this->get_driver_support_contacts_from_sql_db($driver);
-		    $properties->{'supportcontacts'} =
-			\@supportcontacts if (@supportcontacts);
+			# Get support contact list from separate table
+			my @supportcontacts =
+			    $this->get_driver_support_contacts_from_sql_db($driver);
+			$properties->{'supportcontacts'} =
+			    \@supportcontacts if (@supportcontacts);
 
-		    $pentry->{'driverproperties'}{$driver} = $properties
-			if defined($properties);
+			$pentry->{'driverproperties'}{$driver} = $properties
+			    if defined($properties);
+		    }
 
 		    # Current row in printer/driver list treated, advance
 		    do {
@@ -632,7 +635,7 @@ sub get_overview_from_sql_db {
 		# if the overview was requested only to find out which
 		# PPDs/drivers are available.
 		# Do not skip if we do not request a driver list.
-		next if $cupsppds && !$nodrivers;
+		next if $cupsppds && ($speedmode < 2);
 	    }
 
 	    # Add printer record to data structure
