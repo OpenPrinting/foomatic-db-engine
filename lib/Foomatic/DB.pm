@@ -982,7 +982,7 @@ sub get_driver_from_sql_db {
 	    }
 	    $dentry->{'nopjl'} = $drow[26]
 		if defined($drow[26]) && ($drow[26] ne "");
-	    $dentry->{'nopageaccounting'} = $drow[27]
+	    $dentry->{'drivernopageaccounting'} = $drow[27]
 		if defined($drow[27]) && ($drow[27] ne "");
 	    $dentry->{'cmd'} = $drow[28]
 		if defined($drow[28]) && ($drow[28] ne "");

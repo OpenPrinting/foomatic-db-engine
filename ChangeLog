@@ -1,3 +1,9 @@
+2010-04-27  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: "*FoomaticRIPNoPageAccounting" was not inserted
+	  into the generated Foomatic PPDs when the printer/driver data was
+	  read from a MySQL database. Fixed.
+
 2010-04-06  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Implemented two acceleration modes to the
