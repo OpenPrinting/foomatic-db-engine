@@ -1,3 +1,9 @@
+2010-06-11  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* configure.ac: Check for functions of libxml with CFLAGS and LIBS
+	  containing the detected references to libxml. Thanks to Tim Mooney
+	  for the patch (Bug #444).
+
 2010-04-27  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: "*FoomaticRIPNoPageAccounting" was not inserted

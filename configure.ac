@@ -48,7 +48,18 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(strdup strspn strstr xmlParseFile xmlCreatePushParserCtxt xmlParseChunk xmlFreeParserCtxt xmlFreeDoc xmlDocGetRootElement xmlNodeListGetString)
+AC_CHECK_FUNCS(strdup strspn strstr)
+
+#
+# augment CFLAGS and LIBS temporarily while searching for the xml* functions
+#
+save_CFLAGS="$CFLAGS"
+save_LIBS="$LIBS"
+CFLAGS="$XML_CFLAGS $CFLAGS"
+LIBS="$XML_LIBS $LIBS"
+AC_CHECK_FUNCS(xmlParseFile xmlCreatePushParserCtxt xmlParseChunk xmlFreeParserCtxt xmlFreeDoc xmlDocGetRootElement xmlNodeListGetString)
+CFLAGS="$save_CFLAGS"
+LIBS="$save_LIBS"
 
 dnl Checks for programs/directories which are used by Foomtic
 
