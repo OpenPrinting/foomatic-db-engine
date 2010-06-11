@@ -1,5 +1,9 @@
 2010-06-11  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* Makefile.in: Do "make install" in lib/ directory with explicit
+	  use of DESTDIR. Otherwise it can come to a duplicate insertion
+	  of DESTDIR. Thanks to Tim Mooney for the patch (Bug #445).
+
 	* configure.ac: Simplified and generalized the check for the Perl
 	  library directory prefix in the configure script. Thanks to Tim
 	  Mooney (Bug #418).
