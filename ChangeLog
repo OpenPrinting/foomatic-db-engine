@@ -1,5 +1,9 @@
 2010-06-11  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* configure.ac: Simplified and generalized the check for the Perl
+	  library directory prefix in the configure script. Thanks to Tim
+	  Mooney (Bug #418).
+
 	* configure.ac: Check for functions of libxml with CFLAGS and LIBS
 	  containing the detected references to libxml. Thanks to Tim Mooney
 	  for the patch (Bug #444).

@@ -194,22 +194,14 @@ if test x$prefix = xNONE; then
 else
   PREFIX=$prefix
 fi
-echo -n Checking whether Perl will find libraries installed under $PREFIX...
-if ( $PERL -V | egrep "^ *$PREFIX/lib(/perl[[0-9]]?|)(/site_perl|)/[[0-9]]" > /dev/null); then
-  PERLPREFIX=$PREFIX
-  echo " yes"
+echo -n Checking where Perl will find its libraries...
+eval `${PERL} -V:installprefix`
+PERLPREFIX=`echo $installprefix`
+if test -n "$PERLPREFIX"; then
+  echo " $PERLPREFIX"
 else
-  echo " no"
-  echo -n Checking whether Perl will find libraries installed under /usr/local...
-  if ( $PERL -V | egrep "^ */usr/local/lib(/perl[[0-9]]?|)(/site_perl|)/[[0-9]]" > /dev/null); then
-    PERLPREFIX=/usr/local
-    echo " yes"
-    echo Installing the Perl libraries with prefix /usr/local.
-  else
-    PERLPREFIX=/usr
-    echo " no"
-    echo Installing the Perl libraries with prefix /usr.
-  fi
+  PERLPREFIX=/usr
+  echo " not found, installing the Perl libraries with prefix /usr."
 fi
 AC_SUBST(PERLPREFIX)
 
