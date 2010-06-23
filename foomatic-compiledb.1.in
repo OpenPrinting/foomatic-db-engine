@@ -47,8 +47,8 @@ project using output from the associated binary.
 
 .SH BUGS
 Existing files are always conserved instead of older files being
-overwritten. So deleting the destination directory (rm -rf dir) and
-calling foomatic-compiledb without the -f option is recommended.
+overwritten. So deleting the destination directory (rm \-rf dir) and
+calling foomatic-compiledb without the \-f option is recommended.
 
 Please post bug reports on
 

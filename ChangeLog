@@ -1,3 +1,9 @@
+2010-06-23  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-compiledb.1.in, foomatic-kitload.8.in: Fixed some
+	  hyphen-used-as-minus lintian warnings. Thanks to Didier Raboud
+	  (didier at raboud dot com) for the patch.
+
 2010-06-11  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* Makefile.in: Do "make install" in lib/ directory with explicit

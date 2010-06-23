@@ -5,12 +5,12 @@
 foomatic-kitload \- installs a data kit into the foomatic database.
 .SH SYNOPSIS
 .B foomatic-kitload
-[\fI -k kit-dir\fR]
-[\fI -d dest-dir\fR]...
+[\fI \-k kit-dir\fR]
+[\fI \-d dest-dir\fR]...
 .SH DESCRIPTION
 .B foomatic-kitload
 installs a foomatic data kit into the local data library.  It takes a 
-\fI-k\fR \fIdirname\fR
+\fI\-k\fR \fIdirname\fR
 option, where \fIdirname\fR is the toplevel directory of a foomatic
 driver "kit".  A "kit" is a selection of XML source files arranged
 exactly as in the source/section of the master database (ie, opt/driver/printer/ subdirs).
