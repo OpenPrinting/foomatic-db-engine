@@ -1,3 +1,9 @@
+2010-07-05  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README: Documented new "fingerprint" parameter for the <package>
+	  tag. It provides a link to key fingerprint on the web site of the
+	  issuer of the driver.
+
 2010-06-23  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-compiledb.1.in, foomatic-kitload.8.in: Fixed some
