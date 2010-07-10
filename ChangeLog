@@ -1,3 +1,8 @@
+2010-07-10  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Added support for the new
+	  "fingerprint" parameter of the <package> tag.
+
 2010-07-05  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README: Documented new "fingerprint" parameter for the <package>

@@ -212,6 +212,7 @@ typedef struct comboData {
   int num_packages;
   xmlChar **packageurls;
   xmlChar **packagescopes;
+  xmlChar **packagefingerprints;
   xmlChar *drvmaxresx;
   xmlChar *drvmaxresy;
   xmlChar *drvcolor;
@@ -352,6 +353,7 @@ typedef struct driverEntry {
   int num_packages;
   xmlChar **packageurls;
   xmlChar **packagescopes;
+  xmlChar **packagefingerprints;
   xmlChar *maxresx;
   xmlChar *maxresy;
   xmlChar *color;
@@ -1698,7 +1700,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   xmlNodePtr     cur3;  /* Another XML node pointer */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;  /* Full driver ID, with "driver/" */
-  xmlChar        *level, *version, *scope;
+  xmlChar        *level, *version, *scope, *fingerprint;
   xmlChar        *url;
 
   /* Initialization of entries */
@@ -1726,6 +1728,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
   ret->num_packages = 0;
   ret->packageurls = NULL;
   ret->packagescopes = NULL;
+  ret->packagefingerprints = NULL;
   ret->drvmaxresx = NULL;
   ret->drvmaxresy = NULL;
   ret->drvcolor = NULL;
@@ -1897,13 +1900,21 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 		    sizeof(xmlChar *) * 
 		    ret->num_packages);
 	  scope = xmlGetProp(cur2, (const xmlChar *) "scope");
+	  ret->packagefingerprints =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->packagefingerprints, 
+		    sizeof(xmlChar *) * 
+		    ret->num_packages);
+	  fingerprint = xmlGetProp(cur2, (const xmlChar *) "fingerprint");
 	  ret->packageurls[ret->num_packages - 1] =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  ret->packagescopes[ret->num_packages - 1] = perlquote(scope);
+	  ret->packagefingerprints[ret->num_packages - 1] = perlquote(fingerprint);
 	  if (debug)
-	    fprintf(stderr, "    %s (%s)\n", 
+	    fprintf(stderr, "    %s (%s), key fingerprint on %s\n", 
 		    ret->packageurls[ret->num_packages - 1],
-		    ret->packagescopes[ret->num_packages - 1]);
+		    ret->packagescopes[ret->num_packages - 1],
+		    ret->packagefingerprints[ret->num_packages - 1]);
 	}
 	cur2 = cur2->next;
       }
@@ -2914,7 +2925,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   xmlNodePtr     cur4;  /* Another XML node pointer */
   xmlChar        *id;   /* Full driver ID, with "driver/" */
   drvPrnEntryPtr entry; /* An entry for a printer supported by this driver*/
-  xmlChar        *url, *level, *version, *scope;
+  xmlChar        *url, *level, *version, *scope, *fingerprint;
 
   /* Initialization of entries */
   ret->id = NULL;
@@ -2940,6 +2951,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
   ret->num_packages = 0;
   ret->packageurls = NULL;
   ret->packagescopes = NULL;
+  ret->packagefingerprints = NULL;
   ret->maxresx = NULL;
   ret->maxresy = NULL;
   ret->color = NULL;
@@ -3097,13 +3109,21 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 		    sizeof(xmlChar *) * 
 		    ret->num_packages);
 	  scope = xmlGetProp(cur2, (const xmlChar *) "scope");
+	  ret->packagefingerprints =
+	    (xmlChar **)
+	    realloc((xmlChar **)ret->packagefingerprints, 
+		    sizeof(xmlChar *) * 
+		    ret->num_packages);
+	  fingerprint = xmlGetProp(cur2, (const xmlChar *) "fingerprint");
 	  ret->packageurls[ret->num_packages - 1] =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  ret->packagescopes[ret->num_packages - 1] = perlquote(scope);
+	  ret->packagefingerprints[ret->num_packages - 1] = perlquote(fingerprint);
 	  if (debug)
-	    fprintf(stderr, "    %s (%s)\n", 
+	    fprintf(stderr, "    %s (%s), key fingerprint on %s\n", 
 		    ret->packageurls[ret->num_packages - 1],
-		    ret->packagescopes[ret->num_packages - 1]);
+		    ret->packagescopes[ret->num_packages - 1],\
+		    ret->packagefingerprints[ret->num_packages - 1]);
 	}
 	cur2 = cur2->next;
       }
@@ -3932,6 +3952,10 @@ generateOverviewPerlData(overviewPtr overview, /* I/O - Foomatic overview
 		    != NULL)
 		  printf("                    'scope' => '%s',\n",
 			 overview->overviewDrivers[k]->packagescopes[l]);
+		if (overview->overviewDrivers[k]->packagefingerprints[l]
+		    != NULL)
+		  printf("                    'fingerprint' => '%s',\n",
+			 overview->overviewDrivers[k]->packagefingerprints[l]);
 		printf("                  },\n");
 	      }
 	    }
@@ -4368,6 +4392,10 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
 	    != NULL)
 	  printf("      'scope' => '%s',\n",
 		 combo->packagescopes[i]);
+	if (combo->packagefingerprints[i]
+	    != NULL)
+	  printf("      'fingerprint' => '%s',\n",
+		 combo->packagefingerprints[i]);
 	printf("    },\n");
       }
     }
@@ -4883,6 +4911,10 @@ generateDriverPerlData(driverEntryPtr driver, /* I/O - Foomatic driver
 	    != NULL)
 	  printf("      'scope' => '%s',\n",
 		 driver->packagescopes[i]);
+	if (driver->packagefingerprints[i]
+	    != NULL)
+	  printf("      'fingerprint' => '%s',\n",
+		 driver->packagefingerprints[i]);
 	printf("    },\n");
       }
     }

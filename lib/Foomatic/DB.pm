@@ -335,7 +335,7 @@ sub get_driver_packages_from_sql_db {
     my @packages;
     if ($this->{'dbh'}) {
 	my $querystr =
-	    "SELECT scope, name " .
+	    "SELECT scope, fingerprint, name " .
 	    "FROM driver_package " .
 	    "WHERE driver_id=\"$driver\";";
 	my $sth = $this->{'dbh'}->prepare($querystr);
@@ -343,7 +343,9 @@ sub get_driver_packages_from_sql_db {
 	while (my @row = $sth->fetchrow_array) {
 	    my $pkg = undef;
 	    $pkg->{'scope'} = $row[0] if defined($row[0]) && ($row[0] ne "");
-	    $pkg->{'url'} = $row[1] if defined($row[1]) && ($row[1] ne "");
+	    $pkg->{'fingerprint'} = $row[1]
+		if defined($row[1]) && ($row[1] ne "");
+	    $pkg->{'url'} = $row[2] if defined($row[2]) && ($row[2] ne "");
 	    push(@packages, $pkg) if defined($pkg);
 	}
     } else {
