@@ -185,7 +185,7 @@ sub generateppd {
     if ($ppduri =~ /^$progname:(.*)\.ppd$/) {
 	# cups-driverd operation
 	# We try to split between printer name and driver name at all
-	# dashes in the PPD file name, as some drivers (ex. Gutenprint)
+	# dashes in the PPD file name, as some drivers (ex. hpijs-pcl3)
 	# have dashes in their names.
 	my $ppdname = $1;
 	my @poidcomponents = split(/-/, $ppdname);
@@ -195,9 +195,9 @@ sub generateppd {
 	    unshift(@drivercomponents, pop(@poidcomponents));
 	    $driver = join('-', @drivercomponents);
 	    $printer = join('-', @poidcomponents);
-	    next if (!Foomatic::DB::member($driver, @drivers) and
+	    next if (!Foomatic::DB::member($driver, @drivers) or
 		     !Foomatic::DB::member($printer, @printers));
-	    $poid = join('-', @poidcomponents);
+	    $poid = $printer;
 	    last;
 	}
 	die "ERROR: Could not determine driver name for $ppdname.ppd!\n"

@@ -1,3 +1,9 @@
+2010-08-26  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppdfile.in: Fixed bug that made the PPD URI
+	  foomatic:Apollo-P-2100-hpijs-pcl3.ppd interpreted as printer
+	  Apollo-P-2100-hpijs and driver pcl3.
+
 2010-07-10  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm, foomatic-perl-data.c: Added support for the new
