@@ -1693,8 +1693,10 @@ sub get_overview {
     $otype .= ' -n' if ($cupsppds == 1);
     # Generate overview Perl data structure from database
     my $VAR1;
-    eval `$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}` ||
-	die ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!");
+    eval `$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}` || do {
+	warn ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!\n");
+	return undef;
+    };
     $this->{'overview'} = $VAR1;
 
     # Write on-disk cache file if we have one
@@ -1711,8 +1713,10 @@ sub get_overview {
 sub get_overview_xml {
     my ($this, $compile) = @_;
 
-    open( FCX, "$bindir/foomatic-combo-xml -O -l '$libdir'|")
-	or die "Can't execute $bindir/foomatic-combo-xml -O -l '$libdir'";
+    open( FCX, "$bindir/foomatic-combo-xml -O -l '$libdir'|") or do {
+	warn "Can't execute $bindir/foomatic-combo-xml -O -l '$libdir'\n";
+	return undef;
+    };
     $_ = join('', <FCX>);
     close FCX;
     return $_;
@@ -1735,8 +1739,10 @@ sub get_combo_data_xml {
 	}
     }
 
-    open( FCX, "$bindir/foomatic-combo-xml -d '$drv' -p '$poid'$options -l '$libdir'|")
-	or die "Can't execute $bindir/foomatic-combo-xml -d '$drv' -p '$poid'$options -l '$libdir'";
+    open( FCX, "$bindir/foomatic-combo-xml -d '$drv' -p '$poid'$options -l '$libdir'|") or do {
+	warn "Can't execute $bindir/foomatic-combo-xml -d '$drv' -p '$poid'$options -l '$libdir'\n";
+	return undef;
+    };
     $_ = join('', <FCX>);
     close FCX;
     return $_;
@@ -1748,8 +1754,10 @@ sub get_printer {
     # Generate printer Perl data structure from database
     my $VAR1;
     if (-r "$libdir/db/source/printer/$poid.xml") {
-	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) ||
-	    die ("Could not run \"foomatic-perl-data\"!");
+	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) || do {
+	    warn ("Could not run \"foomatic-perl-data\"!\n");
+	    return undef;
+	};
     } else {
 	my ($make, $model);
 	if ($poid =~ /^([^\-]+)\-(.*)$/) {
@@ -1808,8 +1816,10 @@ sub get_driver {
     # Generate driver Perl data structure from database
     my $VAR1;
     if (-r "$libdir/db/source/driver/$drv.xml") {
-	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$libdir/db/source/driver/$drv.xml'`) ||
-	    die ("Could not run \"foomatic-perl-data\"!");
+	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$libdir/db/source/driver/$drv.xml'`) || do {
+	    warn ("Could not run \"foomatic-perl-data\"!\n");
+	    return undef;
+	}
     } else {
 	return undef;
     }
@@ -2694,9 +2704,11 @@ sub getdat ($ $ $) {
 	%dat = %{$this->get_combo_data_from_sql_db($drv, $poid)};
     } else {
 	my $VAR1;
-	eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C -l $this->{'language'}`) ||
-	    die ("Could not run \"foomatic-combo-xml\"/" .
-		 "\"foomatic-perl-data\"!");
+	eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C -l $this->{'language'}`) || do {
+	    warn ("Could not run \"foomatic-combo-xml\"/" .
+		  "\"foomatic-perl-data\"!\n");
+	    return undef;
+	};
 	%dat = %{$VAR1};
     }
 
