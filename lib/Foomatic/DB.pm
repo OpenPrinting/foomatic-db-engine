@@ -2879,50 +2879,52 @@ sub apply_driver_and_pdl_info {
 	}
     }
     $drivers{$dat->{'driver'}} = 1;
-    for my $ll (@{$dat->{'languages'}}) {
-	my $lang = $ll->{'name'};
-	my $level = $ll->{'level'};
-	if ($lang =~ /^postscript$/i) {
-	    if ($level eq "1") {
-		$drivers{'Postscript1'} = 1;
-	    } else {
-		$drivers{'Postscript'} = 1;
+    if (!$parameters->{'addonlyrequesteddrivers'}) {
+	for my $ll (@{$dat->{'languages'}}) {
+	    my $lang = $ll->{'name'};
+	    my $level = $ll->{'level'};
+	    if ($lang =~ /^postscript$/i) {
+		if ($level eq "1") {
+		    $drivers{'Postscript1'} = 1;
+		} else {
+		    $drivers{'Postscript'} = 1;
+		}
+	    } elsif ($lang =~ /^pcl$/i) {
+		if ($level eq "6") {
+		    if ($dat->{'color'}) {
+			$drivers{'pxlcolor'} = 1;
+		    } else {
+			$drivers{'pxlmono'} = 1;
+			$drivers{'lj5gray'} = 1;
+		    }
+		} elsif ($level eq "5e") {
+		    $drivers{'ljet4d'} = 1;
+		    $drivers{'ljet4'} = 1;
+		    $drivers{'lj4dith'} = 1;
+		    if ($dat->{'make'} =~ /^(HP|Hewlett[\s-]+Packard)$/i) {
+			$drivers{'hplip'} = 1;
+		    } else {
+			$drivers{'hpijs-pcl5e'} = 1;
+		    }
+		    $drivers{'gutenprint'} = 1;
+		} elsif ($level eq "5c") {
+		    $drivers{'cljet5'} = 1;
+		    if ($dat->{'make'} =~ /^(HP|Hewlett[\s-]+Packard)$/i) {
+			$drivers{'hplip'} = 1;
+		    } else {
+			$drivers{'hpijs-pcl5c'} = 1;
+		    }
+		} elsif ($level eq "5") {
+		    $drivers{'ljet3d'} = 1;
+		    $drivers{'ljet3'} = 1;
+		} elsif ($level eq "4") {
+		    $drivers{'laserjet'} = 1;
+		    $drivers{'ljetplus'} = 1;
+		    $drivers{'ljet2p'} = 1;
+		}
+		# PCL printers print also plain text
+		$dat->{'ascii'} = 'us-ascii';
 	    }
-	} elsif ($lang =~ /^pcl$/i) {
-	    if ($level eq "6") {
-		if ($dat->{'color'}) {
-		    $drivers{'pxlcolor'} = 1;
-		} else {
-		    $drivers{'pxlmono'} = 1;
-		    $drivers{'lj5gray'} = 1;
-		}
-	    } elsif ($level eq "5e") {
-		$drivers{'ljet4d'} = 1;
-		$drivers{'ljet4'} = 1;
-		$drivers{'lj4dith'} = 1;
-		if ($dat->{'make'} =~ /^(HP|Hewlett[\s-]+Packard)$/i) {
-		    $drivers{'hplip'} = 1;
-		} else {
-		    $drivers{'hpijs-pcl5e'} = 1;
-		}
-		$drivers{'gutenprint'} = 1;
-	    } elsif ($level eq "5c") {
-		$drivers{'cljet5'} = 1;
-		if ($dat->{'make'} =~ /^(HP|Hewlett[\s-]+Packard)$/i) {
-		    $drivers{'hplip'} = 1;
-		} else {
-		    $drivers{'hpijs-pcl5c'} = 1;
-		}
-	    } elsif ($level eq "5") {
-		$drivers{'ljet3d'} = 1;
-		$drivers{'ljet3'} = 1;
-	    } elsif ($level eq "4") {
-		$drivers{'laserjet'} = 1;
-		$drivers{'ljetplus'} = 1;
-		$drivers{'ljet2p'} = 1;
-	    }
-	    # PCL printers print also plain text
-	    $dat->{'ascii'} = 'us-ascii';
 	}
     }
     for my $drv (keys %drivers) {
@@ -3821,7 +3823,7 @@ sub ppdfromvartoperl {
 	}
     }
 
-    if ($dat->{'maxpaperwidth'}) {
+    if ($dat->{'maxpaperwidth'} && !$parameters->{'nodefaultcomment'}) {
 	my $wi = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72);
 	my $wc = sprintf("%.1f", $dat->{'maxpaperwidth'} / 72 * 2.54);
 	my $wcomm = ($dat->{'maxpaperwidth'} < 280 ?
@@ -3841,7 +3843,12 @@ sub ppdfromvartoperl {
     $dat->{'comment'} .=
 	"      Printing engine speed: " . $dat->{'throughput'} .
 	" pages/min<p>\n\n" if
-	defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1);
+	defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1 &&
+	!$parameters->{'nodefaultcomment'});
+    if (defined($parameters->{'comment'})) {
+	$dat->{'comment'} .= "      <p>\n\n" if $dat->{'comment'};
+	$dat->{'comment'} .= "      " . $parameters->{'comment'};
+    }
 
     # Set the defaults for the numerical options, taking into account
     # the "*FoomaticRIPDefault<option>: <value>" if they apply

@@ -19,13 +19,16 @@ my $progname = ($1 || $0);
 
 help() if !@ARGV;
 #my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
-getopts("d:r:p:lb:f:nxh");
+getopts("d:r:p:lb:Dc:Cf:nxh");
 help() if $opt_h;
 my $drivers = $opt_d;
 my $rdriver = $opt_r;
 my $pdls = $opt_p;
 my $ppdlink = $opt_l;
 my $basedir = $opt_b;
+my $addonlyrequesteddrivers = $opt_D;
+my $comment = $opt_c;
+my $nodefaultcomment = $opt_C;
 my $destdir = $opt_f;
 my $nomod = $opt_n;
 my $nocheck = $opt_x;
@@ -65,6 +68,9 @@ my $parameters = {
     ($pdls ? ('pdls' => [split(',', $pdls)]) : ()),
     ($ppdlink ? ('ppdlink' => 1) : ()),
     ($basedir ? ('basedir' => $basedir) : ()),
+    ($comment ? ('comment' => $comment) : ()),
+    ($nodefaultcomment ? ('nodefaultcomment' => 1) : ()),
+    ($addonlyrequesteddrivers ? ('addonlyrequesteddrivers' => 1) : ()),
 };
 
 my $db = Foomatic::DB->new();
@@ -166,7 +172,7 @@ if (!$entryfound) {
     $db->{'dat'}{'comment'} =
 	"      This database entry was automatically generated\n" .
 	"      from the PPD file for this printer.<p>\n\n" .
-	$db->{'dat'}{'comment'};
+	$db->{'dat'}{'comment'} if !$parameters->{'nodefaultcomment'};
     $db->{'dat'}{'functionality'} = "A";
     foreach my $product (@{$db->{'dat'}{ppdproduct}}) {
 	$db->{'dat'}{'model'} =
@@ -243,6 +249,14 @@ $progname -h
                   is relative to this directory (and not relative to the
                   current directory). With a base directory given the 
                   <ppdfile> can also be given relative to this directory.
+ -D             : Add only the driver requested by "-d" and "-r" to the
+                  driver list in the XML file, do not add drivers based on
+                  PDLs, not even on the PDLs supplied by the "-p" option.
+ -c <comment>   : Add the given comment to the comment field of the XML
+                  file. Comments are in HTML.
+ -C             : Suppress any default comments (max paper width, pages
+                  per minute, automatically generated XML, ...). Does not
+                  suppress the comment supplied with "-c".
  -f <directory> : Directory where the resulting XML file to write to. The
                   name of the file will be the printer ID with the ".xml"
                   extension.

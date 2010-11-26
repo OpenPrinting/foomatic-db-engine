@@ -1,3 +1,10 @@
+2010-11-26  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm, foomatic-ppd-to-xml.in: Added new features to
+	  foomatic-ppd-to-xml: Now custom comments can be added (-c), the
+	  deafult comments can get suppressed (-C), and XML files with only
+	  te drivers requested with -r and -d can be generated (-D).
+
 2010-08-30  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Do not die if the C helper programs
