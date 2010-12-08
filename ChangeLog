@@ -1,5 +1,13 @@
 2010-12-08  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* lib/Foomatic/DB.pm: Sort the driver lists in printer XML files
+	  alphabetically (case-insensitive) when generating XML files from
+	  a Perl data structure, so that the files are identical to the
+	  MySQL -> XML exporter on the OpenPrinting web servers. This
+	  prevents automatic BZR commits into foomatic-db or
+	  foomatic-db-nonfree which contain nothing more than driver list
+	  reordering.
+
 	* README, lib/Foomatic/DB.pm, ppdtoxml: Use always a single space
 	  before the closing "/>" of body-less tags. This way the XML style
 	  of files committed to the BZR repositories of foomatic-db and

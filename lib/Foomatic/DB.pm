@@ -3954,7 +3954,8 @@ sub perltoxml {
 	    "</driver>\n" if defined($dat->{'driver'});
 	if (defined($dat->{'drivers'})) {
 	    $xml .= "  <drivers>\n";
-	    for  my $drv (@{$dat->{'drivers'}}) {
+	    for  my $drv (sort {lc($a->{'id'}) cmp lc($b->{'id'})}
+			  @{$dat->{'drivers'}}) {
 		$xml .= "    <driver>\n";
 		$xml .= "      <id>" . $drv->{'id'} . "</id>\n"
 		    if defined($drv->{'id'});
