@@ -1,3 +1,13 @@
+2010-12-08  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README, lib/Foomatic/DB.pm, ppdtoxml: Use always a single space
+	  before the closing "/>" of body-less tags. This way the XML style
+	  of files committed to the BZR repositories of foomatic-db and
+	  foomatic-db-nonfree is the same as the XML style used by the
+	  export of XML from the MySQL database on the OpenPrinting web
+	  server and so the daily synchronization does not commit pure
+	  XML style changes into the BZR repositories.
+
 2010-11-26  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm, foomatic-ppd-to-xml.in: Added new features to

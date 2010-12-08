@@ -1168,7 +1168,7 @@ printer/HP-LaserJet_4000.xml
 # we have to add to the CGI script on OpenPrinting to make the web
 # interface displaying them properly.
 
-    <laser/>
+    <laser />
 
 # At some point we can make color be less of a boolean flag and more
 # of a section full of goodies.
@@ -1219,7 +1219,7 @@ printer/HP-LaserJet_4000.xml
 
   <lang>
     <postscript level="2" />
-    <pjl/>
+    <pjl />
     <text>
       <charset>us-ascii</charset>
     </text>

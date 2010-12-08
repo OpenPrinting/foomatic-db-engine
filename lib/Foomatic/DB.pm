@@ -3893,8 +3893,8 @@ sub perltoxml {
 	    "  <make>" . $dat->{'make'} . "</make>\n" .
 	    "  <model>" . $dat->{'model'} . "</model>\n" .
 	    "  <mechanism>\n" .
-	    ($dat->{'type'} ? "    <" . $dat->{'type'} . "/>\n" : ()) .
-	    ($dat->{'color'} ? "    <color/>\n" : ()) .
+	    ($dat->{'type'} ? "    <" . $dat->{'type'} . " />\n" : ()) .
+	    ($dat->{'color'} ? "    <color />\n" : ()) .
 	    ($dat->{'maxxres'} || $dat->{'maxyres'} ?
 	     "    <resolution>\n" .
 	     "      <dpi>\n" .
@@ -3913,9 +3913,9 @@ sub perltoxml {
 		for  my $lang (@{$dat->{'languages'}}) {
 		    $xml .= "    <" . $lang->{'name'};
 		    if ($lang->{'level'}) {
-			$xml .= " level=\"" . $lang->{'level'} . "\" ";
+			$xml .= " level=\"" . $lang->{'level'} . "\"";
 		    }
-		    $xml .= "/>\n";
+		    $xml .= " />\n";
 		}
 	    }
 	    if (defined($dat->{'pjl'})) {

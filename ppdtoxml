@@ -1123,7 +1123,7 @@ class PPDtoXML:
         print "   <model>%s</model>" %model_text
         print "   <mechanism>"
         if p_color.get_active():
-           print "   <color/>"
+           print "   <color />"
         else:
            print "   <!--not \"color\"-->"
         if mechanism_text is not '':
