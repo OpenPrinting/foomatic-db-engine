@@ -1,3 +1,8 @@
+2010-12-09  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* Makefile.in: Rearranged gcc command line so that linking works
+	  with gcc 4.5.x (Ubuntu bug #687973).
+
 2010-12-08  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Sort the driver lists in printer XML files
