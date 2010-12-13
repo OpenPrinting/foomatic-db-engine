@@ -2788,13 +2788,17 @@ sub apply_driver_and_pdl_info {
     my %drivers;
     my $pdls;
     my $ppddlpath;
-    my $ppddrv = $dat->{'driver'};
+    my $ppddrv = (defined($parameters->{'ppddriver'}) ?
+		  $parameters->{'ppddriver'} :
+		  $dat->{'driver'});
     if ($parameters) {
 	if (defined($parameters->{'drivers'})) {
 	    foreach my $d (@{$parameters->{'drivers'}}) {
 		$drivers{$d} = 1;
 	    }
-	    $ppddrv = $parameters->{'drivers'}[0];
+	    if (!defined($parameters->{'ppddriver'})) {
+		$ppddrv = $parameters->{'drivers'}[0];
+	    }
 	    $dat->{'driver'} = $parameters->{'drivers'}[0] if
 		$parameters->{'drivers'}[0] =~ /^$dat->{'driver'}/;
 	}

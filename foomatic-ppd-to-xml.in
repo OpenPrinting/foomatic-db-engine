@@ -93,6 +93,7 @@ foreach $ppdfile (@ARGV) {
 	(@driverslist ? ('drivers' => [@driverslist]) : ()),
 	($rdriver ? ('recommendeddriver' => $rdriver) : ()),
 	($pdls ? ('pdls' => [split(',', $pdls)]) : ()),
+	($ppddriver ? ('ppddriver' => $ppddriver) : ()),
 	($ppdlink ? ('ppdlink' => 1) : ()),
 	($basedir ? ('basedir' => $basedir) : ()),
 	($comment && !$commentadded ? ('comment' => $comment) : ()),
