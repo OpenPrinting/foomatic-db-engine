@@ -33,175 +33,213 @@ my $destdir = $opt_f;
 my $nomod = $opt_n;
 my $nocheck = $opt_x;
 
-$ppdfile = $ARGV[0];
+my @ppddrivers = ();
+my @driverslist = ($drivers ? split(',', $drivers) : ());
+my @newxmlentries = ();
+my $commentadded = 0;
 
-if ($ppdlink && !$drivers) {
-    $ppdlink = 0;
-    warn("WARNING: \"-l\" set without supplying a driver via \"-d\". No PPD file links will get created!\n");
-}
+foreach $ppdfile (@ARGV) {
 
-my $ppddlpath;
-if ($basedir) {
-    $basedir =~ s:/+$::;
-    if (! -d $basedir) {
-	die ("PPD base directory $basedir does not exist!\n");
+    my $ppddriver;
+    if ($ppdfile =~ /^([^\:]+)\:(.*)$/) {
+	$ppddriver = $1;
+	$ppdfile = $2;
+    } else {
+	$ppddriver = $driverslist[0];
     }
-    if (! -r $ppdfile) {
-	$ppddlpath = $ppdfile;
-	$ppdfile = $basedir . "/" . $ppdfile;
+    $ppdlink = $opt_l;
+    if ($ppdlink && !$ppddriver) {
+	$ppdlink = 0;
+	warn("WARNING: \"-l\" set without assigning a driver to the PPD file \"$ppdfile\" and without supplying a driver via \"-d\". No links for this PPD file will get created!\n");
+    } elsif ($ppdlink && Foomatic::DB::member($ppddriver, @ppddrivers)) {
+	$ppdlink = 0;
+	warn("WARNING: \"-l\" set and PPD file \"$ppdfile\" assigned to the driver \"$ppddriver\", to which another PPD file was assigned already. No links for this PPD file will get created!\n");
+    }
+    if ($ppddriver && !Foomatic::DB::member($ppddriver, @ppddrivers)) {
+	push(@ppddrivers, $ppddriver);
+    }
+    if ($ppddriver && !Foomatic::DB::member($ppddriver, @driverslist)) {
+	push(@driverslist, $ppddriver);
+    }
+    print "PPD file $ppdfile";
+    if ($ppddriver) {
+	print " for driver $ppddriver\n";
+    } else {
+	print "\n";
+    }
+    my $ppddlpath;
+    if ($basedir) {
+	$basedir =~ s:/+$::;
+	if (! -d $basedir) {
+	    die ("PPD base directory $basedir does not exist!\n");
+	}
 	if (! -r $ppdfile) {
-	    die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
+	    $ppddlpath = $ppdfile;
+	    $ppdfile = $basedir . "/" . $ppdfile;
+	    if (! -r $ppdfile) {
+		die ("Given PPD file not found, neither as $ppddlpath nor as $ppdfile!\n");
+	    }
+	} else {
+	    $ppddlpath = $1 if $ppdfile =~ m:$basedir/(.*)$:;
 	}
     } else {
-	$ppddlpath = $1 if $ppdfile =~ m:$basedir/(.*)$:;
+	if (! -r $ppdfile) {
+	    die ("Given PPD file $ppdfile not found!\n");
+	}
+	$ppddlpath = $ppdfile;
     }
-} else {
-    if (! -r $ppdfile) {
-	die ("Given PPD file $ppdfile not found!\n");
+
+    my $parameters = {
+	(@driverslist ? ('drivers' => [@driverslist]) : ()),
+	($rdriver ? ('recommendeddriver' => $rdriver) : ()),
+	($pdls ? ('pdls' => [split(',', $pdls)]) : ()),
+	($ppdlink ? ('ppdlink' => 1) : ()),
+	($basedir ? ('basedir' => $basedir) : ()),
+	($comment && !$commentadded ? ('comment' => $comment) : ()),
+	($nodefaultcomment && !$commentadded ? ('nodefaultcomment' => 1) : ()),
+	($addonlyrequesteddrivers ? ('addonlyrequesteddrivers' => 1) : ()),
+    };
+    $commentadded = 1;
+
+    my $db = Foomatic::DB->new();
+    my $dat = ppdtoperl($ppdfile, $parameters);
+    if ($ppddlpath eq "") {
+	$mk = $dat->{'id'};
+	$mk =~ s/^([^\-]+)\-.*$/$1/;
+	$ppd = $ppdfile;
+	$ppd =~ s:^.*/([^/]+):$1:;
+	$pdddlpath = "PPD/$mk/$ppd";    
     }
-    $ppddlpath = $ppdfile;
-}
-
-my $parameters = {
-    ($drivers ? ('drivers' => [split(',', $drivers)]) : ()),
-    ($rdriver ? ('recommendeddriver' => $rdriver) : ()),
-    ($pdls ? ('pdls' => [split(',', $pdls)]) : ()),
-    ($ppdlink ? ('ppdlink' => 1) : ()),
-    ($basedir ? ('basedir' => $basedir) : ()),
-    ($comment ? ('comment' => $comment) : ()),
-    ($nodefaultcomment ? ('nodefaultcomment' => 1) : ()),
-    ($addonlyrequesteddrivers ? ('addonlyrequesteddrivers' => 1) : ()),
-};
-
-my $db = Foomatic::DB->new();
-my $dat = ppdtoperl($ppdfile, $parameters);
-if ($ppddlpath eq "") {
-    $mk = $dat->{'id'};
-    $mk =~ s/^([^\-]+)\-.*$/$1/;
-    $ppd = $ppdfile;
-    $ppd =~ s:^.*/([^/]+):$1:;
-    $pdddlpath = "PPD/$mk/$ppd";    
-}
-$ppddlpath =~ s/\.gz$//i;
-my @existing = ();
-if (!$nocheck) {
-    @existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
-    foreach my $product (@{$dat->{ppdproduct}}) {
-	my @pids = $db->find_printer("$dat->{'make'}|$product", 4, 1);
+    $ppddlpath =~ s/\.gz$//i;
+    my @existing = ();
+    if (!$nocheck) {
+	@existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
+	foreach my $product (@{$dat->{ppdproduct}}) {
+	    my @pids = $db->find_printer("$dat->{'make'}|$product", 4, 1);
+	    push(@existing,
+		 grep {
+		     !Foomatic::DB::member($_, @existing);
+		 } @pids);
+	}
 	push(@existing,
 	     grep {
 		 !Foomatic::DB::member($_, @existing);
-	     } @pids);
+	     } map {
+	       m:^(.*)\.xml$:; $1;
+	     } map {
+	       m:([^/]+)$:; $1;
+	     } split(/\n/s, 
+		     `find $libdir/db/source/printer -name "*.xml" -print0 | xargs -0 grep -l $ppddlpath`));
     }
-    push(@existing,
-	 grep {
-	     !Foomatic::DB::member($_, @existing);
-	 } map {
-	   m:^(.*)\.xml$:; $1;
-	 } map {
-	   m:([^/]+)$:; $1;
-	 } split(/\n/s, 
-		 `find $libdir/db/source/printer -name "*.xml" -print0 | xargs -0 grep -l $ppddlpath`));
-}
-my $entryfound = 0;
-foreach my $entry (@existing) {
-    my $d = $db->get_printer($entry);
-    my $result;
-    next if $d->{'noxmlentry'};
-    $entryfound = 1;
-    last if $nomod;
-    $db->{'dat'} = $d;
-    if (!defined($parameters->{'drivers'})) {
-	$parameters->{'drivers'} = [$dat->{'driver'}];
-    }
-    if (!defined($parameters->{'pdls'})) {
-	$parameters->{'pdls'} = [split(',', $dat->{'general_cmd'})];
-    } else {
-	push(@{$parameters->{'pdls'}}, split(',', $dat->{'general_cmd'}));
-    }
-    Foomatic::DB::apply_driver_and_pdl_info($db->{'dat'}, $parameters);
-    $db->{'dat'}{'general_ieee'} = $dat->{'general_ieee'} if
-	defined($dat->{'general_ieee'}) && 
-	!defined($db->{'dat'}{'general_ieee'});
-    $db->{'dat'}{'general_mfg'} = $dat->{'general_mfg'} if
-	defined($dat->{'general_mfg'}) &&
-	!defined($db->{'dat'}{'general_mfg'});
-    $db->{'dat'}{'general_mdl'} = $dat->{'general_mdl'} if
-	defined($dat->{'general_mdl'}) &&
-	!defined($db->{'dat'}{'general_mdl'});
-    $db->{'dat'}{'general_des'} = $dat->{'general_des'} if
-	defined($dat->{'general_des'}) &&
-	!defined($db->{'dat'}{'general_des'});
-    $db->{'dat'}{'general_cmd'} = $dat->{'general_cmd'} if
-	defined($dat->{'general_cmd'}) &&
-	!defined($db->{'dat'}{'general_cmd'});
-    $db->{'dat'}{'comment'} .= "\n      <p>\n\n" . $dat->{'comment'};
-    my $xml1 = $db->perltoxml('p');
-    my $xml2 = $db->get_printer_xml($entry);
-    $xml2 =~ s/(<\/functionality>)/$1\n  <driver><\/driver>/s if 
-	$xml2 !~ /<driver>/;
-    $xml2 = transferregexp($xml1, $xml2,
-	'<driver>\S*<\/driver>');
-    $xml2 =~ s/(<\/driver>)/$1\n  <drivers>\n  <\/drivers>/s if 
-	$xml2 !~ /<drivers>/;
-    $xml2 = transferregexp($xml1, $xml2,
-	'<drivers>.*<\/drivers>');
-    $xml2 =~ s/(<\/(mechanism|url)>)/$1\n  <lang>\n  <\/lang>/s if 
-	$xml2 !~ /<lang>/;
-    $xml2 = transferregexp($xml1, $xml2,
-	'<lang>.*<\/lang>');
-    $xml2 =~ s/(<\/lang>)/$1\n  <autodetect>\n  <\/autodetect>/s if 
-	$xml2 !~ /<autodetect>/;
-    $xml2 =~ s/(<autodetect>)/$1\n    <general>\n    <\/general>/s if 
-	$xml2 !~ /<autodetect>[\s\n\r]*<general>/s;
-    $xml2 = transferregexp($xml1, $xml2,
-	'<autodetect>[\s\n\r]*<general>.*<\/general>');
-    $xml2 = transferregexp($xml1, $xml2,
-	'<\/drivers>[\s\n\r]*<comments>.*<\/comments>[\s\n\r]*<\/printer>');
-    $result = $xml2;
-    print "Modifying printer entry $db->{'dat'}{'id'}.xml ...\n";
-    open FILE, "> " . ($destdir ? $destdir . "/" : ()) . 
-	$db->{'dat'}{'id'} . ".xml" or
-	die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
-    print FILE $result;
-    close FILE;
-    delete($db->{'dat'});
-}
-if (!$entryfound) {
-    $db->{'dat'} = $dat;
-    $db->{'dat'}{'comment'} =
-	"      This database entry was automatically generated\n" .
-	"      from the PPD file for this printer.<p>\n\n" .
-	$db->{'dat'}{'comment'} if !$parameters->{'nodefaultcomment'};
-    $db->{'dat'}{'functionality'} = "A";
-    foreach my $product (@{$db->{'dat'}{ppdproduct}}) {
-	$db->{'dat'}{'model'} =
-	    Foomatic::DB::clean_manufacturer_name(Foomatic::DB::clean_model_name($product))
-	    if scalar(@{$db->{'dat'}{ppdproduct}}) > 1;
-	$db->{'dat'}{'model'} =~ s/^$db->{'dat'}{'make'}\s*//i;
-	$db->{'dat'}{'id'} =
-	    Foomatic::DB::generatepid($db->{'dat'}{'make'},
-				      $db->{'dat'}{'model'});
-	if (scalar(@{$db->{'dat'}{ppdproduct}}) > 1) {
-	    $db->{'dat'}{'general_mfg'} = $db->{'dat'}{'ppdmanufacturer'} if
-		$db->{'dat'}{'ppdmanufacturer'} &&
-		!$db->{'dat'}{'general_mfg'};
-	    $db->{'dat'}{'general_mdl'} = $product;
-	    $db->{'dat'}{'general_ieee'} = "MFG:" .
-		$db->{'dat'}{'general_mfg'} .
-		";MDL:" . $db->{'dat'}{'general_mdl'} . ";" .
-		($db->{'dat'}{'general_cmd'} ?
-		 "CMD:" . $db->{'dat'}{'general_cmd'} . ";" : "");
+    unshift(@existing, @newxmlentries) if @newxmlentries;
+    my $entryfound = 0;
+    foreach my $entry (@existing) {
+	my $d = $db->get_printer($entry);
+	my $result;
+	next if $d->{'noxmlentry'};
+	$entryfound = 1;
+	next if $nomod and $entry !~ /\.xml$/i;
+	$db->{'dat'} = $d;
+	if (!defined($parameters->{'drivers'})) {
+	    $parameters->{'drivers'} = [$dat->{'driver'}];
 	}
-	$result = $db->perltoxml('p');
-	print "Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
+	if (!defined($parameters->{'pdls'})) {
+	    $parameters->{'pdls'} = [split(',', $dat->{'general_cmd'})];
+	} else {
+	    push(@{$parameters->{'pdls'}}, split(',', $dat->{'general_cmd'}));
+	}
+	Foomatic::DB::apply_driver_and_pdl_info($db->{'dat'}, $parameters);
+	$db->{'dat'}{'general_ieee'} = $dat->{'general_ieee'} if
+	    defined($dat->{'general_ieee'}) && 
+	    !defined($db->{'dat'}{'general_ieee'});
+	$db->{'dat'}{'general_mfg'} = $dat->{'general_mfg'} if
+	    defined($dat->{'general_mfg'}) &&
+	    !defined($db->{'dat'}{'general_mfg'});
+	$db->{'dat'}{'general_mdl'} = $dat->{'general_mdl'} if
+	    defined($dat->{'general_mdl'}) &&
+	    !defined($db->{'dat'}{'general_mdl'});
+	$db->{'dat'}{'general_des'} = $dat->{'general_des'} if
+	    defined($dat->{'general_des'}) &&
+	    !defined($db->{'dat'}{'general_des'});
+	$db->{'dat'}{'general_cmd'} = $dat->{'general_cmd'} if
+	    defined($dat->{'general_cmd'}) &&
+	    !defined($db->{'dat'}{'general_cmd'});
+	#$db->{'dat'}{'comment'} .= "\n      <p>\n\n" . $dat->{'comment'};
+	my $xml1 = $db->perltoxml('p');
+	my $xml2 = $db->get_printer_xml($entry);
+	$xml2 =~ s/(<\/functionality>)/$1\n  <driver><\/driver>/s if 
+	    $xml2 !~ /<driver>/;
+	$xml2 = transferregexp($xml1, $xml2,
+			       '<driver>\S*<\/driver>');
+	$xml2 =~ s/(<\/driver>)/$1\n  <drivers>\n  <\/drivers>/s if 
+	    $xml2 !~ /<drivers>/;
+	$xml2 = transferregexp($xml1, $xml2,
+			       '<drivers>.*<\/drivers>');
+	$xml2 =~ s/(<\/(mechanism|url)>)/$1\n  <lang>\n  <\/lang>/s if 
+	    $xml2 !~ /<lang>/;
+	$xml2 = transferregexp($xml1, $xml2,
+			       '<lang>.*<\/lang>');
+	$xml2 =~ s/(<\/lang>)/$1\n  <autodetect>\n  <\/autodetect>/s if 
+	    $xml2 !~ /<autodetect>/;
+	$xml2 =~ s/(<autodetect>)/$1\n    <general>\n    <\/general>/s if 
+	    $xml2 !~ /<autodetect>[\s\n\r]*<general>/s;
+	$xml2 = transferregexp($xml1, $xml2,
+			       '<autodetect>[\s\n\r]*<general>.*<\/general>');
+	$xml2 = transferregexp($xml1, $xml2,
+			       '<\/drivers>[\s\n\r]*<comments>.*<\/comments>[\s\n\r]*<\/printer>');
+	$result = $xml2;
+	if ($entry !~ /\.xml$/i) {
+	    print "  Modifying printer entry $db->{'dat'}{'id'}.xml ...\n";
+	} else {
+	    print "  Adding PPD file to $db->{'dat'}{'id'}.xml ...\n";
+	}
 	open FILE, "> " . ($destdir ? $destdir . "/" : ()) . 
 	    $db->{'dat'}{'id'} . ".xml" or
 	    die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
 	print FILE $result;
 	close FILE;
+	delete($db->{'dat'});
     }
-    delete($db->{'dat'});
+    if (!$entryfound) {
+	$db->{'dat'} = $dat;
+	$db->{'dat'}{'comment'} =
+	    "      This database entry was automatically generated\n" .
+	    "      from the PPD file for this printer.<p>\n\n" .
+	    $db->{'dat'}{'comment'} if !$parameters->{'nodefaultcomment'};
+	$db->{'dat'}{'functionality'} = "A";
+	foreach my $product (@{$db->{'dat'}{ppdproduct}}) {
+	    $db->{'dat'}{'model'} =
+		Foomatic::DB::clean_manufacturer_name(Foomatic::DB::clean_model_name($product))
+		if scalar(@{$db->{'dat'}{ppdproduct}}) > 1;
+	    $db->{'dat'}{'model'} =~ s/^$db->{'dat'}{'make'}\s*//i;
+	    $db->{'dat'}{'id'} =
+		Foomatic::DB::generatepid($db->{'dat'}{'make'},
+					  $db->{'dat'}{'model'});
+	    if (scalar(@{$db->{'dat'}{ppdproduct}}) > 1) {
+		$db->{'dat'}{'general_mfg'} = $db->{'dat'}{'ppdmanufacturer'} if
+		    $db->{'dat'}{'ppdmanufacturer'} &&
+		    !$db->{'dat'}{'general_mfg'};
+		$db->{'dat'}{'general_mdl'} = $product;
+		$db->{'dat'}{'general_ieee'} = "MFG:" .
+		    $db->{'dat'}{'general_mfg'} .
+		    ";MDL:" . $db->{'dat'}{'general_mdl'} . ";" .
+		    ($db->{'dat'}{'general_cmd'} ?
+		     "CMD:" . $db->{'dat'}{'general_cmd'} . ";" : "");
+	    }
+	    $result = $db->perltoxml('p');
+	    print "  Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
+	    my $f = ($destdir ? $destdir . "/" : ()) . 
+		$db->{'dat'}{'id'} . ".xml";
+	    open FILE, "> " . $f or
+		die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
+	    print FILE $result;
+	    close FILE;
+	    push(@newxmlentries, $f);
+	}
+	delete($db->{'dat'});
+    }
+    undef($db);
+    undef($dat);
 }
 
 exit 0;
@@ -227,17 +265,27 @@ sub transferregexp {
 sub help {
     print <<HELP;
 
-$progname <options> <ppdfile>
+$progname <options> [<driver>:]<ppdfile> [[<driver>:]<ppdfile> ...]
 $progname -h
 
+ <driver>       : Driver to which the PPD file should get assigned. This
+                  is optional. If not supplied, the first driver in the driver 
+		  list supplied via the "-d" option is used. Note that the PPD
+		  files have to be supplied to different drivers, so with more
+                  than one PPD drivers need to be specified here.
  <ppdfile>      : PPD file for which a printer XML file should be created
  -d <drivers>   : Comma-separated list of drivers with which the printer
                   works. First driver is the one for which the PPD file is.
                   If not otherwise stated by the "-r" option, this is also
-                  the recommended driver.
+                  the recommended driver. Drivers already specified together
+		  with PPDs do no need to get specified with this option again.
+		  The option is not needed if for all PPDs drivers are
+		  specified.
  -r <driver>    : Recommended driver. Supply this option to specify another
                   driver than the driver from the PPD/the first one from the
-                  "-d" argument as the recommended driver.
+                  "-d" argument as the recommended driver (or the one to which
+		  the first PPD file is assigned if the "-d" option is not
+		  used)..
  -p <pdls>      : Comma-separated list of known Page Description Languages
                   (PDLs) which the printer supports. This will add all 
                   suitable drivers to the XML entry. Currently supported are:
@@ -264,7 +312,10 @@ $progname -h
                   only create XML files for printers for which there is no
                   XML file yet.
  -x             : Create XML files independent of whether there are already
-                  XML files for the printers covered by the PPD or not.
+                  XML files for the printers covered by the PPD or not. This
+		  makes the process vastly faster if you have PPD files for
+		  printers which are for sure not yet in the Foomatic
+		  database.
  -h             : show help information
 
 

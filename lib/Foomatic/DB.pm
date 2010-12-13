@@ -1750,10 +1750,16 @@ sub get_combo_data_xml {
 
 sub get_printer {
     my ($this, $poid) = @_;
-    return $this->get_printer_from_sql_db($poid) if $this->{'dbh'};
     # Generate printer Perl data structure from database
     my $VAR1;
-    if (-r "$libdir/db/source/printer/$poid.xml") {
+    if (-r "$poid") {
+	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$poid'`) || do {
+	    warn ("Could not run \"foomatic-perl-data\"!\n");
+	    return undef;
+	};
+    } elsif ($this->{'dbh'}) {
+	return $this->get_printer_from_sql_db($poid);
+    } elsif (-r "$libdir/db/source/printer/$poid.xml") {
 	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) || do {
 	    warn ("Could not run \"foomatic-perl-data\"!\n");
 	    return undef;
@@ -1807,15 +1813,25 @@ sub driver_exists {
 
 sub get_printer_xml {
     my ($this, $poid) = @_;
-    return $this->_get_object_xml("source/printer/$poid", 1);
+    if (-r "$poid") {
+	return $this->_get_object_xml("$poid", 1);
+    } else {
+	return $this->_get_object_xml("source/printer/$poid", 1);
+    }
 }
 
 sub get_driver {
     my ($this, $drv) = @_;
-    return $this->get_driver_from_sql_db($drv) if $this->{'dbh'};
     # Generate driver Perl data structure from database
     my $VAR1;
-    if (-r "$libdir/db/source/driver/$drv.xml") {
+    if (-r "$drv") {
+	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$drv'`) || do {
+	    warn ("Could not run \"foomatic-perl-data\"!\n");
+	    return undef;
+	}
+    } elsif ($this->{'dbh'}) {
+	return $this->get_driver_from_sql_db($drv);
+    } elsif (-r "$libdir/db/source/driver/$drv.xml") {
 	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$libdir/db/source/driver/$drv.xml'`) || do {
 	    warn ("Could not run \"foomatic-perl-data\"!\n");
 	    return undef;
@@ -1828,7 +1844,11 @@ sub get_driver {
 
 sub get_driver_xml {
     my ($this, $drv) = @_;
-    return $this->_get_object_xml("source/driver/$drv", 1);
+    if (-r "$drv") {
+	return $this->_get_object_xml("$drv", 1);
+    } else {
+	return $this->_get_object_xml("source/driver/$drv", 1);
+    }
 }
 
 # Utility query function sorts of things:
@@ -3845,7 +3865,8 @@ sub ppdfromvartoperl {
 	" pages/min<p>\n\n" if
 	defined($dat->{'throughput'}) && ($dat->{'throughput'} > 1 &&
 	!$parameters->{'nodefaultcomment'});
-    if (defined($parameters->{'comment'})) {
+    if (defined($parameters->{'comment'}) &&
+	($parameters->{'comment'} =~ /\S/)) {
 	$dat->{'comment'} .= "      <p>\n\n" if $dat->{'comment'};
 	$dat->{'comment'} .= "      " . $parameters->{'comment'};
     }
@@ -7706,13 +7727,18 @@ sub normalizename {
 
 # Load an XML object from the library
 # You specify the relative file path (to .../db/), less the .xml on the end.
+# To load an arbitrary XML, give a full path and file name ending with ".xml".
 sub _get_object_xml {
     my ($this, $file, $quiet) = @_;
 
-    open XML, "$libdir/db/$file.xml"
-	or do { warn "Cannot open file $libdir/db/$file.xml\n"
-		    if !$quiet;
-		return undef; };
+    my $f = $file;
+    if (! -r "$f") {
+	$f = "$libdir/db/$file.xml"
+    }
+    open XML, $f
+        or do { warn "Cannot open file $f\n"
+                    if !$quiet;
+                return undef; };
     my $xml = join('', (<XML>));
     close XML;
 

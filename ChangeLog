@@ -1,3 +1,16 @@
+2010-12-13  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in: Allow generating a printer XML files also
+	  from more than one PPD file for the same printer with only one call
+	  of the foomatic-ppd-to-xml script. Feature request from George Liu
+	  from Ricoh (bug #565).
+
+	* lib/Foomatic/DB.pm: Allow loading arbitrary printer and driver
+	  XML files into the Perl data structure, not only XML files which
+	  are in the current XML database.
+	  When generating Perl data from a PPD do not add a new paragraph to
+	  the printer comments if the added comment is empty.
+
 2010-12-09  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* Makefile.in: Rearranged gcc command line so that linking works
