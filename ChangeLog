@@ -1,3 +1,8 @@
+2010-12-15  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* README: Documented special entities for inserting job parameters,
+	  like "&job;", "&user;", "&host;", "&title;", "&options;", ...
+
 2010-12-13  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppd-to-xml.in: Allow generating a printer XML files also
