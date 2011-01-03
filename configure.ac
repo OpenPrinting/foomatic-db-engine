@@ -1,4 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
+AC_PREREQ([2.52])
 AC_INIT([footmatic-db-engine], 4.1.0)
 AC_CONFIG_SRCDIR(foomatic-perl-data.c)
 
@@ -208,12 +209,12 @@ AC_SUBST(PERLPREFIX)
 dnl Perl installation directories
 
 dnl This works only with autoconf 2.52 or newer
-dnl PERL_INSTALLDIRS=site
-dnl AC_ARG_VAR(PERL_INSTALLDIRS, [Where should the Perl libraries be installed (Default: site, Choices: perl, site)?])
+PERL_INSTALLDIRS=site
+AC_ARG_VAR(PERL_INSTALLDIRS, [Where should the Perl libraries be installed (Default: site, Choices: perl, site, vendor)?])
 
 dnl This works also with autoconf 2.13
-PERL_INSTALLDIRS=site
-AC_SUBST(PERL_INSTALLDIRS)
+dnl PERL_INSTALLDIRS=site
+dnl AC_SUBST(PERL_INSTALLDIRS)
 
 dnl Check for bourne shell
 AC_PATH_PROGS(SH,bash sh,/bin/sh,$BINSEARCHPATH)

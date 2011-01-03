@@ -1,5 +1,11 @@
 2011-01-03  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* configure.ac: Allow choosing the install directory for the
+	  Perl library DB.pm (perl, site, vendor). Requires autoconf 2.52
+	  or newer (checked with "AC_PREREQ([2.52])"). Bug #605. Thanks
+	  to Christopher Yeleighton (giecrilj at stegny dot 2a dot pl) for
+	  the patch.
+
 	* foomatic-perl-data.c: Eliminated compiler warnings by consistent
 	  use of "const" with xmlChar and char variables (bug #604). Thanks
 	  to Christopher Yeleighton (giecrilj at stegny dot 2a dot pl) for
