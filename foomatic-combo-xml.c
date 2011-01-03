@@ -7,7 +7,7 @@
  *   make Perl data structures out of the XML files are very slow and
  *   memory-consuming.
  *
- *   Copyright 2001-2007 by Till Kamppeter
+ *   Copyright 2001-2011 by Till Kamppeter, Christopher Yeleighton
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License as
@@ -35,6 +35,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <assert.h>
 
 /*
  * Data structures for the printer/driver combo by printer list for the
@@ -209,16 +210,22 @@ char  /* O - new ID */
  * function to parse an XML file and do a task on it
  */
 
-int /* O - Is the requested printer driver combo already confirmed by the
-           <drivers> section in the printer XML file (operation = 0 only) */
+enum parse_operation 
+{ 
+	PARSE_OP_PRINTER, PARSE_OP_DRIVER, PARSE_OP_OPTION, 
+	PARSE_OP_OV_DRIVER, PARSE_OP_OV_PRINTER };
+
+int /* O - Is the requested printer/driver combo already confirmed by the
+           <drivers> section in the printer XML file (operation = 
+	   PARSE_OP_PRINTER only) or by the <printers> section in the driver
+           XML file (operation = PARSE_OP_DRIVER only). 1: yes, 0: no. For
+           all other operations there will be returned always 0. */
 parse(char **data, /* I/O - Data to process */
       const char *pid,   /* I - Foomatic printer ID */
       const char *driver,/* I - driver name */
       const char *filename, /* I - file name for error messages */
       printerlist_t **printerlist, /* I/O printer list for overview */
-      int operation,     /* I - Operation type: 0: printer, 1: driver, 
-			        2: option 3: overview driver 4: overview
-			        printer */
+      int operation,     /* I - See "enum parse_operation" above */
       const char **defaultsettings, /* I - Default option settings given on
 				       the command line */
       int num_defaultsettings, /* I - Number of default option settings */
@@ -243,6 +250,8 @@ parse(char **data, /* I/O - Data to process */
   int           inquotes = 0;
   int           insinglequotes = 0;
   int           indoublequotes = 0;
+  enum tag_type /* Arithmetic values, do not change! */ 
+  { TAG_OPEN = 01, TAG_CLOSE = -01, TAG_EMPTY = 0 };
   int           tagtype = 0; /*1: opening, -1: closing, 0: opening & closing*/
   int           inprinter = 0;
   int           inmake = 0;
@@ -276,7 +285,6 @@ parse(char **data, /* I/O - Data to process */
   int           incomments = 0;
   int           printertobesaved = 0;
   int           printerentryfound = 0;
-  int           constrainttoberemoved = 0;
   int           enumvaltoberemoved = 0;
   int           optionqualified = 0;
   int           enumvalqualified = 1;
@@ -285,7 +293,11 @@ parse(char **data, /* I/O - Data to process */
 				    the file. It is set to zero in the 
 				    beginning of an enum option, for boolean
 				    or numerical options it stays 1 to not
-				    disqualify the option */
+				    disqualify the option */ 
+	enum option_types 
+	{ 
+		OPTION_TYPE_ENUM, OPTION_TYPE_BOOL, 
+		OPTION_TYPE_INT, OPTION_TYPE_FLOAT };
   int           optiontype = 0; /* 0: enum, 1: bool, 2: int, 3: float */
   int           printerscore = 0;
   int           driverscore = 0;
@@ -295,7 +307,6 @@ parse(char **data, /* I/O - Data to process */
   char          currtagname[256];
   char          currtagparam[256];
   char          currtagbody[65536];
-  char          optiondefault[256];
   int           userdefault = 0;
   int           userdefaultfound = 0;
   char          userdefaultvalue[256];
@@ -383,13 +394,13 @@ parse(char **data, /* I/O - Data to process */
 	    if ((*(scan + 1) == '!') && (*(scan + 2) == '-') &&
 		(*(scan + 3) == '-')) {
 	      incomment = 1;
-	      tagtype = 0;
+	      tagtype = TAG_EMPTY;
 	      if (debug) fprintf(stderr, "    Start of a comment\n");
 	    }
 	  }
 	  if (!incomment) {
 	    tagnamefound = 0;
-	    tagtype = 1;
+	    tagtype = TAG_OPEN;
 	    lasttag = scan;
 	  }
 	}
@@ -412,19 +423,23 @@ parse(char **data, /* I/O - Data to process */
 		tagnamefound = 1;
 		memmove(currtagname, tagwordstart, scan - tagwordstart);
 		currtagname[scan - tagwordstart] = '\0';
-		if (debug) fprintf(stderr, "    Tag Name: '%s'\n",
-				   currtagname);
-		if (operation == 0) { /* Printer XML file */
-		  if (strcmp(currtagname, "make") == 0) {
+		if (debug)
+				fprintf(stderr, "    Tag Name: '%s'\n", currtagname);
+		switch (+operation) {
+		case (+PARSE_OP_PRINTER):  /* Printer XML file */
+		switch (+*currtagname) {
+		  case 'm': if (strcmp(currtagname, "make") == 0) {
 		    inmake = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "model") == 0) {
 		    inmodel = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "autodetect") == 0) {
+		  } break;
+		  case 'a': if (strcmp(currtagname, "autodetect") == 0) {
 		    inautodetect = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "driver") == 0) {
+		  } break;
+		  case 'd': if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
 		    if (indrivers) {
-		      if (tagtype == 1) {
+		      if (+tagtype == +TAG_OPEN) {
 			if (debug)
 			  fprintf(stderr, 
 				  "    Resetting Driver.\n");
@@ -433,11 +448,13 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  } else if (strcmp(currtagname, "drivers") == 0) {
 		    indrivers = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "id") == 0) {
+		  } break;
+		  case 'i': if (strcmp(currtagname, "id") == 0) {
 		    inid = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "printer") == 0) {
+		  } break; 
+		  case 'p': if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* XML body of the file is starting here */
 		      inxmlheader = 0;
 		      nestinglevel = 1;
@@ -453,12 +470,10 @@ parse(char **data, /* I/O - Data to process */
 		      lasttag = *data;
 		      lasttagend = NULL;
 		    }
-		  } else if (strcmp(currtagname, "lang") == 0) {
-		    inlang = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "postscript") == 0) {
 		    inpostscript = nestinglevel + 1;
 		    if (inlang) {
-		      if (tagtype == 1) {
+		      if (+tagtype == +TAG_OPEN) {
 			if (debug)
 			  fprintf(stderr, 
 				  "    Resetting Driver/PPD.\n");
@@ -468,11 +483,15 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  } else if (strcmp(currtagname, "ppd") == 0) {
 		    inppd = nestinglevel + 1;
-		  }
-		} else if (operation == 1) { /* Driver XML file */
+		  } break;
+		  case 'l': if (strcmp(currtagname, "lang") == 0) {
+		    inlang = nestinglevel + 1;
+		  } break; 
+		} break; 
+		case (+PARSE_OP_DRIVER): { /* Driver XML file */
 		  if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
-		    if (tagtype == 1) lastprinter = (char*)lasttag;
+		    if (+tagtype == +TAG_OPEN) lastprinter = (char*)lasttag;
 		  } else if (strcmp(currtagname, "execution") == 0) {
 		    inexecution = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "nopjl") == 0) {
@@ -488,7 +507,7 @@ parse(char **data, /* I/O - Data to process */
 		    inid = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "printers") == 0) {
 		    inprinters = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* Mark up to the end of the tag before, so that there do
 			 not remain empty lines or other whitespace after
 			 deleting this constraint */
@@ -497,7 +516,7 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* XML body of the file is starting here */
 		      inxmlheader = 0;
 		      nestinglevel = 1;
@@ -514,26 +533,39 @@ parse(char **data, /* I/O - Data to process */
 		      lasttagend = NULL;
 		    }
 		  } 
-		} else if (operation == 2) { /* Option XML file */
-		  if (strcmp(currtagname, "make") == 0) {
+		} break; 
+		case (+PARSE_OP_OPTION): /* Option XML file */ 
+		switch (+*currtagname) {
+		case 'm':  if (strcmp (currtagname + 01, "make" + 01) == 0) {
 		    inmake = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "model") == 0) {
+		  } else if (strcmp (currtagname + 01, "model" + 01) == 0) {
 		    inmodel = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "driver") == 0) {
+		  } break;
+		case 'd': if (strcmp (currtagname + 01, "driver" + 01) == 0) {
 		    indriver = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "printer") == 0) {
+		  } break;
+		case 'p': if (strcmp (currtagname + 01, "printer" + 01) == 0) {
 		    inprinter = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "arg_defval") == 0) {
+		  } break;
+		case 'a': 
+		if (!strncmp (currtagname, "arg_", 04)) 
+		switch (+currtagname [04]) {
+			case 'd': if (strcmp(currtagname + 05, "defval" + 01) == 0) {
 		    inargdefault = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "arg_shortname") == 0) {
+		  } break;
+		  case 's': if (strcmp(currtagname + 05, "shortname" + 01) == 0) {
 		    inargshortname = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "arg_execution") == 0) {
+		  } break;
+		  case 'e': if (strcmp (currtagname + 05, "execution" + 01) == 0) {
 		    inargexecution = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "arg_pjl") == 0) {
+		  } break;
+		  case 'p': 
+		  if (strcmp (currtagname + 05, "pjl" + 01) == 0) 
+		  /* ?ARG_PJL Y */ {
 		    inargpjl = nestinglevel + 1;
-		    if (inargexecution) {
+		    if (inargexecution) /* ?IN_ARG_EXECUTION Y */ {
 		      /* We have a PJL option ... */
-		      if (*nopjl) {
+		      if (*nopjl) /* ?NO_PJL Y */ {
 			/* ... and the driver does not allow it. 
 			   So skip this option. */
 			free((void *)(*data));
@@ -541,21 +573,37 @@ parse(char **data, /* I/O - Data to process */
 			if (debug)
 			  fprintf
 			    (stderr,
-			     "      Driver does not allow PJL options and this is a PJL option -->\n    Option does not apply!\n");
-			return;
-		      }
-		    }
-		  } else if (strcmp(currtagname, "ev_shortname") == 0) {
-		    inevshortname = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "en") == 0) {
-		    inen = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "arg_max") == 0) {
+"      Driver does not allow PJL options and this is a PJL option -->\n"
+"    Option does not apply!\n");
+			return +comboconfirmed;
+		      } /* ?NO_PJL */
+		    } /* ?IN_ARG_EXECUTION */
+		  }  /* ?ARG_PJL */ break; 
+		  case 'm': if (strcmp(currtagname + 05, "max" + 01) == 0) {
 		    inargmax = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "arg_min") == 0) {
+		  } else if (strcmp(currtagname + 05, "min" + 01) == 0) {
 		    inargmin = nestinglevel + 1;
-		  } else if (strcmp(currtagname, "constraints") == 0) {
+		  } } break;
+		  case 'e': if (strcmp (currtagname + 01, "ev_shortname" + 01) == 0) {
+		    inevshortname = nestinglevel + 1;
+		  } else if (strcmp(currtagname + 01, "en" + 01) == 0) {
+		    inen = nestinglevel + 1;
+		  } else if (strcmp (currtagname + 01, "enum_val" + 01) == 0) {
+		    inenumval = nestinglevel + 1;
+		    if (+tagtype == +TAG_OPEN) {
+		      /* New enum value, enum values are qualified by default
+			 and can be disqualified by constraints */
+		      enumvalqualified = 1;
+		      enumvaltoberemoved = 0;
+		      /* Mark up to the end of the tag before, so that there do
+			 not remain empty lines or other whitespace after
+			 deleting this constraint */
+		      lastenumval = (char*)lasttagend + 1;
+		    }
+		  } break; 
+		  case 'c': if (strcmp (currtagname + 01, "constraints" + 01) == 0) {
 		    inconstraints = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* Reset high scores */
 		      printerhiscore = 0;
 		      driverhiscore = 0;
@@ -566,7 +614,7 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  } else if (strcmp(currtagname, "constraint") == 0) {
 		    inconstraint = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* Delete the fields of the old constraint */
 		      cprinter[0] = '\0';
 		      cmake[0] = '\0';
@@ -575,24 +623,13 @@ parse(char **data, /* I/O - Data to process */
 		      cargdefault[0] = '\0';
 		      csense = 0;
 		    }
-		  } else if (strcmp(currtagname, "enum_val") == 0) {
-		    inenumval = nestinglevel + 1;
-		    if (tagtype == 1) {
-		      /* New enum value, enum values are qualified by default
-			 and can be disqualified by constraints */
-		      enumvalqualified = 1;
-		      enumvaltoberemoved = 0;
-		      /* Mark up to the end of the tag before, so that there do
-			 not remain empty lines or other whitespace after
-			 deleting this constraint */
-		      lastenumval = (char*)lasttagend + 1;
-		    }
-		  } else if (strcmp(currtagname, "option") == 0) {
+		  } break;
+		  case 'o': if (strcmp(currtagname + 01, "option" + 01) == 0) {
 		    inoption = nestinglevel + 1;
 		    /* Mark up to the end of the tag before, to insert the
 		       definition of the default option setting */
-		    if (tagtype == -1) lastoption = (char*)lasttagend + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_CLOSE) lastoption = (char*)lasttagend + 1;
+		    if (+tagtype == +TAG_OPEN) {
 		      /* XML body of the file is starting here */
 		      inxmlheader = 0;
 		      nestinglevel = 1;
@@ -609,11 +646,12 @@ parse(char **data, /* I/O - Data to process */
 		      lasttag = *data;
 		      lasttagend = NULL;
 		    }
-		  }
-		} else if (operation == 3) { /* Driver XML file (Overview) */
+		  } break;
+		} break; 
+		case (+PARSE_OP_OV_DRIVER): { /* Driver XML file (Overview) */
 		  if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      cprinter[0] = '\0';
 		      dfunctionalityentry[0] = '\0';
 		    }
@@ -621,21 +659,21 @@ parse(char **data, /* I/O - Data to process */
 		    inid = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "functionality") == 0) {
 		    indfunctionality = nestinglevel + 1;
-		    if (tagtype == 1) lastdfunctionality = (char*)lasttag;
+		    if (+tagtype == +TAG_OPEN) lastdfunctionality = (char*)lasttag;
 		  } else if (strcmp(currtagname, "execution") == 0) {
 		    inexecution = nestinglevel + 1;
 		  } else if (strcmp(currtagname, "prototype") == 0) {
 		    inprototype = nestinglevel + 1;
-		    if (tagtype == 1) lastprototype = (char*)lasttagend + 1;
+		    if (+tagtype == +TAG_OPEN) lastprototype = (char*)lasttagend + 1;
 		  } else if (strcmp(currtagname, "printers") == 0) {
 		    inprinters = nestinglevel + 1;
-		    if (tagtype == 1) lastprinters = (char*)lasttagend + 1;
+		    if (+tagtype == +TAG_OPEN) lastprinters = (char*)lasttagend + 1;
 		  } else if (strcmp(currtagname, "comments") == 0) {
 		    incomments = nestinglevel + 1;
-		    if (tagtype == 1) lastcomments = (char*)lasttagend + 1;
+		    if (+tagtype == +TAG_OPEN) lastcomments = (char*)lasttagend + 1;
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* XML body of the file is starting here */
 		      inxmlheader = 0;
 		      nestinglevel = 1;
@@ -652,7 +690,8 @@ parse(char **data, /* I/O - Data to process */
 		      lasttagend = NULL;
 		    }
 		  } 
-		} else if (operation == 4) { /* Printer XML file (Overview)*/
+		} break; 
+		case (+PARSE_OP_OV_PRINTER): { /* Printer XML file (Overview)*/
 		  if (debug)
 		    fprintf(stderr,
 			    "     Printer XML (Overview): Tag name: %s\n",
@@ -669,7 +708,7 @@ parse(char **data, /* I/O - Data to process */
 		  } else if (strcmp(currtagname, "driver") == 0) {
 		    indriver = nestinglevel + 1;
 		    if (indrivers) {
-		      if (tagtype == 1) {
+		      if (+tagtype == +TAG_OPEN) {
 			if (debug)
 			  fprintf(stderr, 
 				  "    Resetting Driver/PPD.\n");
@@ -688,7 +727,7 @@ parse(char **data, /* I/O - Data to process */
 		  } else if (strcmp(currtagname, "postscript") == 0) {
 		    inpostscript = nestinglevel + 1;
 		    if (inlang) {
-		      if (tagtype == 1) {
+		      if (+tagtype == +TAG_OPEN) {
 			if (debug)
 			  fprintf(stderr, 
 				  "    Resetting Driver/PPD.\n");
@@ -698,10 +737,10 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  } else if (strcmp(currtagname, "autodetect") == 0) {
 		    inautodetect = nestinglevel + 1;
-		    if (tagtype == 1) lastautodetect = (char*)lasttag;
+		    if (+tagtype == +TAG_OPEN) lastautodetect = (char*)lasttag;
 		  } else if (strcmp(currtagname, "printer") == 0) {
 		    inprinter = nestinglevel + 1;
-		    if (tagtype == 1) {
+		    if (+tagtype == +TAG_OPEN) {
 		      /* XML body of the file is starting here */
 		      inxmlheader = 0;
 		      nestinglevel = 1;
@@ -734,14 +773,14 @@ parse(char **data, /* I/O - Data to process */
 		      cautodetectentry[0] = '\0';
 		    }
 		  }
-		}
+		} break; }
 	      } else { /* additional word = parameter */
 		memmove(currtagparam, tagwordstart, scan - tagwordstart);
 		currtagparam[scan - tagwordstart] = '\0';
 		if (debug) fprintf(stderr, 
 				   "    Tag parameter: '%s'\n",
-				   currtagparam);
-		if (operation == 2) { /* Option XML file */
+				   currtagparam); 
+		if (+operation == +PARSE_OP_OPTION) { /* Option XML file */
 		  if (strcmp(currtagname, "constraint") == 0) {
 		    /* Set the sense of the constraint */
 		    if ((s = strstr(currtagparam, "sense")) != NULL) {
@@ -758,13 +797,13 @@ parse(char **data, /* I/O - Data to process */
 			/* If this value stays 0 we have no enum values */
 			/* and the option disqualifies */
 			numenumvals = 0;
-			optiontype = 0;
+			optiontype = +OPTION_TYPE_ENUM;
 		      } else if (strstr(s + 4, "bool") != NULL) {
-			optiontype = 1;
+			optiontype = +OPTION_TYPE_BOOL;
 		      } else if (strstr(s + 4, "int") != NULL) {
-			optiontype = 2;
+			optiontype = +OPTION_TYPE_INT;
 		      } else if (strstr(s + 4, "float") != NULL) {
-			optiontype = 3;
+			optiontype = +OPTION_TYPE_FLOAT;
 		      }
 		    }
 		  } else if (strcmp(currtagname, "enum_val") == 0) {
@@ -778,7 +817,7 @@ parse(char **data, /* I/O - Data to process */
 				currevid);
 		    }
 		  }
-		} else if (operation == 3) { /* Driver XML file (Overview) */
+		} else if (+operation == +PARSE_OP_OV_DRIVER) { /* Driver XML file (Overview) */
 		  if (strcmp(currtagname, "driver") == 0) {
 		    if ((s = strstr(currtagparam, "id")) != NULL) {
 		      /* Get the short driver name (w/o "driver/") */
@@ -788,7 +827,7 @@ parse(char **data, /* I/O - Data to process */
 		      strcpy(cdriver, s);
 		    }
 		  }
-		} else if (operation == 4) { /* Printer XML file (Overview) */
+		} else if (+operation == +PARSE_OP_OV_PRINTER) { /* Printer XML file (Overview) */
 		  if (debug)
 		    fprintf(stderr, 
 			    "    Printer XML file (overview): Tag name: %s, Tag param:%s\n", 
@@ -810,9 +849,9 @@ parse(char **data, /* I/O - Data to process */
 	    if (*scan == '/') { /* tag closing */
 	      if (tagnamefound) { /* '/' after tag name, this tag has no 
 				     body */
-		tagtype = 0;
+		tagtype = +TAG_EMPTY;
 	      } else { /* we are closing a tag */
-		tagtype = -1;
+		tagtype = +TAG_CLOSE;
 	      }
 	      if (debug)
 		fprintf(stderr,
@@ -844,67 +883,68 @@ parse(char **data, /* I/O - Data to process */
 	      nestinglevel += tagtype;
 	      /* Important tags end, clear the marks and do appropriate 
 		 actions */
-	      if (operation == 0) { /* Printer XML file */
+	      if (+operation == +PARSE_OP_PRINTER) /* ?PARSE_OP_PRINTER Y */ 
+	      { /* Printer XML file */
 		if (nestinglevel < inprinter) inprinter = 0;
-		if (nestinglevel < inmake) { /* Found printer manufacturer */
+		if (nestinglevel < inmake) /* ?OVER_IN_MAKE Y */ { /* Found printer manufacturer */
 		  inmake = 0;
 		  /* Only the <make> outside the <autodetect> tag is valid. */
 		  if (!inautodetect) strcat(make, currtagbody);
-		}
-		if (nestinglevel < inmodel) { /* Found printer model */
+		} /* ?OVER_IN_MAKE */ 
+		if (nestinglevel < inmodel) /* ?OVER_IN_MODEL Y */ { /* Found printer model */
 		  inmodel = 0;
 		  /* Only the <model> outside the <autodetect> tag is valid. */
 		  if (!inautodetect) strcat(model, currtagbody);
-		}
+		} /* ?OVER_IN_MODEL */ 
 		if (nestinglevel < inautodetect) inautodetect = 0;
 		if (nestinglevel < indrivers) indrivers = 0;
-		if (nestinglevel < indriver) {
+		if (nestinglevel < indriver) /* ?OVER_IN_DRIVER Y */ {
 		  indriver = 0;
-		  if (indrivers) {
+		  if (indrivers) /* ?IN_DRIVERS Y */ {
 		    if (debug) fprintf(stderr, 
 				       "    Printer/Driver: %s %s\n",
 				       pid, cid);
-		    if (cid[0] != '\0') {
+		    if (cid[0] != '\0') /* ?HAVE_CID Y */ {
 		      if (debug)
 			fprintf(stderr,
 				"      Printer XML: Printer: %s Driver: %s\n",
 				pid, cid);
-		      if (!strcmp(cid, driver)) {
+		      if (!strcmp(cid, driver)) /* ?CID_IS_DRIVER Y */ {
 			/* Printer/driver combo already confirmed by
 			   <drivers> section of printer XML file */
 			if (debug)
 			  fprintf(stderr,
 				  "      Printer XML: Printer/Driver combo confirmed by <drivers> section!\n");
 			comboconfirmed = 1;
-		      }
-		    }
-		  }
-		}
+		      } /* ?CID_IS_DRIVER */
+		    } /* ?HAVE_CID */ 
+		  } /* ?IN_DRIVERS */ 
+		} /* ?OVER_IN_DRIVER */
 		if (cppd[0]) strcpy(cid, "Postscript");
-		if (nestinglevel < inid) {
+		if (nestinglevel < inid) /* ?OVER_IN_ID Y */ {
 		  inid = 0;
 		  strcpy(cid, currtagbody);
 		  if (debug) fprintf(stderr, 
 				     "    Printer XML: Driver ID: %s\n", cid);
-		}
+		} /* ?OVER_IN_ID */
 		if (nestinglevel < inlang) inlang = 0;
-		if (nestinglevel < inpostscript) {
+		if (nestinglevel < inpostscript) /* ?OVER_IN_POSTSCRIPT Y */ {
 		  inpostscript = 0;
-		  if (inlang) {
+		  if (inlang) /* ?IN_LANG Y */ {
 		    if (debug) fprintf(stderr, 
 				       "    Printer/Driver/PPD: %s %s %s\n",
 				       cprinter, cid, cppd);
-		  }
-		  if (!strcmp(cid, driver)) {
+		  } /* ?IN_LANG */ 
+		  if (!strcmp(cid, driver)) /* ?CID_IS_DRIVER Y */ {
 		    /* Printer/driver combo already confirmed by
 		       <postscript> section of printer XML file */
 		    if (debug)
 		      fprintf(stderr,
 			      "      Printer XML: Printer/Driver combo confirmed by <postscript> section!\n");
 		    comboconfirmed = 1;
-		  }
-		}
-		if (nestinglevel < inppd) {
+		  } /* ?CID_IS_DRIVER */ 
+		} /* ?OVER_IN_POSTSCRIPT */
+		if (nestinglevel < inppd) /* ?OVER_IN_PPD Y */ {
 		  inppd = 0;
 		  /* Get the PPD file location without leading 
 		     white space, is empty on empty PPD file location*/
@@ -914,15 +954,17 @@ parse(char **data, /* I/O - Data to process */
 		  strcpy(cppd, s);
 		  if (debug) fprintf(stderr, 
 				     "    PPD URL: %s\n", cppd);
-		}
-	      } else if (operation == 1) { /* Driver XML file */
+		} /* ?OVER_IN_PPD */ 
+	      } else /* ?PARSE_OP_PRINTER N */ 
+	      if (+operation == +PARSE_OP_DRIVER) /* ?PARSE_OP_DRIVER Y */ 
+	      { /* Driver XML file */
 		if (nestinglevel < inexecution) inexecution = 0;
 		if (nestinglevel < innopjl) innopjl = 0;
 		if (nestinglevel < indriver) indriver = 0;
-		if (nestinglevel < inprinters) {
+		if (nestinglevel < inprinters) /* ?OVER_IN_PRINTERS Y */ {
 		  inprinters = 0;
 		  /* Remove the whole <printers> block */
-		  if (lastprinters != NULL) {
+		  if (lastprinters != NULL) /* ?LAST_PRINTERS Y */ {
 		    if (debug) 
 		      fprintf(stderr, "    Removing <printers> block\n");
 		    memmove(lastprinters, scan + 1, 
@@ -932,22 +974,22 @@ parse(char **data, /* I/O - Data to process */
 		    if (debug) 
 		      fprintf(stderr, "    Inserting saved printer\n");
 		    l = strlen(printerentry);
-		    if (l != 0) {
+		    if (l != 0) /* ?PRINTER_ENTRY Y */ {
 		      memmove(lastprinters + l, lastprinters, 
 			      *data + datalength - lastprinters + 1);
 		      memmove(lastprinters, printerentry, l);
 		      datalength += l;
 		      scan += l;
-		    }
-		  }
-		}
-		if (nestinglevel < inprinter) {
+		    } /* ?PRINTER_ENTRY */ 
+		  } /* ?LAST_PRINTERS */
+		} /* ?OVER_IN_PRINTERS */
+		if (nestinglevel < inprinter) /* ?OVER_IN_PRINTER Y */ {
 		  inprinter = 0;
-		  if (printertobesaved) {
+		  if (printertobesaved) /* ?PRINTER_TO_BE_SAVED Y */ {
 		    /* Save the printer entry in a buffer to reinsert it
 		       after deleting the <printers> block */
 		    printertobesaved = 0;
-		    if (lastprinter != NULL) {
+		    if (lastprinter != NULL) /* ?LAST_PRINTER Y */ {
 		      if (debug) fprintf(stderr, "    Saving printer\n");
 		      strcat(printerentry,"\n <printers>\n  ");
 		      l = strlen(printerentry);
@@ -957,82 +999,87 @@ parse(char **data, /* I/O - Data to process */
 		      strcat(printerentry,"\n </printers>");
 		      if (debug) fprintf(stderr, "    Printer entry %s\n",
 					 printerentry);
-		    }
-		  }
-		}
-		if (nestinglevel < inid) {
+		    } /* ?LAST_PRINTER */
+		  } /* ?PRINTER_TO_BE_SAVED */
+		} /* ?OVER_IN_PRINTER */
+		if (nestinglevel < inid) /* ?OVER_IN_ID Y */ {
 		  inid = 0;
 		  /* printer ID after the "printer/" in currtagbody is 
 		     used (to not compare the always equal "printer/" */
 		  if (strcmp(trpid, 
-			     translateid(currtagbody + 8, idlist)) == 0) {
+			     translateid(currtagbody + 8, idlist)) == 0) /* ?FOUND_PRINTER_IN_DRIVER Y */ {
 		    /* Found printer entry in driver file */
 		    printerentryfound = 1;
 		    printertobesaved = 1;
 		    if (debug) fprintf(stderr, "    Found printer\n");
-		  } else {
+		  } else /* ?FOUND_PRINTER_IN_DRIVER N */ {
 		    if (debug) fprintf(stderr, "    Other printer\n");
-		  }
-		}
-	      } else if (operation == 2) { /* Option XML file */
+		  }  /* ?FOUND_PRINTER_IN_DRIVER */
+		} /* ?OVER_IN_ID Y */
+	      } else  /* ?PARSE_OP_DRIVER N */ 
+	      if (+operation == +PARSE_OP_OPTION) /* ?PARSE_OP_OPTION Y */ 
+	      { /* Option XML file */
 		if ((debug) && (strcmp(currtagname, "constraint") == 0) &&
-		    (tagtype == -1)) {
+		    (tagtype == +TAG_CLOSE)) /* ?CLOSE_CONSTRAINT Y */ {
 		  j++;
 		  fprintf(stderr, "    Constraint %d: %s\n", j, filename);
-		}
-		if (nestinglevel < inen) {
+		} /* ?CLOSE_CONSTRAINT */ 
+		if (nestinglevel < inen) /* ?OVER_IN_EN Y */ {
 		  inen = 0;
-		  if (inargshortname) {
+		  if (inargshortname) /* ?IN_ARG_SHORT_NAME Y */ {
 		    /* We have the short name of the option, check whether
 		       the user has defined a default value for it */
 		    if (debug)
 		      fprintf
 			(stderr, "    Option short name: '%s'\n",
 			 currtagbody);
-		    for (k = 0; k < num_defaultsettings; k ++) {
+		    for (k = 0; k < num_defaultsettings; k ++) /* @DEFAULT_SETTINGS */ 
+		    {
 		      if ((strstr(defaultsettings[k], currtagbody) == 
 			   defaultsettings[k]) && 
 			  (*(defaultsettings[k] + strlen(currtagbody))
-			   == '=')) {
+			   == '=')) /* ?FOUND_DEFAULT_SETTING Y */ {
 			s = (char *)(defaultsettings[k] +
 				     strlen(currtagbody) + 1);
 			userdefault = 1;
-			if (optiontype == 1) {
+			switch (+optiontype)  /* *OPTION_TYPE */ {
+			case (+OPTION_TYPE_BOOL): {
 			  /* Boolean options */
 			  if ((strcasecmp(s, "true") == 0) ||
 			      (strcasecmp(s, "yes") == 0) ||
-			      (strcasecmp(s, "on") == 0)) {
+			      (strcasecmp(s, "on") == 0)) 
 			    /* "True" */
 			    s = "1";
-			  } else if ((strcasecmp(s, "false") == 0) ||
+			  else if ((strcasecmp(s, "false") == 0) ||
 				     (strcasecmp(s, "no") == 0) ||
-				     (strcasecmp(s, "off") == 0)) {
+				     (strcasecmp(s, "off") == 0)) 
 			    /* "False" */
 			    s = "0";
-			  } else if ((strcasecmp(s, "0") != 0) &&
-				     (strcasecmp(s, "1") != 0)) {
+			  else if ((strcasecmp(s, "0") != 0) &&
+				     (strcasecmp(s, "1") != 0)) 
 			    /* No valid value for a bool option */
 			    userdefault = 0;
-			  }
-			} else if (optiontype == 2) {
+			} break;
+			case (+OPTION_TYPE_INT): {
 			  /* Integer options */
-			  if (strspn(s, "+-0123456789") < strlen(s)) {
+			  if (strspn(s, "+-0123456789") < strlen(s)) 
 			    userdefault = 0;
-			  }
-			} else if (optiontype == 3) {
+			} break;
+			case (+OPTION_TYPE_FLOAT): {
 			  /* Float options */
-			  if (strspn(s, "+-0123456789.eE") < strlen(s)) {
+			  if (strspn(s, "+-0123456789.eE") < strlen(s)) 
 			    userdefault = 0;
-			  }
-			}
+			} break; } /* *OPTION_TYPE X */ 
 			strcpy(userdefaultvalue, s);
 			if ((debug) && (userdefault))
 			  fprintf
 			    (stderr,
 			     "      User default setting: '%s'\n",
 			     userdefaultvalue);
-		      } else if ((strcmp(defaultsettings[k], currtagbody) ==
-				  0) && (optiontype == 1)) {
+		      } else /* ?FOUND_DEFAULT_SETTING N */
+		      if ((strcmp(defaultsettings[k], currtagbody) ==
+				  0) && (+optiontype == +OPTION_TYPE_BOOL)) 
+				  /* ?DEFAULT_TRUE Y */ {
 			/* "True" for boolean options */
 			strcpy(userdefaultvalue, "1");
 			userdefault = 1;
@@ -1041,10 +1088,12 @@ parse(char **data, /* I/O - Data to process */
 			    (stderr,
 			     "      User default setting: '%s'\n",
 			     userdefaultvalue);
-		      } else if ((strcmp(defaultsettings[k] + 2,currtagbody)
+		      } else /* ?DEFAULT_TRUE N */ 
+		      if ((strcmp(defaultsettings[k] + 2,currtagbody)
 				  == 0) &&
 				 (strncasecmp(defaultsettings[k], "no", 2)
-				  == 0) && (optiontype == 1)) {
+				  == 0) && (+optiontype == +OPTION_TYPE_BOOL)) 
+				  /* ?DEFAULT_FALSE Y */ {
 			/* "False" for boolean options */
 			strcpy(userdefaultvalue, "0");
 			userdefault = 1;
@@ -1053,9 +1102,10 @@ parse(char **data, /* I/O - Data to process */
 			    (stderr,
 			     "      User default setting: '%s'\n",
 			     userdefaultvalue);
-		      }
-		    }
-		  } else if (inevshortname) {
+		      } /* ?DEFAULT_FALSE ?DEFAULT_TRUE ?FOUND_DEFAULT_SETTING */
+		    } /* @DEFAULT_SETTINGS X */
+		  } else  /* ?IN_ARG_SHORT_NAME N */ 
+		  if (inevshortname) /* ?IN_EV_SHORT_NAME Y */ {
 		    /* We have the short name of the enum value, check
 		       whether the user chose this value as default,
 		       extract the enum value ID then and mark the user's
@@ -1065,52 +1115,55 @@ parse(char **data, /* I/O - Data to process */
 			(stderr, "    Enum value short name: '%s'\n",
 			 currtagbody);
 		    if ((userdefault) &&
-			(strcmp(userdefaultvalue, currtagbody) == 0)) {
+			(strcmp(userdefaultvalue, currtagbody) == 0)) 
+			/* ?DEFAULT_IN_TAG_BODY Y */ {
 		      strcpy(userdefaultid, currevid);
 		      userdefaultfound = 1;
 		      if (debug)
 			fprintf
 			  (stderr,
 			   "      User default setting found!\n");
-		    }
-		  }
-		}
-		if (nestinglevel < inargmax) {
+		    } /* ?DEFAULT_IN_TAG_BODY Y */
+		  } /* ?IN_EV_SHORT_NAME ?IN_ARG_SHORT_NAME */
+		} /* ?OVER_IN_EN */
+		if (nestinglevel < inargmax) /* ?OVER_IN_ARG_MAX Y */ {
 		  inargmax = 0;
-		  if ((optiontype >= 2) && (optiontype <= 3)) {
+		  if 
+((optiontype == +OPTION_TYPE_INT) 
+|| (+optiontype == +OPTION_TYPE_FLOAT)) /* ?OPTION_NUMERIC Y */ {
 		    maxnumvalue = atof(currtagbody);
-		    if (userdefault) {
+		    if (userdefault &&
 		      /* Range-check user default and make it invalid if
 			 necessary */
-		      if (atof(userdefaultvalue) > maxnumvalue) {
+		      +atof(userdefaultvalue) > +maxnumvalue) 
 			userdefault = 0;
-		      }
-		    }
 		    if (debug)
 		      fprintf
 			(stderr,
 			 "    Maximum value: %s\n",
 			 currtagbody);
-		  }
-		}
-		if (nestinglevel < inargmin) {
+		  } /* ?OPTION_NUMERIC */
+		} /* ?OVER_IN_ARG_MAX */
+		if (nestinglevel < inargmin) /* ?OVER_IN_ARG_MIN Y */ {
 		  inargmin = 0;
-		  if ((optiontype >= 2) && (optiontype <= 3)) {
+		  if 
+((+optiontype == +OPTION_TYPE_INT) 
+|| (+optiontype == +OPTION_TYPE_FLOAT)) /* ?OPTION_NUMERIC Y */ {
 		    minnumvalue = atof(currtagbody);
-		    if (userdefault) {
+		    if (userdefault) /* ?USER_DEFAULT Y */ {
 		      /* Range-check user default and make it invalid if
 			 necessary */
 		      if (atof(userdefaultvalue) < minnumvalue) {
 			userdefault = 0;
 		      }
-		    }
+		    } /* ?USER_DEFAULT */
 		    if (debug)
 		      fprintf
 			(stderr,
 			 "    Minimum value: %s\n",
 			 currtagbody);
-		  }
-		}
+		  } /* ?OPTION_NUMERIC */
+		} /* ?OVER_IN_ARG_MIN */
 		if (nestinglevel < inargshortname) {
 		  inargshortname = 0;
 		}
@@ -1123,37 +1176,37 @@ parse(char **data, /* I/O - Data to process */
 		if (nestinglevel < inevshortname) {
 		  inevshortname = 0;
 		}
-		if (nestinglevel < inprinter) {
+		if (nestinglevel < inprinter) /* ?OVER_IN_PRINTER Y */ {
 		  inprinter = 0;
-		  if (inconstraint) {
+		  if (inconstraint) /* ?IN_CONSTRAINT Y */ {
 		    /* Make always short printer IDs (w/o "printer/") */
 		    if (currtagbody[0] == 'p') {
 		      strcat(cprinter, currtagbody + 8);
 		    } else {
 		      strcat(cprinter, currtagbody);
 		    }
-		  }
-		}
-		if (nestinglevel < inmake) {
+		  } /* ?IN_CONSTRAINT */
+		} /* ?OVER_IN_PRINTER */
+		if (nestinglevel < inmake) /* ?OVER_IN_MAKE Y */ {
 		  inmake = 0;
 		  if (inconstraint) strcat(cmake, currtagbody);
-		}
-		if (nestinglevel < inmodel) {
+		} /* ?OVER_IN_MAKE */
+		if (nestinglevel < inmodel) /* ?OVER_IN_MODEL Y */ {
 		  inmodel = 0;
 		  if (inconstraint) strcat(cmodel, currtagbody);
-		}
-		if (nestinglevel < indriver) {
+		} /* ?OVER_IN_MODEL */
+		if (nestinglevel < indriver) /* ?OVER_IN_DRIVER Y */ {
 		  indriver = 0;
 		  if (inconstraint) strcat(cdriver, currtagbody);
-		}
-		if (nestinglevel < inargdefault) {
+		} /* ?OVER_IN_DRIVER */
+		if (nestinglevel < inargdefault) /* ?OVER_IN_ARG_DEFAULT Y */ {
 		  inargdefault = 0;
 		  if (inconstraint) strcat(cargdefault, currtagbody);
-		}
-		if (nestinglevel < inconstraint) {
+		} /* ?OVER_IN_ARG_DEFAULT */
+		if (nestinglevel < inconstraint) /* ?OVER_IN_CONSTRAINT Y */ {
 		  inconstraint = 0;
 		  /* Constraint completely read, here we evaluate it */
-		  if (debug) {
+		  if (debug) /* ?DEBUG Y */ {
 		    fprintf(stderr,"    Evaluation of constraint\n");
 		    fprintf(stderr,"      Values given in constraint:\n");
 		    fprintf(stderr,"        make: |%s|, model: |%s|, printer: |%s|\n",
@@ -1165,15 +1218,17 @@ parse(char **data, /* I/O - Data to process */
 			    make, model);
 		    fprintf(stderr,"        PID: |%s|, driver: |%s|\n",
 			    pid, driver);
-		  }
+		  } /* ?DEBUG */
 		  if (!((cmake[0]) || (cmodel[0]) || 
-			(cprinter[0]) || (cdriver[0]))) {
+			(cprinter[0]) || (cdriver[0]))) /* ?NULL_CONSTRAINT Y */ {
 		    fprintf(stderr, "WARNING: Illegal null constraint in %s, line %d!\n",
 			    filename, linecount);
-		  } else if (((cmake[0]) || (cmodel[0])) && (cprinter[0])) {
+		  } else  /* ?NULL_CONSTRAINT N */ 
+		  if (((cmake[0]) || (cmodel[0])) && (cprinter[0])) 
+		  /* ?PRINTER_AND_MAKE Y */ {
 		    fprintf(stderr, "WARNING: Both printer id and make/model in constraint in %s, line %d!\n",
 			    filename, linecount);
-		  } else {
+		  } else /* ?PRINTER_AND_MAKE N */ {
 		    if (debug) 
 		      fprintf(stderr,
 			      "      Highest scores for printer: |%d|, driver: |%d|\n",
@@ -1187,30 +1242,31 @@ parse(char **data, /* I/O - Data to process */
 		    driverscore = 0;
 		    /* The per-printer constraining can happen by poid or by
 		       a make[/model] pair */
-		    if (cprinter[0]) {
+		    if (cprinter[0]) /* ?HAVE_PRINTER Y */ {
 		      if (debug) fprintf(stderr,"        Checking PID\n");
 		      if (strcmp(translateid(cprinter, idlist), trpid) == 0)
 			printerscore = 2;
 		      else
 			printerscore = -1;
-		    } else if (cmake[0]) {
+		    } else /* ?HAVE_PRINTER N */ if (cmake[0]) /* ?HAVE_MAKE Y */ {
 		      if (debug) fprintf(stderr,"        Checking make\n");
 		      /* We have a requested make, so it can't be zero.
 			 You can't request or constraint by model only! */
-		      if (strcmp(cmake, make) == 0) {
+		      if (strcmp(cmake, make) == 0) /* ?GOT_MAKE Y */ {
 			printerscore = 1; /* make matches */
-			if (cmodel[0]) {
+			if (cmodel[0]) /* ?HAVE_MODEL Y */ {
 			  if (debug)
 			    fprintf(stderr,"        Checking model\n");
 			  if (strcmp(cmodel, model) == 0)
 			    printerscore = 2; /* model matches, too */
 			  else
 			    printerscore = -1; /* model mismatch */
-			}
-		      } else printerscore = -1; /* make mismatch */
-		    }
+			} /* ?HAVE_MODEL */
+		      } else /* ?GOT_MAKE N */ printerscore = -1; /* make mismatch */ 
+		      /* ?GOT_MAKE */
+		    }  /* ?HAVE_MAKE  ?HAVE_PRINTER */
 		    /* Is a driver requested? */
-		    if (cdriver[0]) {
+		    if (cdriver[0]) /* ?HAVE_DRIVER Y */ {
 		      if (debug) 
 			fprintf(stderr,"        Checking driver\n");
 		      if ((strcmp(cdriver, driver) == 0) ||
@@ -1218,7 +1274,7 @@ parse(char **data, /* I/O - Data to process */
 			driverscore = 1; /* driver matches */
 		      else
 			driverscore = -1; /* driver mismatch */
-		    }
+		    } /* ?HAVE_DRIVER */
 		    if (debug)
 		      fprintf(stderr,
 			      "      Scores for this constraint: printer: |%d|, driver: |%d|\n",
@@ -1227,14 +1283,14 @@ parse(char **data, /* I/O - Data to process */
 		       best-matching constraint */
 		    /* Any sort of match? */
 		    if (((printerscore > 0) || (driverscore > 0)) &&
-			((printerscore > -1) && (driverscore > -1))) {
+			((printerscore > -1) && (driverscore > -1))) /* ?GOT_MATCH Y */ {
 		      if (debug) fprintf(stderr,
 					 "      Something matches\n");
 		      /* Does this beat the best match to date? */
 		      if (((printerscore >= printerhiscore) &&
 			   (driverscore >= driverhiscore)) ||
 			  /* They're equal or better in both categories */
-			  (printerscore == 2)) {
+			  (printerscore == 2)) /* ?BEST_PRINTER_DRIVER Y */ {
 			  /* A specific printer always wins */
 			if (debug)
 			  fprintf(stderr,"      This constraint wins\n");
@@ -1246,7 +1302,7 @@ parse(char **data, /* I/O - Data to process */
 			  driverhiscore = driverscore;
 			}
 			/* Constraint applies */
-			if (inenumval) {
+			if (inenumval) /* ?IN_ENUM_VAL Y */ {
 			  /* The winning constraint determines with its
 			     sense whether the option/the enum value
 			     qualifies for our printer/driver combo */
@@ -1255,7 +1311,7 @@ parse(char **data, /* I/O - Data to process */
 			    fprintf(stderr,
 				    "      Enumeration choice qualifies? %d (0: No, 1: Yes)\n",
 				    enumvalqualified);
-			} else {
+			} else /* ?IN_ENUM_VAL N */ {
 			  optionqualified = csense;
 			  if (debug) 
 			    fprintf(stderr,
@@ -1265,27 +1321,27 @@ parse(char **data, /* I/O - Data to process */
 			     determines the default setting for this
 			     option */
 			  strcpy(argdefault, cargdefault);
-			}
-		      }
-		    }
-		  }
+			} /* ?IN_ENUM_VAL */
+		      } /* ?BEST_PRINTER_DRIVER */
+		    } /* ?GOT_MATCH */
+		  } /* ?PRINTER_AND_MAKE ?NULL_CONSTRAINT */
 		}
-		if (nestinglevel < inconstraints) {
+		if (nestinglevel < inconstraints) /* ?OVER_IN_CONSTRAINTS Y */ {
 		  inconstraints = 0;
 		  /* End of <constraints> block, did the option/the enum
 		     value qualify for our printer/driver combo? */
-		  if (inenumval) {
+		  if (inenumval) /* ?IN_ENUM_VAL Y */ {
 		    if (debug)
 		      fprintf(stderr,
 			      "    This enumeration value finally qualified? %d (0: No, 1: Yes)\n",
 			      enumvalqualified);
 		    if (!enumvalqualified) enumvaltoberemoved = 1;
-		  } else {
+		  } else  /* ?IN_ENUM_VAL N */ {
 		    if (debug)
 		      fprintf(stderr,
 			      "    This option finally qualified?  %d (0: No, 1: Yes)\n",
 			      optionqualified);
-		    if (!optionqualified) {
+		    if (!optionqualified) /* ?OPTION_QUALIFIED Y */ {
 		      /* We have reached the end of the <constraints> block
 			 for this option, and the option's constraints 
 			 didn't qualify the option for our printer/driver
@@ -1295,59 +1351,59 @@ parse(char **data, /* I/O - Data to process */
 		      *data = NULL;
 		      if (debug)
 			fprintf(stderr, "    Option does not apply!\n");
-		      return;
-		    }
-		  }
+		      return +comboconfirmed;
+		    } /* ?OPTION_QUALIFIED */
+		  } /* ?IN_ENUM_VAL */
 		  if (debug)
 		    fprintf(stderr,
 			    "    Constr. for enum. value? %d, enum value disqualified? %d (0: No, 1: Yes)\n",
 			    inenumval, enumvaltoberemoved);
-		  if ((!inenumval) || (!enumvaltoberemoved)) {
+		  if ((!inenumval) || (!enumvaltoberemoved)) /* ?REMOVE_CONSTRAINTS Y */ {
 		    /* Remove the read <constraints> block, it will not
 		       appear in the output, but don't remove it if the
 		       current enum value will be removed anyway */
-		    if (lastconstraints != NULL) {
+		    if (lastconstraints != NULL) /* ?LAST_CONSTRAINTS Y */ {
 		      if (debug)
 			fprintf(stderr, "    Removing constraints block\n");
 		      memmove(lastconstraints, scan + 1, 
 			      *data + datalength - scan);
 		      datalength -= scan + 1 - lastconstraints;
 		      scan = lastconstraints - 1;
-		    } else {
+		    } else /* ?LAST_CONSTRAINTS N */ {
 		      if (debug)
 			fprintf(stderr, "    This enum value will be removed anyway, so constraints block does not  \n    need to be removed.\n");
-		    }
-		  }
-		}
-		if (nestinglevel < inenumval) {
+		    } /* ?LAST_CONSTRAINTS */
+		  } /* ?REMOVE_CONSTRAINTS */ 
+		} /* ?OVER_IN_CONSTRAINTS */
+		if (nestinglevel < inenumval) /* ?OVER_IN_ENUM_VAL Y */ {
 		  inenumval = 0;
 		  if (debug) 
 		    fprintf(stderr,
 			    "    End of enumeration value block, to be removed? %d (0: No, 1: Yes)\n",
 			    enumvaltoberemoved);
-		  if (enumvaltoberemoved) {
+		  if (enumvaltoberemoved) /* ?ENUM_VAL_TO_BE_REMOVED Y */ {
 		    /* This enum value does not apply to our printer/driver
 		       combo, remove it */
-		    if (lastenumval != NULL) {
+		    if (lastenumval != NULL) /* ?LAST_ENUM_VAL Y */ {
 		      if (debug) fprintf(stderr, "    Removing enumeration value\n");
 		      memmove(lastenumval, scan + 1, 
 			      *data + datalength - scan);
 		      datalength -= scan + 1 - lastenumval;
 		      scan = lastenumval - 1;
-		    } else {
+		    } else  /* ?LAST_ENUM_VAL N */ {
 		      fprintf (stderr, "    Cannot remove this evaluation value.\n");
-		    }
-		  } else
+		    }  /* ?LAST_ENUM_VAL */
+		  } else /* ?ENUM_VAL_TO_BE_REMOVED N */ 
 		    /* This enum value applies to our printer/driver combo */
 		    numenumvals++;
-		}
-		if (nestinglevel < inoption) {
+		} /* ?ENUM_VAL_TO_BE_REMOVED */
+		if (nestinglevel < inoption) /* ?OVER_IN_OPTION Y */ {
 		  inoption = 0;
 		  if (debug)
 		    fprintf(stderr,
 			    "End of option block:\n      No. of enum. values: %d, qualified by constraints? %d (0: No, 1: Yes)\n",
 			    numenumvals, optionqualified);
-		  if ((!numenumvals) || (!optionqualified)) {
+		  if ((!numenumvals) || (!optionqualified)) /* ?NO_VALUES_APPLY Y */ {
 		    /* We have reached the end of the option file, but there
                        are no enum values which qualified for our combo
 		       or there were no constraints at all =>
@@ -1355,8 +1411,8 @@ parse(char **data, /* I/O - Data to process */
 		    free((void *)(*data));
 		    *data = NULL;
 		    if (debug) fprintf (stderr, "    No enum. values, no constraints => Removing option!\n");
-		    return;
-		  }
+		    return +comboconfirmed;
+		  } /* ?NO_VALUES_APPLY */
 		  /* Insert the line determining the default setting */
 		  if ((argdefault[0]) || (userdefault)) {
 		    if (lastoption != NULL) {
@@ -1365,15 +1421,18 @@ parse(char **data, /* I/O - Data to process */
 				"    Inserting default value\n");
 		      if (userdefault) {
 			/* There is a user-defined default setting */
-			if ((optiontype >= 1) && (optiontype <= 3)) {
-			  /* Boolean or numerical option */
-			  strcpy(argdefault, userdefaultvalue);
-			} else {
+			if ((+optiontype == +OPTION_TYPE_ENUM)) {
 			  /* enumerated option */
 			  if (userdefaultfound) {
 			    strcpy(argdefault, userdefaultid);
 			  }
-			}
+			} else {
+			  /* Boolean or numerical option */
+				assert 
+(+optiontype == +OPTION_TYPE_BOOL || +optiontype == +OPTION_TYPE_INT 
+			  || +optiontype == +OPTION_TYPE_FLOAT);
+			  strcpy(argdefault, userdefaultvalue);
+			}  
 		      }
 		      sprintf(defaultline,
 			      "\n  <arg_defval>%s</arg_defval>",
@@ -1391,34 +1450,36 @@ parse(char **data, /* I/O - Data to process */
 		    }
 		  }
 		}
-	      } else if (operation == 3) { /* Driver XML file (Overview) */
+	      } else if (+operation == +PARSE_OP_OV_DRIVER) 
+	      { /* Driver XML file (Overview) */
 		if (nestinglevel < indriver) indriver = 0;
-		if (nestinglevel < inprinters) {
+		if (nestinglevel < inprinters) /* ?OVER_IN_PRINTERS Y */ {
 		  inprinters = 0;
 		  /* Remove the whole <printers> block */
-		  if (lastprinters != NULL) {
+		  if (lastprinters != NULL) /* ?LAST_PRINTERS Y */ {
 		    if (debug) 
 		      fprintf(stderr, "    Removing <printers> block\n");
 		    memmove(lastprinters, scan + 1, 
 			    *data + datalength - scan);
 		    datalength -= scan + 1 - lastprinters;
 		    scan = lastprinters - 1;
-		  }
-		}
-		if (nestinglevel < incomments) {
+		  } /* ?LAST_PRINTERS */
+		} /* ?OVER_IN_PRINTERS */
+		if (nestinglevel < incomments) /* ?OVER_IN_COMMENTS Y */ {
 		  incomments = 0;
 		  /* Remove the whole <comments> block */
-		  if ((lastcomments != NULL) && (!inprinter)) {
+		  if ((lastcomments != NULL) && (!inprinter)) 
+		  /* ?COMMENTS_NOT_IN_PRINTER Y */ {
 		    if (debug) 
 		      fprintf(stderr, "    Removing <comments> block\n");
 		    memmove(lastcomments, scan + 1, 
 			    *data + datalength - scan);
 		    datalength -= scan + 1 - lastcomments;
 		    scan = lastcomments - 1;
-		  }
-		}
+		  } /* ?COMMENTS_NOT_IN_PRINTER */
+		} /* ?OVER_IN_COMMENTS */
 		if (nestinglevel < inexecution) inexecution = 0;
-		if (nestinglevel < inid) {
+		if (nestinglevel < inid) /* ?OVER_IN_ID Y */ {
 		  inid = 0;
 		  /* Get the short printer ID (w/o "printer/") */
 		  strcpy(cprinter, currtagbody + 8);
@@ -1427,12 +1488,13 @@ parse(char **data, /* I/O - Data to process */
 		    fprintf(stderr,
 			    "    Overview: Printer: %s Driver: %s\n",
 			    cprinter, cdriver);
-		}
-		if (nestinglevel < indfunctionality) {
+		} /* ?OVER_IN_ID */
+		if (nestinglevel < indfunctionality) 
+		/* ?OVER_IN_D_FUNCTIONALITY Y */ {
 		  indfunctionality = 0;
 		  /* Save the functionality entry in a buffer to insert it
 		     into the overview */
-		  if (lastdfunctionality != NULL) {
+		  if (lastdfunctionality != NULL) /* ?LAST_D_FUNCTIONALITY Y */ {
 		    if (debug) fprintf(stderr,
 				       "    Saving <functionality> entry\n");
 		    memmove(dfunctionalityentry, lastdfunctionality,
@@ -1441,9 +1503,9 @@ parse(char **data, /* I/O - Data to process */
 		    if (debug) fprintf(stderr,
 				       "    <functionality> entry: %s\n",
 				       dfunctionalityentry);
-		  }
-		}
-		if (nestinglevel < inprinter) {
+		  } /* ?LAST_D_FUNCTIONALITY */
+		}/* ?OVER_IN_D_FUNCTIONALITY */
+		if (nestinglevel < inprinter) /* ?OVER_IN_PRINTER Y */ {
 		  inprinter = 0;
 		  if (debug)
 		    fprintf(stderr,
@@ -1455,11 +1517,12 @@ parse(char **data, /* I/O - Data to process */
 		  plistpreventry = NULL;
 		  /* Search printer in list */
 		  while ((plistpointer != NULL) &&
-			 (strcmp(plistpointer->id, cprinter) != 0)) {
+			 (strcmp(plistpointer->id, cprinter) != 0)) 
+			 /* @FIND_PRINTER */ {
 		    plistpreventry = plistpointer;
 		    plistpointer = (printerlist_t *)(plistpointer->next);
-		  }
-		  if (plistpointer == NULL) {
+		  } /* @FIND_PRINTER X */ 
+		  if (plistpointer == NULL) /* ?PRINTER_NOT_FOUND Y */ {
 		    /* printer not found, create new entry */
 		    plistpointer = 
 		      (printerlist_t *)malloc(sizeof(printerlist_t));
@@ -1471,14 +1534,14 @@ parse(char **data, /* I/O - Data to process */
 			(struct printerlist_t *)plistpointer;
 		    else 
 		      *printerlist = plistpointer;
-		  }
+		  } /* ?PRINTER_NOT_FOUND */
 		  /* Add driver entry */
 		  dlistpointer = plistpointer->drivers;
 		  dlistpreventry = NULL;
-		  while (dlistpointer != 0) {
+		  while (dlistpointer != 0) /* @D_LIST_POINTER */ {
 		    dlistpreventry = dlistpointer;
 		    dlistpointer = (driverlist_t *)(dlistpointer->next);
-		  }
+		  } /* @D_LIST_POINTER X */
 		  dlistpointer = 
 		    (driverlist_t *)malloc(sizeof(driverlist_t));
 		  strcpy(dlistpointer->name, cdriver);
@@ -1492,10 +1555,11 @@ parse(char **data, /* I/O - Data to process */
 		      (struct driverlist_t *)dlistpointer;
 		  else 
 		    plistpointer->drivers = dlistpointer;
-		}
-		if (nestinglevel < inprototype) {
+		} /* ?OVER_IN_PRINTER */
+		if (nestinglevel < inprototype) /* ?OVER_IN_PROTOTYPE Y */ {
 		  inprototype = 0;
-		  if (pid) { /* We abuse pid here to tell that we want
+		  if (pid) /* ?PID Y */ 
+		  { /* We abuse pid here to tell that we want
 				to have an overview of available PPDs and
 				not of all possible printer/driver combos.
 			        pid is never used for a printer ID when 
@@ -1509,7 +1573,7 @@ parse(char **data, /* I/O - Data to process */
 		      fprintf(stderr,
 			      "    Overview: Driver: %s Command line: |%s|\n",
 			      cdriver, s);
-		    if (*s != '\0') {
+		    if (*s != '\0') /* ?FOUND_COMMAND_LINE_PROTOTYPE Y */ {
 		      /* We have found a non-empty command line prototype, so
 			 this driver produces PPD files */
 		      driverhasproto = 1;
@@ -1520,11 +1584,11 @@ parse(char **data, /* I/O - Data to process */
 		      dlistpointer = plistpointer->drivers;
 		      dlistpreventry = NULL;
 		      while ((dlistpointer != 0) &&
-			     (strcasecmp(dlistpointer->name, cdriver))) {
+(strcasecmp(dlistpointer->name, cdriver))) /* @FIND_DRIVER */ {
 			dlistpreventry = dlistpointer;
 			dlistpointer = (driverlist_t *)(dlistpointer->next);
-		      }
-		      if (dlistpointer == 0) {
+		      } /* @FIND_DRIVER X */
+		      if (dlistpointer == 0) /* ?DRIVER_NOT_FOUND Y */ {
 			dlistpointer = 
 			  (driverlist_t *)malloc(sizeof(driverlist_t));
 			strcpy(dlistpointer->name, cdriver);
@@ -1535,8 +1599,8 @@ parse(char **data, /* I/O - Data to process */
 			    (struct driverlist_t *)dlistpointer;
 			else 
 			  plistpointer->drivers = dlistpointer;
-		      }
-		    } else {
+		      } /* ?DRIVER_NOT_FOUND */
+		    } else /* ?FOUND_COMMAND_LINE_PROTOTYPE N */ {
 		      /* We have found an empty command line prototype, so
 			 this driver does not produce any PPD file, */
 		      /* Renove the driver XML data from memory */
@@ -1544,8 +1608,8 @@ parse(char **data, /* I/O - Data to process */
 		      *data = NULL;
 		      if (debug)
 			fprintf(stderr, "    Driver entry does not produce PPDs!\n");
-		      return;
-		    }
+		      return +comboconfirmed;
+		    } /* ?FOUND_COMMAND_LINE_PROTOTYPE */
 		  }
 		  /* Remove the whole <prototype> block */
 		  if (lastprototype != NULL) {
@@ -1824,28 +1888,35 @@ parse(char **data, /* I/O - Data to process */
   if (debug) fprintf(stderr, 
 		     "    XML tag nesting level: %d\n",nestinglevel);
   if (debug) fprintf(stderr, "    Lines of input: %d\n", linecount);
-  if (operation == 0) { /* Printer XML file */
-    if ((make[0] == 0) || (model[0] == 0)) {
+  switch (+operation) /* *OPERATION */
+  { 
+	  case /* *OPERATION */ (+PARSE_OP_PRINTER): { /* Printer XML file */
+    if ((make[0] == 0) || (model[0] == 0)) /* ?NO_MODEL Y */ {
       /* <make> or <model> tag not found */
       fprintf(stderr, "Could not determine manufacturer or model name from the printer file %s!\n",
 	      filename);
       exit(1);
-    }
+    } /* ?NO_MODEL */
     if (debug) fprintf(stderr, "    Driver in printer's driver list: %d\n", comboconfirmed); 
-  } else if (operation == 1) { /* Driver XML file */
+  } break; 
+  case /* *OPERATION */ (+PARSE_OP_DRIVER): { /* Driver XML file */
     if (debug) 
       fprintf(stderr,
 	      "    nopjl: %d (1: driver does not allow PJL options)\n",
 	      *nopjl);
-    if (printerentryfound != 0) { /* the printer is in the listing of the 
+    if (printerentryfound != 0) /* ?PRINTER_ENTRY_FOUND Y */ 
+    { /* the printer is in the listing of the 
 				     driver */
       comboconfirmed = 1;
-    }
+    } /* ?PRINTER_ENTRY_FOUND */ 
     if (debug) fprintf(stderr, "    Printer in driver's printer list: %d\n", comboconfirmed); 
-  } else if (operation == 2) { /* Option XML file */
+  } break; 
+  case /* *OPERATION */ (+PARSE_OP_OPTION): { /* Option XML file */
     if (debug) fprintf(stderr, "    Resulting option XML:\n%s\n", *data); 
-  } else if (operation == 3) { /* Driver XML file (Overview) */
-    if (pid && (driverhasproto == 0)) {
+  } break;
+  case /* *OPERATION */ (+PARSE_OP_OV_DRIVER): 
+  { /* Driver XML file (Overview) */
+    if (pid && (driverhasproto == 0)) /* ?PID_NO_DRIVER Y */ {
       /* We did not find a command line prototype, so
 	 this driver does not produce any PPD file, */
       /* As we want to list only/printer/driver combos which produce
@@ -1857,17 +1928,18 @@ parse(char **data, /* I/O - Data to process */
       plistpointer = *printerlist;
       plistpreventry = NULL;
       /* Go through all printers in the list */
-      while (plistpointer != NULL) {
+      while (plistpointer != NULL) /* @P_LIST_POINTER */ {
 	/* Search for the driver */
 	dlistpointer = plistpointer->drivers;
 	dlistpreventry = NULL;
-	while ((dlistpointer != NULL) &&
-	       (strcasecmp(dlistpointer->name, cdriver))) {
+	while 
+	((dlistpointer != NULL) && (strcasecmp(dlistpointer->name, cdriver))) 
+	/* @FIND_DRIVER */ {
 	  dlistpreventry = dlistpointer;
 	  dlistpointer =
 	    (driverlist_t *)(dlistpointer->next);
-	}
-	if (dlistpointer != NULL) {
+	} /* @FIND_DRIVER X */
+	if (dlistpointer != NULL) /* ?D_LIST_POINTER Y */ {
 	  /* Delete it */
 	  dlistnextentry =
 	    (driverlist_t *)(dlistpointer->next);
@@ -1877,16 +1949,18 @@ parse(char **data, /* I/O - Data to process */
 	      (struct driverlist_t *)dlistnextentry;
 	  else
 	    plistpointer->drivers = dlistnextentry;
-	}
+	} /* ?D_LIST_POINTER */
 	/* Next printer */
 	plistpreventry = plistpointer;
 	plistpointer =
 	  (printerlist_t *)(plistpointer->next);
-      }
+      } /* @P_LIST_POINTER X */
       if (debug)
 	fprintf(stderr, "    Driver entry does not produce PPDs!\n");
-    }
-  } else if (operation == 4) { /* Printer XML file (Overview) */
+    } /* ?PID_NO_DRIVER */ 
+  } break; 
+  case /* *OPERATION */ (+PARSE_OP_OV_PRINTER):
+  { /* Printer XML file (Overview) */
     /* Remove the printer input data */
     **data = '\0';
     /* Build the printer entry for the overview in the memory which was used
@@ -1894,7 +1968,8 @@ parse(char **data, /* I/O - Data to process */
        the original printer XML file. */
     if (debug) fprintf(stderr, "    Data for this printer entry in the overview:\n      Printer ID: |%s|\n      Make: |%s|\n      Model: |%s|\n      Functionality: |%s|\n      Rec. driver: |%s|\n      Auto detect entry: |%s|\n",
 	    cprinter, cmake, cmodel, cfunctionality, cdriver,cautodetectentry);
-    if ((cprinter[0]) && (cmake[0]) && (cmodel[0]) && (cfunctionality[0])) {
+    if ((cprinter[0]) && (cmake[0]) && (cmodel[0]) && (cfunctionality[0])) 
+    /* ?PRINTER_ENTRY Y */ {
       strcpy(cprinter, translateid(cprinter, idlist));
       strcat((char *)(*data), "  <printer>\n    <id>");
       strcat((char *)(*data), cprinter);
@@ -1905,45 +1980,45 @@ parse(char **data, /* I/O - Data to process */
       strcat((char *)(*data), "</model>\n    <functionality>");
       strcat((char *)(*data), cfunctionality);
       strcat((char *)(*data), "</functionality>\n");
-      if (cunverified) {
+      if (cunverified) /* ?UNVERIFIED Y */ {
 	strcat((char *)(*data), "    <unverified>");
 	strcat((char *)(*data), cfunctionality);
 	strcat((char *)(*data), "</unverified>\n");
-      }
-      if (cdriver[0]) {
+      } /* ?UNVERIFIED */
+      if (cdriver[0]) /* ?DRIVER Y */ {
 	strcat((char *)(*data), "    <driver>");
 	strcat((char *)(*data), cdriver);
 	strcat((char *)(*data), "</driver>\n");
-      }
-      if (cautodetectentry[0]) {
+      } /* ?DRIVER */
+      if (cautodetectentry[0]) /* ?AUTO_DETECT_ENTRY Y */ {
 	strcat((char *)(*data), "    ");
 	strcat((char *)(*data), cautodetectentry);
-      }
+      } /* ?AUTO_DETECT_ENTRY */ 
       plistpointer = *printerlist;
       plistpreventry = NULL;
       while ((plistpointer) &&
-             (strcmp(plistpointer->id, cprinter) != 0)) {
+             (strcmp(plistpointer->id, cprinter) != 0)) /* @LOCATE_CPRINTER */ {
 	plistpreventry = plistpointer;
 	plistpointer = (printerlist_t *)(plistpointer->next);
-      }
-      if (plistpointer) {
+      } /* @LOCATE_CPRINTER X */
+      if (plistpointer) /* ?P_LIST_POINTER Y */ {
 	strcat((char *)(*data), "\n    <drivers>\n");
 	dlistpointer = plistpointer->drivers;
 	exceptionfound = 0;
-	while (dlistpointer) {
+	while (dlistpointer) /* @D_LIST_POINTER */ {
 	  strcat((char *)(*data), "      <driver>");
 	  strcat((char *)(*data), dlistpointer->name);
 	  strcat((char *)(*data), "</driver>\n");
 	  if (dlistpointer->functionality != NULL) exceptionfound = 1;
 	  dlistpointer = (driverlist_t *)(dlistpointer->next);
-	}
+	} /* @D_LIST_POINTER X */
 	strcat((char *)(*data), "    </drivers>\n");
-	if (exceptionfound) {
+	if (exceptionfound) /* ?EXCEPTION_FOUND Y */ {
 	  strcat((char *)(*data), "    <driverfunctionalityexceptions>\n");
 	  dlistpointer = plistpointer->drivers;
-	  while (dlistpointer) {
+	  while (dlistpointer) /* @D_LIST_POINTER */ { 
 	    if ((dlistpointer->name != NULL) &&
-		(dlistpointer->functionality != NULL)) {
+		(dlistpointer->functionality != NULL)) /* ?D_LIST_PTR_FUNCT Y */ {
 	      strcat((char *)(*data),
 		     "      <driverfunctionalityexception>\n");
 	      strcat((char *)(*data), "        <driver>");
@@ -1952,35 +2027,35 @@ parse(char **data, /* I/O - Data to process */
 	      strcat((char *)(*data), dlistpointer->functionality);
 	      strcat((char *)(*data),
 		     "\n      </driverfunctionalityexception>\n");
-	    }
+	    } /* ?D_LIST_PTR_FUNCT */
 	    dlistpointer = (driverlist_t *)(dlistpointer->next);
-	  }
+	  } /* @D_LIST_POINTER X */
 	  strcat((char *)(*data), "    </driverfunctionalityexceptions>\n");
-	}
+	} /* ?EXCEPTION_FOUND */
 	/* We remove every printer entry in the list for which we have found
 	   a printer XML file in the database, so all remaining entries are
 	   of printers which are only mentioned in a driver's printer list
 	   but do not have an XML file in the database. We will treat these
 	   printers later */
 	dlistpointer = plistpointer->drivers;
-	while (dlistpointer) {
+	while (dlistpointer) /* @D_LIST_POINTER */ {
 	  dlistpreventry = dlistpointer;
 	  dlistpointer = (driverlist_t *)(dlistpointer->next);
 	  free(dlistpreventry);
-	}
+	} /* @D_LIST_POINTER X */
 	if (plistpreventry == NULL)
 	  *printerlist = (printerlist_t *)(plistpointer->next);
 	else
 	  plistpreventry->next = plistpointer->next;
 	free(plistpointer);
-      }
-      if (ppdlist != NULL) {
+      } /* ?P_LIST_POINTER */ 
+      if (ppdlist != NULL) /* ?PPD_LIST Y */ {
 	strcat((char *)(*data), "    <ppds>\n");
 	ppdlistpointer = ppdlist;
 	if (debug)
 	  fprintf(stderr,
 		  "    Going through list: ");
-	while (ppdlistpointer) {
+	while (ppdlistpointer) /* @PPD_LIST_POINTER */ {
 	if (debug)
 	  fprintf(stderr,
 		  ".");
@@ -1992,12 +2067,12 @@ parse(char **data, /* I/O - Data to process */
 	  strcat((char *)(*data), "</ppdfile>\n");
 	  strcat((char *)(*data), "      </ppd>\n");
 	  ppdlistpointer = (ppdlist_t *)(ppdlistpointer->next);
-	}
+	} /* @PPD_LIST_POINTER X */
 	strcat((char *)(*data), "    </ppds>\n");
-      }
+      } /* ?PPD_LIST */
       strcat((char *)(*data), "  </printer>\n");
-    }
-  }
+    } /* ?PRINTER_ENTRY */ 
+  } break; } /* *OPERATION X */
   return(comboconfirmed);
 }
 
@@ -2009,8 +2084,7 @@ int                 /* O - Exit status of the program */
 main(int  argc,     /* I - Number of command-line arguments */
      char *argv[])  /* I - Command-line arguments */
 {
-  int		i,j;		/* Looping vars */
-  const char    *tmpstr1;       /* Temporary string constant */
+  int		i;		/* Looping vars */
   char          *t;
 
   const char    *pid = NULL,

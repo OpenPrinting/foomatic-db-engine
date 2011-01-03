@@ -1,3 +1,11 @@
+2011-01-03  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.c: Improved readability of the code by using
+	  symbolic constants and additional comments. Also eliminated
+	  warnings about value-less "return"s and unused variables (bug
+	  #599, #600, #601). Thanks to Christopher Yeleighton (giecrilj at
+	  stegny dot 2a dot pl).
+
 2010-12-15  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* README: Documented special entities for inserting job parameters,
