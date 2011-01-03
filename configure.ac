@@ -220,7 +220,7 @@ dnl Check for bourne shell
 AC_PATH_PROGS(SH,bash sh,/bin/sh,$BINSEARCHPATH)
 
 dnl Paths for LPD and LPRng (without magicfilter)
-AC_PATH_DIRS(LPD_SPOOL,lpd,/var/spool/lpd,$SPOOLSEARCHPATH)
+FM_PATH_DIRS(LPD_SPOOL,lpd,/var/spool/lpd,$SPOOLSEARCHPATH)
 AC_PATH_PROGS(LPD_LOG,lp-errs,/var/log/lp-errs,$LOGSEARCHPATH)
 AC_PATH_PROGS(LPD_BIN,lpd,/usr/sbin/lpd,$SBINSEARCHPATH)
 AC_PATH_PROGS(PRINTCAP,printcap,/etc/printcap,$SYSCONFSEARCHPATH)
@@ -232,13 +232,13 @@ AC_PATH_PROGS(LPD_LPC,lpc-lpd lpc-lprng lpc-lpr lpc,/usr/sbin/lpc,$SBB)
 AC_PATH_PROGS(LPRNG_CHECKPC,checkpc,/usr/sbin/checkpc,$SBINSEARCHPATH)
 
 dnl Paths and other settings for CUPS
-AC_PATH_DIRS(CUPS_ETC,cups,/etc/cups,$SYSCONFSEARCHPATH)
+FM_PATH_DIRS(CUPS_ETC,cups,/etc/cups,$SYSCONFSEARCHPATH)
 AC_PATH_PROGS(CUPS_ADMIN,lpadmin,/usr/sbin/lpadmin,$SBINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPSTAT,lpstat,/usr/bin/lpstat,$BINSEARCHPATH)
-AC_PATH_DIRS(CUPS_PPDS,cups/model,/usr/share/cups/model,$DATASEARCHPATH)
-AC_PATH_DIRS(CUPS_FILTERS,cups/filter,/usr/lib/cups/filter,$DATASEARCHPATH)
-AC_PATH_DIRS(CUPS_BACKENDS,cups/backend,/usr/lib/cups/backend,$DATASEARCHPATH)
-AC_PATH_DIRS(LIB_CUPS,cups,/usr/lib/cups,$LIBSEARCHPATH)
+FM_PATH_DIRS(CUPS_PPDS,cups/model,/usr/share/cups/model,$DATASEARCHPATH)
+FM_PATH_DIRS(CUPS_FILTERS,cups/filter,/usr/lib/cups/filter,$DATASEARCHPATH)
+FM_PATH_DIRS(CUPS_BACKENDS,cups/backend,/usr/lib/cups/backend,$DATASEARCHPATH)
+FM_PATH_DIRS(LIB_CUPS,cups,/usr/lib/cups,$LIBSEARCHPATH)
 AC_PATH_PROGS(CUPS_PCONF,cups/printers.conf,$CUPS_ETC/printers.conf,$SYSCONFSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPR,lpr-cups lpr,/usr/bin/lpr,$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPQ,lpq-cups lpq,/usr/bin/lpq,$BINSEARCHPATH)
@@ -255,7 +255,7 @@ AC_PATH_PROGS(CUPS_LPOPTIONS,lpoptions,/usr/bin/lpoptions,$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPINFO,lpinfo,/usr/sbin/lpinfo,$SBINSEARCHPATH)
 
 dnl Paths for PDQ
-AC_PATH_DIRS(PDQ_CONF,pdq,/usr/lib/pdq,$SYS_LIB_PATH)
+FM_PATH_DIRS(PDQ_CONF,pdq,/usr/lib/pdq,$SYS_LIB_PATH)
 AC_PATH_PROGS(PDQ_PRINTRC,pdq/printrc,$PDQ_CONF/printrc,$SYS_LIB_PATH)
 dnl PDQ_FOOMATIC=$PDQ_CONF/drivers/foomatic
 AC_PATH_PROGS(PDQ_PRINT,pdq lpr-pdq,/usr/bin/pdq,$BINSEARCHPATH)
@@ -263,9 +263,9 @@ dnl PDQ_JOBDIR=~/.printjobs
 
 dnl Paths for PPR
 AC_PATH_PROGS(PPR_PPRD,ppr/bin/pprd,/usr/lib/ppr/bin/pprd,$LIBSEARCHPATH)
-AC_PATH_DIRS(PPR_INTERFACES,ppr/interfaces,/usr/lib/ppr/interfaces,$LIBSEARCHPATH)
-AC_PATH_DIRS(PPR_PPDFILES,ppr/PPDFiles,/usr/share/ppr/PPDFiles,$DATASEARCHPATH)
-AC_PATH_DIRS(PPR_ETC,ppr,/etc/ppr,$SYSCONFSEARCHPATH)
+FM_PATH_DIRS(PPR_INTERFACES,ppr/interfaces,/usr/lib/ppr/interfaces,$LIBSEARCHPATH)
+FM_PATH_DIRS(PPR_PPDFILES,ppr/PPDFiles,/usr/share/ppr/PPDFiles,$DATASEARCHPATH)
+FM_PATH_DIRS(PPR_ETC,ppr,/etc/ppr,$SYSCONFSEARCHPATH)
 AC_PATH_PROGS(PPR_PPR,ppr lpr-ppr,/usr/bin/ppr,$BINSEARCHPATH)
 AC_PATH_PROGS(PPR_PPAD,ppad,/usr/bin/ppad,$BSB)
 AC_PATH_PROGS(PPR_PPOP,ppop,/usr/bin/ppop,$BSB)
@@ -280,14 +280,14 @@ AC_PATH_PROGS(RLPR,rlpr,/usr/bin/rlpr,$BSB)
 AC_PATH_PROGS(SMBCLIENT,smbclient,/usr/bin/smbclient,$BSB)
 AC_PATH_PROGS(NPRINT,nprint,/usr/bin/nprint,$BSB)
 AC_PATH_PROGS(PTAL_CONNECT,ptal-connect,/usr/bin/ptal-connect,$BSB)
-AC_PATH_DIRS(PTAL_PIPES,ptal-printd,/var/run/ptal-printd,$PTALPIPESSEARCHPATH)
-AC_PATH_DIRS(MTINK_PIPES,mtink,/var/mtink,$MTINKPIPESSEARCHPATH)
+FM_PATH_DIRS(PTAL_PIPES,ptal-printd,/var/run/ptal-printd,$PTALPIPESSEARCHPATH)
+FM_PATH_DIRS(MTINK_PIPES,mtink,/var/mtink,$MTINKPIPESSEARCHPATH)
 AC_PATH_PROGS(GZIP,gzip,/bin/gzip,$BSB)
 
 dnl Path for Foomatic XML database (foomatic-db)
-AC_PATH_DIRS(LIBDIR,foomatic/db/source,/usr/share/foomatic/db/source,$DATASEARCHPATH)
+FM_PATH_DIRS(LIBDIR,foomatic/db/source,/usr/share/foomatic/db/source,$DATASEARCHPATH)
 LIBDIR=`echo $LIBDIR | sed -e "s:/db/source$::"`
-AC_PATH_DIRS(LOCAL_LIBDIR,db/source,../foomatic-db/db/source,.:./foomatic-db:./foomatic-db*:../foomatic-db:../foomatic-db*)
+FM_PATH_DIRS(LOCAL_LIBDIR,db/source,../foomatic-db/db/source,.:./foomatic-db:./foomatic-db*:../foomatic-db:../foomatic-db*)
 LOCAL_LIBDIR=`echo $LOCAL_LIBDIR | sed -e "s:/db/source$::"`
 
 dnl Path for foomatic-rip (from foomatic-filters)
