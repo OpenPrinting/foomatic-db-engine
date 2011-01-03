@@ -97,7 +97,7 @@ typedef struct margins {
    printer entry */
 typedef struct printerDrvEntry {
   xmlChar *name;
-  xmlChar *comment;
+  xmlChar const *comment;
   xmlChar *ppd;
   /* functionality exceptions */
   xmlChar *excmaxresx;
@@ -116,16 +116,16 @@ typedef struct printerDrvEntry {
  */
 
 typedef struct choice {
-  xmlChar *value;
-  xmlChar *comment;
+  xmlChar const *value;
+  xmlChar const *comment;
   xmlChar *idx;
   xmlChar *driverval;
 } choice, *choicePtr;
 
 typedef struct arg {
-  xmlChar *name;
-  xmlChar *name_false;
-  xmlChar *comment;
+  xmlChar const *name;
+  xmlChar const *name_false;
+  xmlChar const *comment;
   xmlChar *idx;
   xmlChar *option_type;
   xmlChar *style;
@@ -141,7 +141,7 @@ typedef struct arg {
   xmlChar *max_length;
   xmlChar *allowed_chars;
   xmlChar *allowed_regexp;
-  xmlChar *default_value;
+  xmlChar const *default_value;
   /* Choices for enumerated options */
   int     num_choices;
   choicePtr *choices;
@@ -191,12 +191,12 @@ typedef struct comboData {
   xmlChar *driver_group;
   xmlChar *pcdriver;
   xmlChar *driver_type;
-  xmlChar *driver_comment;
+  xmlChar const *driver_comment;
   xmlChar *url;
   xmlChar *driver_obsolete;
-  xmlChar *supplier;
+  xmlChar const *supplier;
   xmlChar *manufacturersupplied;
-  xmlChar *license;
+  xmlChar const *license;
   xmlChar *licensetext;
   xmlChar *origlicensetext;
   xmlChar *licenselink;
@@ -204,10 +204,10 @@ typedef struct comboData {
   xmlChar *free;
   xmlChar *patents;
   int num_supportcontacts;
-  xmlChar **supportcontacts;
+  xmlChar const **supportcontacts;
   xmlChar **supportcontacturls;
   xmlChar **supportcontactlevels;
-  xmlChar *shortdescription;
+  xmlChar const *shortdescription;
   xmlChar *locales;
   int num_packages;
   xmlChar **packageurls;
@@ -266,7 +266,7 @@ typedef struct printerEntry {
   xmlChar *color;
   xmlChar *maxxres;
   xmlChar *maxyres;
-  xmlChar *refill;
+  xmlChar const *refill;
   xmlChar *ascii;
   xmlChar *pjl;
   xmlChar *printerppdentry;
@@ -300,7 +300,7 @@ typedef struct printerEntry {
   xmlChar *url;
   xmlChar *contriburl;
   xmlChar *ppdurl;
-  xmlChar *comment;
+  xmlChar const *comment;
   /* Page Description Languages */
   int     num_languages;
   printerLanguagePtr  *languages;
@@ -316,7 +316,7 @@ typedef struct printerEntry {
 
 typedef struct drvPrnEntry {
   xmlChar *id;
-  xmlChar *comment;
+  xmlChar const *comment;
   /* functionality exceptions */
   xmlChar *excmaxresx;
   xmlChar *excmaxresy;
@@ -335,9 +335,9 @@ typedef struct driverEntry {
   xmlChar *group;
   xmlChar *url;
   xmlChar *driver_obsolete;
-  xmlChar *supplier;
+  xmlChar const *supplier;
   xmlChar *manufacturersupplied;
-  xmlChar *license;
+  xmlChar const *license;
   xmlChar *licensetext;
   xmlChar *origlicensetext;
   xmlChar *licenselink;
@@ -345,10 +345,10 @@ typedef struct driverEntry {
   xmlChar *free;
   xmlChar *patents;
   int num_supportcontacts;
-  xmlChar **supportcontacts;
+  xmlChar const **supportcontacts;
   xmlChar **supportcontacturls;
   xmlChar **supportcontactlevels;
-  xmlChar *shortdescription;
+  xmlChar const *shortdescription;
   xmlChar *locales;
   int num_packages;
   xmlChar **packageurls;
@@ -371,7 +371,7 @@ typedef struct driverEntry {
   xmlChar *cmd_pdf;
   xmlChar *driverppdentry;
   marginsPtr drivermargins;
-  xmlChar *comment;
+  xmlChar const *comment;
   int     num_printers;
   drvPrnEntryPtr *printers;
 } driverEntry, *driverEntryPtr;
@@ -466,17 +466,21 @@ perlquote(xmlChar *str) { /* I - Original string */
  * has to be in its own file.
  */
 
+xmlChar const sc_locale_C [] = "C", sc_locale_POSIX [] = "POSIX";
+
 static void
 getLocalizedText(xmlDocPtr doc,   /* I - The whole data tree */
 		 xmlNodePtr node, /* I - Node of XML tree to work on */
-		 xmlChar **ret,   /* O - Text which was selected by the
+		 xmlChar const **ret,   /* O - Text which was selected by the
 				         language */
-		 xmlChar *language, /* I - User language */
+		 xmlChar const language [], /* I - User language */
 		 int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
 
   cur1 = node->xmlChildrenNode;
-  if (xmlStrcasecmp(cur1->name, "C") && xmlStrcasecmp(cur1->name, "POSIX")) {
+  if 
+  (xmlStrcasecmp(cur1->name, sc_locale_C) 
+  && xmlStrcasecmp(cur1->name, sc_locale_POSIX)) {
     while (cur1 != NULL) {
       /* Exact match of locale ID */
       if ((!xmlStrcasecmp(cur1->name, language))) {
@@ -536,13 +540,13 @@ getLocalizedLicenseText(xmlDocPtr doc,   /* I - The whole data tree */
 		 xmlChar **link,   /* O - Link which was selected by the
 				         language */
 		 xmlChar **origlink, /* O - Link to original text in English */
-		 xmlChar *language, /* I - User language */
+		 xmlChar const language [], /* I - User language */
 		 int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   int            localizedtextfound = 0;
 
   cur1 = node->xmlChildrenNode;
-  if (xmlStrcasecmp(cur1->name, "C") && xmlStrcasecmp(cur1->name, "POSIX")) {
+  if (xmlStrcasecmp(cur1->name, sc_locale_C) && xmlStrcasecmp(cur1->name, sc_locale_POSIX)) {
     while (cur1 != NULL) {
       /* Exact match of locale ID */
       if ((!xmlStrcasecmp(cur1->name, language))) {
@@ -654,7 +658,7 @@ parseMarginEntry(xmlDocPtr doc,   /* I - The whole combo data tree */
 				     exzception */
 		 marginsPtr ret,  /* O - C data structure of Foomatic
 					  overview */
-		 xmlChar *language, /* I - User language */
+		 xmlChar const language [], /* I - User language */
 		 int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlChar        *pagesize;
@@ -745,7 +749,7 @@ parseMargins(xmlDocPtr doc,   /* I - The whole combo data tree */
 	     xmlNodePtr node, /* I - Node of XML tree to work on */
 	     marginsPtr *ret, /* O - C data structure of Foomatic
 				 overview */
-	     xmlChar *language, /* I - User language */
+	     xmlChar const language [], /* I - User language */
 	     int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
 
@@ -786,7 +790,7 @@ parseOverviewPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 		     xmlNodePtr node, /* I - Node of XML tree to work on */
 		     overviewPtr ret, /* O - C data structure of Foomatic
 					 overview */
-		     xmlChar *language, /* I - User language */
+		     xmlChar const language [], /* I - User language */
 		     int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -1280,7 +1284,7 @@ parseComboPrinter(xmlDocPtr doc, /* I - The whole combo data tree */
 		  xmlNodePtr node, /* I - Node of XML tree to work on */
 		  comboDataPtr ret, /* O - C data structure of Foomatic
 				       combo */
-		  xmlChar *language, /* I - User language */
+		  xmlChar const language [], /* I - User language */
 		  int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -1693,7 +1697,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 		 xmlNodePtr node, /* I - Node of XML tree to work on */
 		 comboDataPtr ret, /* O - C data structure of Foomatic
 				      combo */
-		 xmlChar *language, /* I - User language */
+		 xmlChar const language [], /* I - User language */
 		 int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -1842,7 +1846,7 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "supportcontact"))) {
 	  ret->num_supportcontacts ++;
 	  ret->supportcontacts =
-	    (xmlChar **)
+	    (xmlChar const **)
 	    realloc((xmlChar **)ret->supportcontacts, 
 		    sizeof(xmlChar *) * 
 		    ret->num_supportcontacts);
@@ -1997,14 +2001,14 @@ parseComboDriver(xmlDocPtr doc, /* I - The whole combo data tree */
 	  ret->requires[ret->num_requires - 1] =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  ret->requiresversion[ret->num_requires - 1] = perlquote(version);
-	  if (debug)
+	  if (debug) /* an explicit brace for GCC thought police */ {
 	    if (!version)
 	      fprintf(stderr, "  Driver requires driver: %s\n", 
 		      ret->requires[ret->num_requires - 1]);
 	    else
 	      fprintf(stderr, "  Driver requires driver: %s (%s)\n", 
 		      ret->requires[ret->num_requires - 1],
-		      ret->requiresversion[ret->num_requires - 1]);
+		      ret->requiresversion[ret->num_requires - 1]); }
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
 	  ret->driver_type = (xmlChar *)"C";
 	  if (debug) fprintf(stderr, "  Driver type: CUPS Raster\n");
@@ -2151,7 +2155,7 @@ static void
 parseChoices(xmlDocPtr doc, /* I - The whole combo data tree */
 	     xmlNodePtr node, /* I - Node of XML tree to work on */
 	     argPtr option, /* O - C data structure of Foomatic option */
-	     xmlChar *language, /* I - User language */
+	     xmlChar const language [], /* I - User language */
   	     int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -2204,7 +2208,7 @@ parseChoices(xmlDocPtr doc, /* I - The whole combo data tree */
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ev_shortname"))) {
 	  if (debug)
 	    fprintf(stderr, "      Choice short name (do not translate):\n");
-	  getLocalizedText(doc, cur2, &(enum_val->value), "C", debug);
+	  getLocalizedText (doc, cur2, &(enum_val->value), sc_locale_C, debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "ev_longname"))) {
 	  if (debug)
 	    fprintf(stderr, "      Choice long name:\n");
@@ -2226,7 +2230,7 @@ static void
 parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	     xmlNodePtr node, /* I - Node of XML tree to work on */
 	     comboDataPtr ret, /* O - C data structure of Foomatic combo */
-	     xmlChar *language, /* I - User language */
+	     xmlChar const language [], /* I - User language */
 	     int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -2307,12 +2311,12 @@ parseOptions(xmlDocPtr doc, /* I - The whole combo data tree */
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_shortname"))) {
 	  if (debug)
 	    fprintf(stderr, "    Option short name (do not translate):\n");
-	  getLocalizedText(doc, cur2, &(option->name), "C", debug);
+	  getLocalizedText(doc, cur2, &(option->name), sc_locale_C, debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_shortname_false"))) {
 	  if (debug)
 	    fprintf(stderr,
 		    "    Option short name if false (do not translate):\n");
-	  getLocalizedText(doc, cur2, &(option->name_false), "C", debug);
+	  getLocalizedText(doc, cur2, &(option->name_false), sc_locale_C, debug);
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "arg_longname"))) {
 	  if (debug)
 	    fprintf(stderr, "    Option long name:\n");
@@ -2458,7 +2462,7 @@ parsePrinterEntry(xmlDocPtr doc, /* I - The whole printer data tree */
 		  xmlNodePtr node, /* I - Node of XML tree to work on */
 		  printerEntryPtr ret, /* O - C data structure of Foomatic
 					  printer entry */
-		  xmlChar *language, /* I - User language */
+		  xmlChar const language [], /* I - User language */
 		  int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -2917,7 +2921,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 		 xmlNodePtr node, /* I - Node of XML tree to work on */
 		 driverEntryPtr ret, /* O - C data structure of Foomatic
 					driver entry */
-		 xmlChar *language, /* I - User language */
+		 xmlChar const language [], /* I - User language */
 		 int debug) { /* I - Debug mode flag */
   xmlNodePtr     cur1;  /* XML node currently worked on */
   xmlNodePtr     cur2;  /* Another XML node pointer */
@@ -3051,7 +3055,7 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	if ((!xmlStrcmp(cur2->name, (const xmlChar *) "supportcontact"))) {
 	  ret->num_supportcontacts ++;
 	  ret->supportcontacts =
-	    (xmlChar **)
+	    (xmlChar const **)
 	    realloc((xmlChar **)ret->supportcontacts, 
 		    sizeof(xmlChar *) * 
 		    ret->num_supportcontacts);
@@ -3206,14 +3210,14 @@ parseDriverEntry(xmlDocPtr doc, /* I - The whole driver data tree */
 	  ret->requires[ret->num_requires - 1] =
 	    perlquote(xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1));
 	  ret->requiresversion[ret->num_requires - 1] = perlquote(version);
-	  if (debug)
+	  if (debug) {
 	    if (!version)
 	      fprintf(stderr, "  Driver requires driver: %s\n", 
 		      ret->requires[ret->num_requires - 1]);
 	    else
 	      fprintf(stderr, "  Driver requires driver: %s (%s)\n", 
 		      ret->requires[ret->num_requires - 1],
-		      ret->requiresversion[ret->num_requires - 1]);
+		      ret->requiresversion[ret->num_requires - 1]); }
 	} else if ((!xmlStrcmp(cur2->name, (const xmlChar *) "cups"))) {
 	  ret->driver_type = (xmlChar *)"C";
 	  if (debug) fprintf(stderr, "  Driver type: CUPS Raster\n");
@@ -3403,7 +3407,7 @@ parseXMLFromStdin() {
 
 static overviewPtr     /* O - C data structure of overview */
 parseOverviewFile(char *filename, /* I - Input file name, NULL: stdin */
-		  xmlChar *language, /* I - User language */
+		  xmlChar const language [], /* I - User language */
 		  int debug) { /* I - Debug mode flag */
   xmlDocPtr      doc;  /* Output of XML parser */
   overviewPtr    ret;  /* C data structure of overview */
@@ -3493,7 +3497,7 @@ parseOverviewFile(char *filename, /* I - Input file name, NULL: stdin */
 
 static comboDataPtr   /* O - C data structure of printer/driver combo */
 parseComboFile(char *filename, /* I - Input file name, NULL: stdin */
-	       xmlChar *language, /* I - User language */
+	       xmlChar const language [], /* I - User language */
 	       int debug) { /* I - Debug mode flag */
   xmlDocPtr      doc;  /* Output of XML parser */
   comboDataPtr   ret;  /* C data structure of printer/driver combo */
@@ -3587,7 +3591,7 @@ parseComboFile(char *filename, /* I - Input file name, NULL: stdin */
 
 static printerEntryPtr     /* O - C data structure of printer entry */
 parsePrinterFile(char *filename, /* I - Input file name, NULL: stdin */
-		 xmlChar *language, /* I - User language */
+		 xmlChar const language [], /* I - User language */
 		 int debug) { /* I - Debug mode flag */
   xmlDocPtr       doc;  /* Output of XML parser */
   printerEntryPtr ret;  /* C data structure of printer entry */
@@ -3646,7 +3650,7 @@ parsePrinterFile(char *filename, /* I - Input file name, NULL: stdin */
 
 static driverEntryPtr     /* O - C data structure of driver entry */
 parseDriverFile(char *filename, /* I - Input file name, NULL: stdin */
-		xmlChar *language, /* I - User language */
+		xmlChar const language [], /* I - User language */
 		int debug) { /* I - Debug mode flag */
   xmlDocPtr       doc;  /* Output of XML parser */
   driverEntryPtr  ret;  /* C data structure of driver entry */
@@ -3735,7 +3739,9 @@ prepareComboData(comboDataPtr combo, /* I/O - Foomatic combo data parsed
   /* Insert the user-supplied defaults */
 
   for (i = 0; i < num_defaultsettings; i ++) {
-    s = strchr((char *)(defaultsettings[i]), '=');
+    s = 
+    xmlStrchr ((defaultsettings[i]), '=') 
+    - (defaultsettings[i]) + (defaultsettings[i]);
     *s = (xmlChar)'\0';
     s ++;
     option = defaultsettings[i];
@@ -4109,6 +4115,8 @@ generateMarginsPerlData(marginsPtr margins, /* I/O - Foomatic margins data
   }
 }
 
+xmlChar const sc_Postscript [] = "Postscript";
+
 void
 generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
 					     parsed from XML input */
@@ -4132,7 +4140,7 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
     for (i = 0; i < combo->num_drivers; i ++) {
       printf("                 {\n");
       if (combo->drivers[i]->name) {
-	if (strncmp(combo->drivers[i]->name, "Postscript", 10))
+	if (xmlStrncmp(combo->drivers[i]->name, sc_Postscript, 10))
 	  haspsdriver = 1;
 	printf("                   'name' => '%s',\n",
 	       combo->drivers[i]->name);
@@ -4585,7 +4593,8 @@ generateComboPerlData(comboDataPtr combo, /* I/O - Foomatic combo data
       printf("      'vals_byname' => {\n");
       for (j = 0; j < combo->args[i]->num_choices; j ++) {
 	if (combo->args[i]->choices[j]->value == NULL) {
-	  combo->args[i]->choices[j]->value = "None";
+		static xmlChar sc_None [] = "None";
+	  combo->args[i]->choices[j]->value = sc_None;
 	}
 	printf("        '%s' => {\n", combo->args[i]->choices[j]->value);
 	printf("          'value' => '%s',\n", 
@@ -4758,8 +4767,8 @@ generatePrinterPerlData(printerEntryPtr printer, /* I/O - Foomatic printer
     printf("  'drivers' => [\n");
     for (i = 0; i < printer->num_drivers; i ++) {
       printf("                 {\n");
-      if (printer->drivers[i]->name) {
-	if (strncmp(printer->drivers[i]->name, "Postscript", 10))
+      if (printer->drivers[i]->name) { 
+	if (xmlStrncmp(printer->drivers[i]->name, sc_Postscript, 10))
 	  haspsdriver = 1;
 	printf("                   'name' => '%s',\n",
 	       printer->drivers[i]->name);
@@ -5057,7 +5066,7 @@ main(int argc, char **argv) { /* I - Command line arguments */
   int i, j; /* loop variables */
   int           debug = 0; /* Debug output level */
   xmlChar       *setting; 
-  xmlChar       *language = "C"; 
+  xmlChar const      *language = sc_locale_C; 
   xmlChar       **defaultsettings = NULL; /* User-supplied option settings*/
   int           num_defaultsettings = 0;
   char          *filename = NULL;
@@ -5099,7 +5108,7 @@ main(int argc, char **argv) { /* I - Command line arguments */
 	defaultsettings =
 	  (xmlChar **)realloc((xmlChar **)defaultsettings, 
 			      sizeof(xmlChar *) * num_defaultsettings);
-	defaultsettings[num_defaultsettings-1] = strdup(setting);
+	defaultsettings[num_defaultsettings-1] = xmlStrdup (setting);
 	break;
       case 'l' : /* language */
 	if (argv[i][2] != '\0')
