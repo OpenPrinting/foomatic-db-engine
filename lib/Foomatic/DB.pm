@@ -7775,7 +7775,7 @@ sub _get_xml_filelist {
 
     if (!defined($this->{"names-$dir"})) {
 	opendir DRV, "$libdir/db/$dir"
-	    or die 'Cannot find source db for $dir\n';
+	    or die "Cannot find source db for $dir\n";
 	my $driverfile;
 	while($driverfile = readdir(DRV)) {
 	    next if ($driverfile !~ m!^(.+)\.xml$!);

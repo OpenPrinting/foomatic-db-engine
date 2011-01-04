@@ -1,5 +1,10 @@
 2011-01-04  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* lib/Foomatic/DB.pm: Fixed wrong quotes in error message which
+	  prevented a variable from being substituted by its value (bug
+	  #612). Thanks to Christopher Yeleighton (giecrilj at stegny dot 2a
+	  dot pl) for the report.
+
 	* README: Fixed typos (bug #608). Thanks to Christopher Yeleighton
 	  (giecrilj at stegny dot 2a dot pl) for the report.
 
