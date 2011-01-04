@@ -1,5 +1,8 @@
 2011-01-04  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* README: Fixed typos (bug #608). Thanks to Christopher Yeleighton
+	  (giecrilj at stegny dot 2a dot pl) for the report.
+
 	* Makefile.in: Silenced warning about datarootdir when running
 	  "./configure".
 
