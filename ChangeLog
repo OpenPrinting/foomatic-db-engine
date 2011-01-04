@@ -1,5 +1,10 @@
 2011-01-04  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* configure.ac: Converted many "dnl" comments into "#" comments so
+	  that they make it into the "./configure" script (bug #610). Thanks
+	  to Christopher Yeleighton (giecrilj at stegny dot 2a dot pl) for
+	  the hint.
+
 	* configure.ac: Make choosing the install directory for Perl libraries
 	  really working. The code which was commented out was not working.
 	  Now bug #605 is really fixed.

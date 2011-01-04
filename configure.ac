@@ -3,25 +3,25 @@ AC_PREREQ([2.52])
 AC_INIT([footmatic-db-engine], 4.1.0)
 AC_CONFIG_SRCDIR(foomatic-perl-data.c)
 
-dnl If the user didn't specify the $sysconfdir on the command line, let it
-dnl be /etc, not /usr/local/etc or /usr/etc
+# If the user didn't specify the $sysconfdir on the command line, let it
+# be /etc, not /usr/local/etc or /usr/etc
 if [[ x$sysconfdir = 'x${prefix}/etc' ]]; then
   sysconfdir=/etc
 fi
 
-dnl Checks for programs.
+# Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
-dnl Checks for libraries.
+dnl # Checks for libraries.
 dnl AC_PATH_XTRA
 dnl LIBS="$LIBS"
 
-dnl
-dnl Test for libxml
-dnl
+#
+# Test for libxml
+#
 xml_version=
 AC_PATH_PROG(XML2_CONFIG, xml2-config)
 if test ! -z "$XML2_CONFIG"; then
@@ -40,15 +40,15 @@ fi
 AC_SUBST(XML_CFLAGS)
 AC_SUBST(XML_LIBS)
 
-dnl Checks for header files.
+# Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
 dnl AC_CHECK_HEADERS(libxml/xmlmemory.h libxml/parser.h)
 
-dnl Checks for typedefs, structures, and compiler characteristics.
+# Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
-dnl Checks for library functions.
+# Checks for library functions.
 AC_CHECK_FUNCS(strdup strspn strstr)
 
 #
@@ -62,7 +62,7 @@ AC_CHECK_FUNCS(xmlParseFile xmlCreatePushParserCtxt xmlParseChunk xmlFreeParserC
 CFLAGS="$save_CFLAGS"
 LIBS="$save_LIBS"
 
-dnl Checks for programs/directories which are used by Foomtic
+# Checks for programs/directories which are used by Foomtic
 
 SPOOLSEARCHPATH=/var/spool:/usr/spool/:/usr/local/spool:/usr/local/var/spool:/var/local/spool:/var/local
 LOGSEARCHPATH=/var/log:/usr/log:/usr/local/log:/usr/local/var/log:/var/local/log:/var/local
@@ -81,7 +81,7 @@ BSB=$BINSEARCHPATH:$SBINSEARCHPATH
 SBB=$SBINSEARCHPATH:$BINSEARCHPATH
 SYS_LIB_PATH=$SYSCONFSEARCHPATH:$LIBSEARCHPATH
 
-dnl Get the operating system and version number...
+# Get the operating system and version number...
 uname=`uname`
 uversion=`uname -r | sed -e '1,$s/[[^0-9]]//g'`
 if test x$uname = xIRIX64; then
@@ -123,7 +123,7 @@ if test -z "$CURL" -a -z "$CURL" ; then
 fi
 AC_PATH_PROG(PRINTF,printf,$BSB)dnl
 
-dnl dislabel ghostscript check
+# disable ghostscript check
 AC_MSG_CHECKING(Ghostscript check)
 AC_ARG_ENABLE( gscheck,
 [  --disable-gscheck      disable checking Ghostscript for security flaw],
@@ -185,11 +185,11 @@ AC_MSG_RESULT(using $DEVFD3)
 AC_SUBST(DEVFD3)
 AC_SUBST(DEVFD0)
 
-dnl Check for Perl
+# Check for Perl
 AC_PATH_PROGS(PERL,perl,/usr/bin/perl,$BINSEARCHPATH)
 
-dnl Check whether Perl libraries will be found when installed with current
-dnl $prefix, if not, try to fall back to /usr/local at first, then to /usr
+# Check whether Perl libraries will be found when installed with current
+# $prefix, if not, try to fall back to /usr/local at first, then to /usr
 if test x$prefix = xNONE; then
   PREFIX=$ac_default_prefix
 else
@@ -206,7 +206,7 @@ else
 fi
 AC_SUBST(PERLPREFIX)
 
-dnl Perl installation directories
+# Perl installation directories
 
 dnl This works only with autoconf 2.52 or newer
 AC_ARG_VAR(PERL_INSTALLDIRS, [Where should the Perl libraries be installed (Default: site, Choices: perl, site, vendor)?])
@@ -218,10 +218,10 @@ dnl This works also with autoconf 2.13
 dnl PERL_INSTALLDIRS=site
 dnl AC_SUBST(PERL_INSTALLDIRS)
 
-dnl Check for bourne shell
+# Check for bourne shell
 AC_PATH_PROGS(SH,bash sh,/bin/sh,$BINSEARCHPATH)
 
-dnl Paths for LPD and LPRng (without magicfilter)
+# Paths for LPD and LPRng (without magicfilter)
 FM_PATH_DIRS(LPD_SPOOL,lpd,/var/spool/lpd,$SPOOLSEARCHPATH)
 AC_PATH_PROGS(LPD_LOG,lp-errs,/var/log/lp-errs,$LOGSEARCHPATH)
 AC_PATH_PROGS(LPD_BIN,lpd,/usr/sbin/lpd,$SBINSEARCHPATH)
@@ -233,7 +233,7 @@ AC_PATH_PROGS(LPD_LPRM,lprm-lpd lprm-lprng lprm-lpr lprm,/usr/bin/lprm,$BINSEARC
 AC_PATH_PROGS(LPD_LPC,lpc-lpd lpc-lprng lpc-lpr lpc,/usr/sbin/lpc,$SBB)
 AC_PATH_PROGS(LPRNG_CHECKPC,checkpc,/usr/sbin/checkpc,$SBINSEARCHPATH)
 
-dnl Paths and other settings for CUPS
+# Paths and other settings for CUPS
 FM_PATH_DIRS(CUPS_ETC,cups,/etc/cups,$SYSCONFSEARCHPATH)
 AC_PATH_PROGS(CUPS_ADMIN,lpadmin,/usr/sbin/lpadmin,$SBINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPSTAT,lpstat,/usr/bin/lpstat,$BINSEARCHPATH)
@@ -256,14 +256,14 @@ AC_PATH_PROGS(CUPS_LPMOVE,lpmove,/usr/sbin/lpmove,$SBB)
 AC_PATH_PROGS(CUPS_LPOPTIONS,lpoptions,/usr/bin/lpoptions,$BINSEARCHPATH)
 AC_PATH_PROGS(CUPS_LPINFO,lpinfo,/usr/sbin/lpinfo,$SBINSEARCHPATH)
 
-dnl Paths for PDQ
+# Paths for PDQ
 FM_PATH_DIRS(PDQ_CONF,pdq,/usr/lib/pdq,$SYS_LIB_PATH)
 AC_PATH_PROGS(PDQ_PRINTRC,pdq/printrc,$PDQ_CONF/printrc,$SYS_LIB_PATH)
 dnl PDQ_FOOMATIC=$PDQ_CONF/drivers/foomatic
 AC_PATH_PROGS(PDQ_PRINT,pdq lpr-pdq,/usr/bin/pdq,$BINSEARCHPATH)
 dnl PDQ_JOBDIR=~/.printjobs
 
-dnl Paths for PPR
+# Paths for PPR
 AC_PATH_PROGS(PPR_PPRD,ppr/bin/pprd,/usr/lib/ppr/bin/pprd,$LIBSEARCHPATH)
 FM_PATH_DIRS(PPR_INTERFACES,ppr/interfaces,/usr/lib/ppr/interfaces,$LIBSEARCHPATH)
 FM_PATH_DIRS(PPR_PPDFILES,ppr/PPDFiles,/usr/share/ppr/PPDFiles,$DATASEARCHPATH)
@@ -272,11 +272,11 @@ AC_PATH_PROGS(PPR_PPR,ppr lpr-ppr,/usr/bin/ppr,$BINSEARCHPATH)
 AC_PATH_PROGS(PPR_PPAD,ppad,/usr/bin/ppad,$BSB)
 AC_PATH_PROGS(PPR_PPOP,ppop,/usr/bin/ppop,$BSB)
 
-dnl Paths for direct, spoolerless printing
+dnl # Paths for direct, spoolerless printing
 dnl DIRECT_ETC=/etc/foomatic/direct
 dnl DIRECT_CONFIG=$(DIRECT_ETC)/.config
 
-dnl Other paths
+# Other paths
 AC_PATH_PROGS(NC,nc netcat,/usr/bin/nc,$BSB)
 AC_PATH_PROGS(RLPR,rlpr,/usr/bin/rlpr,$BSB)
 AC_PATH_PROGS(SMBCLIENT,smbclient,/usr/bin/smbclient,$BSB)
@@ -286,17 +286,16 @@ FM_PATH_DIRS(PTAL_PIPES,ptal-printd,/var/run/ptal-printd,$PTALPIPESSEARCHPATH)
 FM_PATH_DIRS(MTINK_PIPES,mtink,/var/mtink,$MTINKPIPESSEARCHPATH)
 AC_PATH_PROGS(GZIP,gzip,/bin/gzip,$BSB)
 
-dnl Path for Foomatic XML database (foomatic-db)
+# Path for Foomatic XML database (foomatic-db)
 FM_PATH_DIRS(LIBDIR,foomatic/db/source,/usr/share/foomatic/db/source,$DATASEARCHPATH)
 LIBDIR=`echo $LIBDIR | sed -e "s:/db/source$::"`
 FM_PATH_DIRS(LOCAL_LIBDIR,db/source,../foomatic-db/db/source,.:./foomatic-db:./foomatic-db*:../foomatic-db:../foomatic-db*)
 LOCAL_LIBDIR=`echo $LOCAL_LIBDIR | sed -e "s:/db/source$::"`
 
-dnl Path for foomatic-rip (from foomatic-filters)
+# Path for foomatic-rip (from foomatic-filters)
 AC_PATH_PROGS(FOOMATIC_RIP,foomatic-rip,/usr/bin/foomatic-rip,$BSB)
 AC_PATH_PROGS(LOCAL_FOOMATIC_RIP,foomatic-rip,../foomatic-filters/foomatic-rip,.:./foomatic-filters:./foomatic-filters*:../foomatic-filters:../foomatic-filters*)
 
-dnl AC_OUTPUT(Makefile src/Makefile)
 AC_OUTPUT(Makefile makeDefaults makeMan
 foomatic-configure foomatic-printjob foomatic-kitload
 foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
@@ -307,7 +306,7 @@ foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
 foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml
 )
 
-dnl Finished
+# Finished
 echo "Finished configuring."
 echo "Type 'make' to build the package"
 echo "then 'make install' to install it."
