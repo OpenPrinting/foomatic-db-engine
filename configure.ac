@@ -209,8 +209,10 @@ AC_SUBST(PERLPREFIX)
 dnl Perl installation directories
 
 dnl This works only with autoconf 2.52 or newer
-PERL_INSTALLDIRS=site
 AC_ARG_VAR(PERL_INSTALLDIRS, [Where should the Perl libraries be installed (Default: site, Choices: perl, site, vendor)?])
+if test -z "$PERL_INSTALLDIRS"; then
+  PERL_INSTALLDIRS=site
+fi
 
 dnl This works also with autoconf 2.13
 dnl PERL_INSTALLDIRS=site

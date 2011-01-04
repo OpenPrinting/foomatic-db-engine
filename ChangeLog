@@ -1,3 +1,9 @@
+2011-01-04  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* configure.ac: Make choosing the install directory for Perl libraries
+	  really working. The code which was commented out was not working.
+	  Now bug #605 is really fixed.
+
 2011-01-03  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* configure.ac, acinclude.m4: Avoid name space conflicts by letting
