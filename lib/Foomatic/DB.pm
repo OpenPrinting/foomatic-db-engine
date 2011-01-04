@@ -7772,19 +7772,17 @@ sub _set_object_xml {
 # read with _get_object_xml.
 sub _get_xml_filelist {
     my ($this, $dir) = @_;
+    my $dir_name = "names-$dir";
 
-    if (!defined($this->{"names-$dir"})) {
+    if (!defined ($this->{$dir_name})) {
 	opendir DRV, "$libdir/db/$dir"
 	    or die "Cannot find source db for $dir\n";
-	my $driverfile;
-	while($driverfile = readdir(DRV)) {
-	    next if ($driverfile !~ m!^(.+)\.xml$!);
-	    push(@{$this->{"names-$dir"}}, $1);
-	}
-	closedir(DRV);
+	my @names_dir = map { m!^(.+)\.xml$!? $1: () } readdir (DRV);
+	closedir (DRV);
+	$this->{$dir_name} = \@names_dir;
     }
 
-    return @{$this->{"names-$dir"}};
+    return @{$this->{$dir_name}};
 }
 
 
