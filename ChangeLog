@@ -1,5 +1,9 @@
 2011-01-04  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* configure.ac: Replaced deprecated AC_OUTPUT with argumenmts by
+	  the correct usage (bug #611). Thanks to Christopher Yeleighton
+	  (giecrilj at stegny dot 2a dot pl) for the hint.
+
 	* configure.ac: Converted many "dnl" comments into "#" comments so
 	  that they make it into the "./configure" script (bug #610). Thanks
 	  to Christopher Yeleighton (giecrilj at stegny dot 2a dot pl) for

@@ -296,7 +296,7 @@ LOCAL_LIBDIR=`echo $LOCAL_LIBDIR | sed -e "s:/db/source$::"`
 AC_PATH_PROGS(FOOMATIC_RIP,foomatic-rip,/usr/bin/foomatic-rip,$BSB)
 AC_PATH_PROGS(LOCAL_FOOMATIC_RIP,foomatic-rip,../foomatic-filters/foomatic-rip,.:./foomatic-filters:./foomatic-filters*:../foomatic-filters:../foomatic-filters*)
 
-AC_OUTPUT(Makefile makeDefaults makeMan
+AC_CONFIG_FILES(Makefile makeDefaults makeMan
 foomatic-configure foomatic-printjob foomatic-kitload
 foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
 foomatic-getpjloptions foomatic-addpjloptions
@@ -305,6 +305,7 @@ foomatic-nonumericalids foomatic-replaceoldprinterids
 foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
 foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml
 )
+AC_OUTPUT
 
 # Finished
 echo "Finished configuring."
