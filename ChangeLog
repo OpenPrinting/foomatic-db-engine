@@ -1,3 +1,9 @@
+2011-03-04  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* configure.ac: Added libdir support for the ./configure
+	  script. Thanks to Richard Hughes (hughsient at gmail dot com) for
+	  supplying me this patch from Red Hat.
+
 2011-01-04  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Improved code of the _get_xml_filelist()
