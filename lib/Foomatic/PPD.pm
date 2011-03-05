@@ -300,11 +300,17 @@ sub foo_options {
 sub xml_esc {
     my ($in) = (@_);
     
-    $in =~ s!&!&amp;!g;
-    $in =~ s!<!&lt;!g;
-    $in =~ s!>!&gt;!g;
+    @chars = split(//,$in);
+    $ascii = "";
+    foreach (@chars) {
+        if (ord ($_) > 127) { $_="?"; }
+        $ascii .= $_;
+    }
+    $ascii =~ s!&!&amp;!g;
+    $ascii =~ s!<!&lt;!g;
+    $ascii =~ s!>!&gt;!g;
 
-    return $in;
+    return $ascii;
 }
 
 sub pdq_filter {

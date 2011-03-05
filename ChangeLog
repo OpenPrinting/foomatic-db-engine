@@ -1,5 +1,9 @@
 2011-03-04  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* lib/Foomatic/PPD.pm: Handle non-UTF-8 encodings in imported PPD
+	  files. Thanks to Richard Hughes (hughsient at gmail dot com) for
+	  supplying me this patch from Red Hat.
+
 	* configure.ac: Added libdir support for the ./configure
 	  script. Thanks to Richard Hughes (hughsient at gmail dot com) for
 	  supplying me this patch from Red Hat.
