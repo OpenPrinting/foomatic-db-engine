@@ -2180,6 +2180,7 @@ sub find_printer {
 	    # "Real" manufacturer, check manufacturer, model, and/or
 	    # description
 	    my $matched = 1;
+	    my $mfgmdlmatched = 1;
 	    my ($mfg, $mdl, $des, $sku);
 	    my $ieee1284 = deviceIDfromDBEntry($p);
 	    if ($ieee1284 =~ /(MFG|MANUFACTURER):\s*([^:;]+);?/i) {
@@ -2200,11 +2201,13 @@ sub find_printer {
 	    if ($mfg) {
 		if ($mfg ne $automake) {
 		    $matched = 0;
+		    $mfgmdlmatched = 0;
 		}
 	    }
 	    if ($mdl) {
 		if ($mdl ne $automodel) {
 		    $matched = 0;
+		    $mfgmdlmatched = 0;
 		}
 	    }
 	    if ($des) {
@@ -2220,12 +2223,29 @@ sub find_printer {
 	    if ($matched &&
 		($des || ($mfg && ($mdl || ($sku && $autosku))))) {
 		# Full match to known auto-detection data
-		$matchlength = 1000;
+		$matchlength = 1200;
+		if (!$p->{noxmlentry}) {
+		    $matchlength += 1;
+		}
 		$bestmatchlength = $matchlength if
 		    $bestmatchlength < $matchlength;
 		$results{$p->{id}} = $matchlength if
 			    (!defined($results{$p->{id}}) ||
-			     ($results{$p->{id}} < $matchlength)); 
+			     ($results{$p->{id}} < $matchlength));
+		next;
+	    }
+	    if ($mfgmdlmatched &&
+		($mfg && $mdl)) {
+		# Match to known auto-detection make/model data
+		$matchlength = 1000;
+		if (!$p->{noxmlentry}) {
+		    $matchlength += 1;
+		}
+		$bestmatchlength = $matchlength if
+		    $bestmatchlength < $matchlength;
+		$results{$p->{id}} = $matchlength if
+			    (!defined($results{$p->{id}}) ||
+			     ($results{$p->{id}} < $matchlength));
 		next;
 	    }
 	}
@@ -2254,6 +2274,9 @@ sub find_printer {
 	    # models
 	    if (normalize($task->[1]) eq normalize($task->[0])) {
 		$matchlength = 100;
+		if (!$p->{noxmlentry}) {
+		    $bestmatchlength += 1;
+		}
 		$bestmatchlength = $matchlength + $task->[2] if
 		    $bestmatchlength < $matchlength + $task->[2];
 		$results{$p->{id}} = $matchlength + $task->[2] if

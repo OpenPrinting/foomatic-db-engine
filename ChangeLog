@@ -1,3 +1,17 @@
+2011-06-30  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/PPD.pm: Improved printer entry searh algorithm
+	  (find_printer() method) in two points:
+	   1. Score match of only make and model in printer ID of the entry
+	      higher than match of make and model fields of the entry but
+	      lower than match of full printer ID. This raises the relevance
+	      of printer ID matches if the search term contains only a partial
+	      device ID consisting of only the make and model fields.
+	   2. Score a printer entry with an actual printer XML file 1 point
+	      higher than an implicit printer entry only coming from a
+	      printer name in a driver's printer list. This raises the
+	      relevance of actual printer XML entries.
+
 2011-03-04  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/PPD.pm: Handle non-UTF-8 encodings in imported PPD
