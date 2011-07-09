@@ -1,3 +1,7 @@
+2011-07-09  Daniel Dressler <danieru.dressler@gmail.com>
+	* Added foomatic-verify-xml.pl, a helper script for verifying 
+		the xml database against our xml schemas using xmlint
+
 2011-06-30  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/PPD.pm: Improved printer entry searh algorithm
