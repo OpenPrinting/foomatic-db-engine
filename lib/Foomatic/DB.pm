@@ -12,6 +12,7 @@ use Encode;
 @EXPORT = qw(ppdtoperl ppdfromvartoperl);
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
+use xmlParse;
 use DBI;
 use Data::Dumper;
 use POSIX;                      # for rounding integers
