@@ -304,6 +304,7 @@ foomatic-compiledb foomatic-fix-xml
 foomatic-nonumericalids foomatic-replaceoldprinterids
 foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
 foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml
+foomatic-verify-xml
 )
 AC_OUTPUT
 
