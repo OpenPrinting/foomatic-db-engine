@@ -1,5 +1,5 @@
 
-package DB;
+package Foomatic::DB;
 use Exporter;
 use Encode;
 @ISA = qw(Exporter);
@@ -12,7 +12,7 @@ use Encode;
 @EXPORT = qw(ppdtoperl ppdfromvartoperl);
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
-use xmlParse;
+use Foomatic::xmlParse;
 use DBI;
 use Data::Dumper;
 use POSIX;                      # for rounding integers
@@ -1691,7 +1691,7 @@ sub get_overview {
 
     # Build a new overview
     # Generate overview Perl data structure from xml database
-    my $parser = xmlParse->new($this->{'language'},0);
+    my $parser = Foomatic::xmlParse->new($this->{'language'},0);
     
     my @printers = <"$libdir/db/source/printer/*.xml">;
     my @drivers = <"$libdir/db/source/driver/*.xml">;
@@ -1725,12 +1725,12 @@ sub get_printer {
     # Generate printer Perl data structure from database
     my $printer;
     if (-r "$poid") {
-	my $parser = xmlParse->new($this->{'language'},0);
+	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
 	$printer = $parser->parsePrinter($poid);
     } elsif ($this->{'dbh'}) {
 	return $this->get_printer_from_sql_db($poid);
     } elsif (-r "$libdir/db/source/printer/$poid.xml") {
-	my $parser = xmlParse->new($this->{'language'},0);
+	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
 	$printer = $parser->parsePrinter("$libdir/db/source/printer/$poid.xml");
     } else {
 	my ($make, $model);

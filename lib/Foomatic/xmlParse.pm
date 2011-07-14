@@ -1,4 +1,4 @@
-package xmlParse;
+package Foomatic::xmlParse;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use POSIX qw/strftime/;
 #use Data::Dumper;
 use XML::LibXML;
 use Clone;
-use phonebook;
+use Foomatic::phonebook;
 
 ### Code style ###
 # - Tabs for indentation
@@ -34,7 +34,7 @@ sub new {
 		$this->{'version'} = $version;
 	}
 	
-	my $phonebook = phonebook->new($this->{'version'});
+	my $phonebook = Foomatic::phonebook->new($this->{'version'});
 	$this->{'printerPhonebook'} = $phonebook->printer();
 	$this->{'driverPhonebook'}  = $phonebook->driver();
 	$this->{'optionPhonebook'}  = $phonebook->option();
