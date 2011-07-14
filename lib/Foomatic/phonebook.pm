@@ -1,4 +1,4 @@
-package phonebook;
+package Foomatic::phonebook;
 
 use strict;
 use warnings;
