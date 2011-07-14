@@ -1793,12 +1793,12 @@ sub get_driver {
     # Generate driver Perl data structure from database
     my $driver;
     if (-r "$drv") {
-	my $parser = xmlParse->new($this->{'language'},0);
+	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
 	$driver = $parser->parseDriver("$drv");
     } elsif ($this->{'dbh'}) {
 	return $this->get_driver_from_sql_db($drv);
     } elsif (-r "$libdir/db/source/driver/$drv.xml") {
-	my $parser = xmlParse->new($this->{'language'},0);
+	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
 	$driver = $parser->parseDriver("$libdir/db/source/printer/$drv.xml");
     } else {
 	return undef;

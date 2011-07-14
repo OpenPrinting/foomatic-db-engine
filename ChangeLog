@@ -1,6 +1,22 @@
+2011-07-14 Daniel Dressler <danieru.dressler@gmail.com>
+	* Fixed imports in lib/Foomatic/DB.pm, lib/Foomatic/xmlParse.pm,
+	  lib/Foomatic/phonebook.pm. DB::Get_printer, DB::get_driver, 
+	  and DB::get_overview now use the perl xmlParse.
+
+2011-07-13  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-verify-xml.pl, foomatic-verify-xml.in, Makefile.in,
+	  configure.ac: Integrated foomatic-verify-xml into the build system.
+	  Some text clean-up.
+
 2011-07-09  Daniel Dressler <danieru.dressler@gmail.com>
-	* Added foomatic-verify-xml.pl, a helper script for verifying 
-		the xml database against our xml schemas using xmlint
+
+	* lib/Foomatic/DB.pm, lib/Foomatic/xmlParse.pm,
+	  lib/Foomatic/phonebook.pm: Added new code for parsing the XML
+	  database without helper programs written in C.
+
+	* Added foomatic-verify-xml.pl, a helper script for verifying
+	  the xml database against our xml schemas using xmlint
 
 2011-06-30  Till Kamppeter <till.kamppeter@gmail.com>
 

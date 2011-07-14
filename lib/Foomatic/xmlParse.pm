@@ -52,7 +52,6 @@ sub cleanID {
 
 #xml parser
 my $parser = XML::LibXML->new();
-#phonebooks
 
 
 
