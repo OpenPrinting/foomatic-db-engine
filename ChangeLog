@@ -2,6 +2,10 @@
 	* Fixed imports in lib/Foomatic/DB.pm, lib/Foomatic/xmlParse.pm,
 	  lib/Foomatic/phonebook.pm. DB::Get_printer, DB::get_driver, 
 	  and DB::get_overview now use the perl xmlParse.
+	* Replaced body of get_combo_data_xml and get_overview_xml with an error
+	  that the function is debricated.
+	* Getdat has been renamed to get_combo_data, getdat is now a stub 
+	  for its new name.
 
 2011-07-13  Till Kamppeter <till.kamppeter@gmail.com>
 
