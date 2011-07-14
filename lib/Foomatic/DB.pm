@@ -1,5 +1,5 @@
 
-package Foomatic::DB;
+package DB;
 use Exporter;
 use Encode;
 @ISA = qw(Exporter);
@@ -1690,15 +1690,13 @@ sub get_overview {
     }
 
     # Build a new overview
-    my $otype = ($cupsppds ? '-C' : '-O');
-    $otype .= ' -n' if ($cupsppds == 1);
-    # Generate overview Perl data structure from database
-    my $VAR1;
-    eval `$bindir/foomatic-combo-xml $otype -l '$libdir' | $bindir/foomatic-perl-data -O -l $this->{'language'}` || do {
-	warn ("Could not run \"foomatic-combo-xml\"/\"foomatic-perl-data\"!\n");
-	return undef;
-    };
-    $this->{'overview'} = $VAR1;
+    # Generate overview Perl data structure from xml database
+    my $parser = xmlParse->new($this->{'language'},0);
+    
+    my @printers = <"$libdir/db/source/printer/*.xml">;
+    my @drivers = <"$libdir/db/source/driver/*.xml">;
+    my $overview = $parser->parseOverview(\@printers, \@drivers, $cupsppds);
+    $this->{'overview'} = $overview;
 
     # Write on-disk cache file if we have one
     if (defined($this->{'overviewfile'})) {
@@ -1712,59 +1710,28 @@ sub get_overview {
 }
 
 sub get_overview_xml {
-    my ($this, $compile) = @_;
-
-    open( FCX, "$bindir/foomatic-combo-xml -O -l '$libdir'|") or do {
-	warn "Can't execute $bindir/foomatic-combo-xml -O -l '$libdir'\n";
-	return undef;
-    };
-    $_ = join('', <FCX>);
-    close FCX;
-    return $_;
+	die("get_overview_xml has been depricated as of foomatic-db-engine 5.0 because\n
+	it relied on functionality in the C programs that was not rewritten. \n");
 }
 
 sub get_combo_data_xml {
-    my ($this, $drv, $poid, $withoptions) = @_;
-
-    # Insert the default option settings if there are some and the user
-    # desires it.
-    my $options = "";
-    if (($withoptions) && (defined($this->{'dat'}))) {
-	my $dat = $this->{'dat'};
-	for my $arg (@{$dat->{'args'}}) {
-	    my $name = $arg->{'name'};
-	    my $default = $arg->{'default'};
-	    if (($name) && ($default)) {
-		$options .= " -o '$name'='$default'";
-	    }
-	}
-    }
-
-    open( FCX, "$bindir/foomatic-combo-xml -d '$drv' -p '$poid'$options -l '$libdir'|") or do {
-	warn "Can't execute $bindir/foomatic-combo-xml -d '$drv' -p '$poid'$options -l '$libdir'\n";
-	return undef;
-    };
-    $_ = join('', <FCX>);
-    close FCX;
-    return $_;
+	die("get_combo_data_xml has been depricated as of foomatic-db-engine 5.0 because\n
+	it relied on functionality in the C programs that was not rewritten. \n
+	Please use PPDs as an exchange format for combos.\n");
 }
 
 sub get_printer {
     my ($this, $poid) = @_;
     # Generate printer Perl data structure from database
-    my $VAR1;
+    my $printer;
     if (-r "$poid") {
-	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$poid'`) || do {
-	    warn ("Could not run \"foomatic-perl-data\"!\n");
-	    return undef;
-	};
+	my $parser = xmlParse->new($this->{'language'},0);
+	$printer = $parser->parsePrinter($poid);
     } elsif ($this->{'dbh'}) {
 	return $this->get_printer_from_sql_db($poid);
     } elsif (-r "$libdir/db/source/printer/$poid.xml") {
-	eval (`$bindir/foomatic-perl-data -P -l $this->{'language'} '$libdir/db/source/printer/$poid.xml'`) || do {
-	    warn ("Could not run \"foomatic-perl-data\"!\n");
-	    return undef;
-	};
+	my $parser = xmlParse->new($this->{'language'},0);
+	$printer = $parser->parsePrinter("$libdir/db/source/printer/$poid.xml");
     } else {
 	my ($make, $model);
 	if ($poid =~ /^([^\-]+)\-(.*)$/) {
@@ -1777,14 +1744,14 @@ sub get_printer {
 	    $make =~ s/_/ /g;
 	    $model = "Unknown model";
 	}
-	$VAR1 = {
+	$printer = {
 	    'id' => $poid,
 	    'make' => $make,
 	    'model' => $model,
 	    'noxmlentry' => 1
 	}
     }
-    return $VAR1;
+    return $printer;
 }
 
 sub make_exists {
@@ -1824,23 +1791,19 @@ sub get_printer_xml {
 sub get_driver {
     my ($this, $drv) = @_;
     # Generate driver Perl data structure from database
-    my $VAR1;
+    my $driver;
     if (-r "$drv") {
-	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$drv'`) || do {
-	    warn ("Could not run \"foomatic-perl-data\"!\n");
-	    return undef;
-	}
+	my $parser = xmlParse->new($this->{'language'},0);
+	$driver = $parser->parseDriver("$drv");
     } elsif ($this->{'dbh'}) {
 	return $this->get_driver_from_sql_db($drv);
     } elsif (-r "$libdir/db/source/driver/$drv.xml") {
-	eval (`$bindir/foomatic-perl-data -D -l $this->{'language'} '$libdir/db/source/driver/$drv.xml'`) || do {
-	    warn ("Could not run \"foomatic-perl-data\"!\n");
-	    return undef;
-	}
+	my $parser = xmlParse->new($this->{'language'},0);
+	$driver = $parser->parseDriver("$libdir/db/source/printer/$drv.xml");
     } else {
 	return undef;
     }
-    return $VAR1;
+    return $driver;
 }
 
 sub get_driver_xml {
@@ -2705,6 +2668,13 @@ sub sortvals {
 # themselves
 
 sub getdat ($ $ $) {
+	#As of foomatic-db-engine getdat has been renamed to get_combo_data
+	#getdat remains as a stub
+    my ($this, $drv, $poid) = @_;
+    return $this->get_combo_data($drv, $poid);
+}
+
+sub get_combo_data ($ $ $) {
     my ($this, $drv, $poid) = @_;
 
     my $ppdfile;
