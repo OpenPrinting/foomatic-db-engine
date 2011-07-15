@@ -51,12 +51,6 @@ SBINDIR=$(sbindir)
 MANDIR=$(mandir)
 ETCDIR=$(sysconfdir)/foomatic
 
-## C settings
-CC=@CC@
-CFLAGS=@CFLAGS@
-XML_CFLAGS=@XML_CFLAGS@
-XML_LIBS=@XML_LIBS@
-
 ## Settings for Perl
 # Where to find the perl binary
 PERL=@PERL@
@@ -147,7 +141,7 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-configure foomatic-printjob \
 	foomatic-kitload foomatic-ppdfile foomatic-preferred-driver \
 	foomatic-cleanupdrivers foomatic-getpjloptions \
-	foomatic-addpjloptions foomatic-compiledb foomatic-fix-xml \
+	foomatic-addpjloptions foomatic-compiledb \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
 	foomatic-ppd-options foomatic-printermap-to-gutenprint-xml \
 	foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml \
@@ -155,7 +149,6 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
-	foomatic-combo-xml foomatic-perl-data \
 	foomatic-ppdfile foomatic-compiledb \
 	foomatic-ppd-options foomatic-searchprinter foomatic-ppd-to-xml \
 	foomatic-verify-xml
@@ -163,7 +156,7 @@ BINFILES:=foomatic-printjob foomatic-configure \
 # Administrative commands, only useful for admins
 SBINFILES:=foomatic-kitload \
 	foomatic-getpjloptions foomatic-addpjloptions \
-	foomatic-preferred-driver foomatic-fix-xml \
+	foomatic-preferred-driver \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
 	foomatic-printermap-to-gutenprint-xml \
 	foomatic-cleanupdrivers foomatic-extract-text
@@ -223,7 +216,7 @@ install-man: check-config
 
 # If the Perl scripts have "use lib 'lib/';" lines from a former
 # "make testing", we remove them.
-build: defaults lib/Makefile foomatic-combo-xml foomatic-perl-data man
+build: defaults lib/Makefile man
 	for m in $(BINFILES) $(SBINFILES); do \
 	  $(PERL) -p -i -e "s=use lib '.*lib/';\n==s" $$m; \
 	done
@@ -231,12 +224,6 @@ build: defaults lib/Makefile foomatic-combo-xml foomatic-perl-data man
 
 lib/Makefile: lib/Makefile.PL
 	( cd lib && $(PERL) Makefile.PL verbose INSTALLDIRS=$(PERL_INSTALLDIRS) )
-
-foomatic-combo-xml: foomatic-combo-xml.c
-	$(CC) $(CFLAGS) -o foomatic-combo-xml foomatic-combo-xml.c
-
-foomatic-perl-data: foomatic-perl-data.c
-	$(CC) $(CFLAGS) $(XML_CFLAGS) -o foomatic-perl-data foomatic-perl-data.c $(XML_LIBS)
 
 man: lib/Foomatic/Defaults.pm
 	chmod a+rx ./makeMan
@@ -247,9 +234,7 @@ clean: lib/Makefile remove-trash
 	rm -f lib/Makefile.old
 	rm -f lib/Foomatic/Defaults.pm
 	rm -f *~ .testing-stamp
-	rm -f *.o gs_out
-	rm -f foomatic-combo-xml
-	rm -f foomatic-perl-data
+	rm -f gs_out
 	rm -f Foomatic
 	rm -rf foomatic-db
 	rm -f $(BINFILES:=.1) $(SBINFILES:=.8)
@@ -302,7 +287,7 @@ uninstall-man: check-config
 # systems with installed Foomatic.
 inplace: testing
 testing: INPLACE = --inplace
-testing: defaults foomatic-combo-xml foomatic-perl-data man
+testing: defaults man
 	ln -sf lib/Foomatic .; \
 	for m in $(BINFILES) $(SBINFILES); do \
 	  $(PERL) -p -i -e "s=^\#\x21$(PERL)(.*)\n=\#\x21$(PERL)\$$1\nuse lib '`pwd`/lib/';\n=s" $$m; \

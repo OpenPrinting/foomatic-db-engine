@@ -1,16 +1,36 @@
 2011-07-15  Daniel Dressler <danieru.dressler@gmail.com>
-	* get combo data() now uses xmlParse. Removed some debug code 
+
+	* Fixed get overview, I had double quotes arround a glob
+	  I thought they were option =<. Removed on disk caching of overview
+	  code. This code was already no-op'd and obsolete due to an
+	  in memory cache.
+
+2011-07-15  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.1.in, foomatic-combo-xml.c,
+	  foomatic-fix-xml.in.  foomatic-perl-data.1.in,
+	  foomatic-perl-data.c, README, USAGE, Makefile.in, configure.ac:
+	  Removed the C accelerators foomatic-combo-xml and
+	  foomatic-perl-data. With Daniel Dressler's new code they are not
+	  needed any more. Also removed foomatic-fix-xml which is a
+	  workaround for a bug in libxml1. libxml1 is not supported any more
+	  since the removal of the C accelerators.
+
+2011-07-15  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* get_combo_data() now uses xmlParse. Removed some debug code
 	  from xmlParse
 
 2011-07-14  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* Fixed imports in lib/Foomatic/DB.pm, lib/Foomatic/xmlParse.pm,
-	  lib/Foomatic/phonebook.pm. DB::Get_printer, DB::get_driver, 
+	  lib/Foomatic/phonebook.pm. DB::get_printer, DB::get_driver,
 	  and DB::get_overview now use the perl xmlParse.
-	  
+
 	* Replaced body of get_combo_data_xml and get_overview_xml with an error
-	  that the function is debricated.
-	  
-	* Getdat has been renamed to get_combo_data, getdat is now a stub 
+	  that the function is deprecated.
+
+	* getdat has been renamed to get_combo_data, getdat is now a stub
 	  for its new name.
 
 2011-07-13  Till Kamppeter <till.kamppeter@gmail.com>
