@@ -1,3 +1,10 @@
+2011-07-15  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* Fixed get overview, I had double quotes arround a glob
+	  I thought they were option =<. Removed on disk caching of overview
+	  code. This code was already no-op'd and obsolete due to an
+	  in memory cache.
+
 2011-07-15  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-combo-xml.1.in, foomatic-combo-xml.c,
@@ -10,10 +17,12 @@
 	  since the removal of the C accelerators.
 
 2011-07-15  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* get_combo_data() now uses xmlParse. Removed some debug code
 	  from xmlParse
 
 2011-07-14  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* Fixed imports in lib/Foomatic/DB.pm, lib/Foomatic/xmlParse.pm,
 	  lib/Foomatic/phonebook.pm. DB::get_printer, DB::get_driver,
 	  and DB::get_overview now use the perl xmlParse.

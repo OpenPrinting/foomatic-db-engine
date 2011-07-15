@@ -1667,44 +1667,15 @@ sub get_overview {
 	return $this->{'overview'};
     }
 
-    # Read on-disk cache file if we have one
-    if (defined($this->{'overviewfile'})) {
-        if (!$rebuild && (-r $this->{'overviewfile'})) {
-	    if (open CFILE, "< $this->{'overviewfile'}") {
-		my $output = join('', <CFILE>);
-		close CFILE;
-		# Only output the cashed page if it was really
-		# completely written Before introduction of this
-		# measure pages would not display due to an incomplete
-		# cache file until the next page rebuild (or until
-		# manually nuking the cache).
-		if ($output =~ m!\]\;\s*$!s) {
-		    my $VAR1;
-		    if (eval $output) {
-			$this->{'overview'} = $VAR1;
-			return $this->{'overview'};
-		    }
-		}
-	    }
-	}
-    }
-
     # Build a new overview
     # Generate overview Perl data structure from xml database
     my $parser = Foomatic::xmlParse->new($this->{'language'},0);
     
-    my @printers = <"$libdir/db/source/printer/*.xml">;
-    my @drivers = <"$libdir/db/source/driver/*.xml">;
+    my @printers = <$libdir/db/source/printer/*.xml>;
+    my @drivers = <$libdir/db/source/driver/*.xml>;
     my $overview = $parser->parseOverview(\@printers, \@drivers, $cupsppds);
     $this->{'overview'} = $overview;
 
-    # Write on-disk cache file if we have one
-    if (defined($this->{'overviewfile'})) {
-	if (open CFILE, "> $this->{'overviewfile'}") {
-	    print CFILE Dumper($this->{'overview'});
-	    close CFILE;
-	}
-    }
 
     return $this->{'overview'};
 }
