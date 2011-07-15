@@ -754,7 +754,6 @@ sub getOptionRelationships {
 		#Clean out constraints
 		delete $optionCache{$option}->{'constraints'};
 	}
-	print Dumper(\%optionRelations); 
 	return \%optionRelations;
 }
 

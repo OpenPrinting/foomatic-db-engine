@@ -2726,13 +2726,13 @@ sub get_combo_data ($ $ $) {
 	}
 	
 	#TODO: Allow an xml that exists in the working dir
-	my $printerPath = "$libdir/db/source/printer/$printer->{'id'}.xml";
-	my $driverPath =  "$libdir/db/source/driver/$printer->{'driver'}.xml";
+	my $printerPath = "$libdir/db/source/printer/$p->{'id'}.xml";
+	my $driverPath =  "$libdir/db/source/driver/$p->{'driver'}.xml";
 	my @options = <$libdir/db/source/opt/*.xml>;
 	
 	#printer and driver xmls must exist
-	if (! (-r $printerPath)) {die("The Printer XML for $printer->{'id'} does not exist\n");}
-	if (! (-r $driverPath)) {die("The Driver XML for $printer->{'driver'} does not exist\n");}
+	if (! (-r $printerPath)) {die("The Printer XML for $p->{'id'} does not exist\n");}
+	if (! (-r $driverPath)) {die("The Driver XML for $p->{'driver'} does not exist\n");}
 	
 	$combo = $this->{'comboXmlParser'}->parseCombo($printerPath, $driverPath, \@options);
     }
