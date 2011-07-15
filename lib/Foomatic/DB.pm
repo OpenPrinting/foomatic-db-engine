@@ -2713,21 +2713,32 @@ sub get_combo_data ($ $ $) {
     }
 
     # Generate Perl data structure from database
-    my %dat;			# Our purpose in life...
+    my $combo;			# Our purpose in life...
     if ($this->{'dbh'}) {
-	%dat = %{$this->get_combo_data_from_sql_db($drv, $poid)};
+	$combo = $this->get_combo_data_from_sql_db($drv, $poid);
     } else {
-	my $VAR1;
-	eval (`$bindir/foomatic-combo-xml -d '$drv' -p '$poid' -l '$libdir' | $bindir/foomatic-perl-data -C -l $this->{'language'}`) || do {
-	    warn ("Could not run \"foomatic-combo-xml\"/" .
-		  "\"foomatic-perl-data\"!\n");
-	    return undef;
-	};
-	%dat = %{$VAR1};
+	#xmlParse caches some important information related to options.
+	#The object should be kept alive to maximise the untility of the cache
+	#Memory wise the cache is very small yet requires processing the
+	#entire option xml set to generate
+	if(!defined($this->{'comboXmlParser'})) {
+	    $this->{'comboXmlParser'} = Foomatic::xmlParse->new($this->{'language'}, 1);
+	}
+	
+	#TODO: Allow an xml that exists in the working dir
+	my $printerPath = "$libdir/db/source/printer/$p->{'id'}.xml";
+	my $driverPath =  "$libdir/db/source/driver/$p->{'driver'}.xml";
+	my @options = <$libdir/db/source/opt/*.xml>;
+	
+	#printer and driver xmls must exist
+	if (! (-r $printerPath)) {die("The Printer XML for $p->{'id'} does not exist\n");}
+	if (! (-r $driverPath)) {die("The Driver XML for $p->{'driver'} does not exist\n");}
+	
+	$combo = $this->{'comboXmlParser'}->parseCombo($printerPath, $driverPath, \@options);
     }
 
     # Funky one-at-a-time cache thing
-    $this->{'dat'} = \%dat;
+    $this->{'dat'} = $combo;
 
     # We do some additional stuff which is very awkward to implement in C
     # now, so we do it here
@@ -2735,13 +2746,8 @@ sub get_combo_data ($ $ $) {
     # Some clean-up
     checklongnames($this->{'dat'});
     sortoptions($this->{'dat'});
-    generalentries($this->{'dat'});
-    if (defined($this->{'dat'}{'shortdescription'})) {
-	$this->{'dat'}{'shortdescription'} =~ s/[\s\n\r]+/ /s;
-	$this->{'dat'}{'shortdescription'} =~ s/^\s+//;
-	$this->{'dat'}{'shortdescription'} =~ s/\s+$//;
-    }
-    return \%dat;
+    
+    return $combo;
 }
 
 sub getdatfromppd {
@@ -4779,20 +4785,6 @@ sub setnumericaldefaults {
 	    }
 	}
     }
-
-}
-
-sub generalentries {
-
-    my ($dat) = @_;
-
-    $dat->{'compiled-at'} = localtime(time());
-    $dat->{'timestamp'} = time();
-
-    my $user = `whoami`; chomp $user;
-    my $host = `hostname`; chomp $host;
-
-    $dat->{'compiled-by'} = "$user\@$host";
 
 }
 
