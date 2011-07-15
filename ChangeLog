@@ -1,3 +1,14 @@
+2011-07-15  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-combo-xml.1.in, foomatic-combo-xml.c,
+	  foomatic-fix-xml.in.  foomatic-perl-data.1.in,
+	  foomatic-perl-data.c, README, USAGE, Makefile.in, configure.ac:
+	  Removed the C accelerators foomatic-combo-xml and
+	  foomatic-perl-data. With Daniel Dressler's new code they are not
+	  needed any more. Also removed foomatic-fix-xml which is a
+	  workaround for a bug in libxml1. libxml1 is not supported any more
+	  since the removal of the C accelerators.
+
 2011-07-15  Daniel Dressler <danieru.dressler@gmail.com>
 	* get_combo_data() now uses xmlParse. Removed some debug code
 	  from xmlParse
@@ -10,7 +21,7 @@
 	* Replaced body of get_combo_data_xml and get_overview_xml with an error
 	  that the function is deprecated.
 
-	* Getdat has been renamed to get_combo_data, getdat is now a stub
+	* getdat has been renamed to get_combo_data, getdat is now a stub
 	  for its new name.
 
 2011-07-13  Till Kamppeter <till.kamppeter@gmail.com>

@@ -75,9 +75,8 @@ Installation
 Foomatic runs on all systems where one can run the Perl
 interpreter and Ghostscript.
 
-Besides Perl and a C compiler with its standard libraries you will
-need the libxml C library for XML handling and one of the tools
-"wget" or "curl".
+Besides Perl with its standard libraries you will need the libxml2
+Perl bindings for XML handling and one of the tools "wget" or "curl".
 
 In addition, you need the Foomatic database ("foomatic-db") and the
 Foomatic filters ("foomatic-filters"). It is recommended to install
@@ -93,38 +92,16 @@ and "curl" is located on
 
    http://curl.haxx.se/
 
-Because libxml is also used by GNOME, it is probably also part of
-every distribution of GNU/Linux or *BSD and one can also easily build
-it on any Unix-like operating system. If you distribution does not
-provide libxml you can get libxml from
-
-   http://www.xmlsoft.org/
-
-If your distribution contains libxml, note that besides the "libxml"
-or "libxml2" package you must install also a package with a name
-"libxml-devel" or "libxml2-devel" to be able to compile programs which
-use libxml. This additional package contains the needed header files
-and "xml(2)-config", which tells the C compiler where it finds the
-header files. If "xml(2)-config" or some header files in the packages
-of your distribution are missing, compile libxml from source.
-
-We have tested with the versions 1.8.17 and 2.4.19 of libxml,
-both work, but 1.8.17 requires that the XML files do not have leading
-blank lines. Use foomatic-fix-xml if you have such XML files (old or
-third-party files). libxml 1.8.9 and earlier do not work.
-
-Using libxml 2.x or newer is highly recommended.
-
 For Foomatic making sense one also needs Ghostscript (5.50 or newer,
 GPL Ghostscript 8.64 or newer highly recommended) if one has a
 non-PostScript printer. In addition, the appropriate driver for a
 non-PostScript printer must be installed.
 
-After installing the libxml package, Foomatic can be installed using
-the commands (if you have downloaded this package from the BZR
-repository, run "./make_configure" at first, for that you will also
-need libxml 2.x, the "autoconf" and "aclocal" utilities, "aclocal" is
-in the "automake" package in some distributions):
+Foomatic can be installed using the commands (if you have downloaded
+this package from the BZR repository, run "./make_configure" at first,
+for that you will also need libxml 2.x, the "autoconf" and "aclocal"
+utilities, "aclocal" is in the "automake" package in some
+distributions):
 
    ./configure
    make
@@ -133,11 +110,11 @@ in the "automake" package in some distributions):
 "make install" must be run as "root", the other commands can be run as
 a normal user.
 
-The "configure" script will auto-detect where the libxml is installed and
-which version and also where relevant programs, files, and directories
-of your printer spooler are located. In addition, it is made sure that
-Perl will find the Perl libraries of Foomatic. If "configure" fails because
-of something not being installed, do
+The "configure" script will auto-detect where relevant programs,
+files, and directories of your printer spooler are located. In
+addition, it is made sure that Perl will find the Perl libraries of
+Foomatic. If "configure" fails because of something not being
+installed, do
 
    rm -rf config.cache autom*.cache
 

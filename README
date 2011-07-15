@@ -794,64 +794,6 @@ foomatic-compiledb
   especially foomatic-configure will automagically compute just what they 
   need at runtime.
 
-foomatic-combo-xml
-
-  The Foomatic accelaration engine written in C, it computes
-  printer/driver combo XML files or the printer overview XML file in
-  less then two seconds (on a crappy 128MB/350MHz
-  machine). foomatic-compiledb needs less than three minutes for its
-  job on a two-processor 1GB/1GHz machine. The printer/driver combo
-  XML files are computed around 600 times faster than with the pure
-  Perl programs of the beginning of the XML Foomatic. In addition,
-  foomatic-combo-xml does not need more than 10 MB of memory.
-
-  The program is called by the Foomatic Perl library, but can also be
-  called stand-alone, call the program without command line options to
-  know how to use it.
-
-  foomatic-combo-xml does not need any XML parsing libraries, to make
-  it faster and less memory-consuming, the XML files are somehow
-  "manually" parsed.
-
-foomatic-perl-data
-
-  The XML-to-Perl translator, also written in C. This program reads
-  the XML files of the Foomatic database and translates them into Perl
-  data structures, so that the Perl scripts can access the data.
-
-  The intention of this program is to not need the many non-standard
-  Perl XML libraries which would make the installation of Foomatic
-  very awkward. Now only the libxml C library is needed, a library
-  which ships with most distributions of free operating systems. One
-  can use either libxml 1.x (1.8.17 and newer) or 2.x, but 2.x is
-  recommended.
-
-  Without any C helper programs the following problems appeared:
-
-  - The thing was *at least* an order of magnitude slower than life
-    under Postgres and Perl was. It took hours to run compile_db, and
-    up to some minutes (at least a few seconds) to compile one combo.
-    The first one took more time as the option cache loaded.
-
-  - Memory: compiledb compute processes peaked at about 150MB RAM.
-    You could turn down the number of computations per process, but it
-    never got much below 130MB.
-
-  - Due to the slowness of the Perl XML handling an on-disk cache was
-    used.  This lead to old files from the cache being used when one
-    changed something in the database and forgot to delete the cache.
-
-  - Many non-standard Perl libraries were needed which made the
-    installation of Foomatic rather difficult. Now only the libxml C
-    library is needed. This library ships with every modern distro of
-    GNU/Linux.
-
-foomatic-fix-xml
-
-  Run this program if you have compiled foomatic-perl-data against
-  libxml 1.x and you have old database entries with a leading blank
-  line. libxml 1.x chokes on leading blank lines.
-
 foomatic-cleanupdrivers
 
   Removes all driver entries with empty driver command lines. This way
@@ -979,11 +921,9 @@ get_drivers_for_printer
   appropriate; the frst two just return all and take no arguments.
 
 get_overview
-get_overview_xml
 
   This returns an overview listing of all printers, with ids, makes,
-  models, functionaliy, drivers, etc.  The various flavors return a
-  Perl data structure or XML.
+  models, functionaliy, drivers, etc.
 
 get_makes
 get_models_by_make
@@ -1014,15 +954,6 @@ normalizename
   numbers appear in correct numerical order. In addition,
   normalizename also applies normalize.
 
-get_combo_data_xml
-
-  This returns the combined printer/driver data for a particular
-  combination.  Arguments are driver and printer id.
-
-  The "combo" operation is less trival than it looks; be careful when
-  messing with it. It took us hours to get right... Currently, it is
-  implemented in the foomatic-combo-xml.c C accelerator.
-
 get_printer_xml
 get_printer
 get_driver_xml
@@ -1039,7 +970,7 @@ find_printer
   space or a '|', an IEEE-1284 device ID of a printer, manufacturer,
   model, Foomatic printer ID, or parts of any of the mentioned items.
 
-getdat
+get_combo_data
 
   This returns a Perl data structure of all the data for a given
   printer/driver combo. It contains a description of printer

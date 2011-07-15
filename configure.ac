@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.52])
 AC_INIT([foomatic-db-engine], 4.1.0)
-AC_CONFIG_SRCDIR(foomatic-perl-data.c)
+AC_CONFIG_SRCDIR(foomatic-ppdfile.in)
 
 # If the user didn't specify the $sysconfdir on the command line, let it
 # be /etc, not /usr/local/etc or /usr/etc
@@ -10,57 +10,9 @@ if [[ x$sysconfdir = 'x${prefix}/etc' ]]; then
 fi
 
 # Checks for programs.
-AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-
-dnl # Checks for libraries.
-dnl AC_PATH_XTRA
-dnl LIBS="$LIBS"
-
-#
-# Test for libxml
-#
-xml_version=
-AC_PATH_PROG(XML2_CONFIG, xml2-config)
-if test ! -z "$XML2_CONFIG"; then
-        xml_version=libxml2
-        XML_CFLAGS=`$XML2_CONFIG --cflags`
-        XML_LIBS=`$XML2_CONFIG --libs`
-fi
-if test -z "$xml_version"; then
-        AC_PATH_PROG(XML_CONFIG, xml-config)
-        if test ! -z "$XML_CONFIG"; then
-                xml_version=libxml
-                XML_CFLAGS=`$XML_CONFIG --cflags`
-                XML_LIBS=`$XML_CONFIG --libs`
-        fi
-fi
-AC_SUBST(XML_CFLAGS)
-AC_SUBST(XML_LIBS)
-
-# Checks for header files.
-AC_HEADER_DIRENT
-AC_HEADER_STDC
-dnl AC_CHECK_HEADERS(libxml/xmlmemory.h libxml/parser.h)
-
-# Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-
-# Checks for library functions.
-AC_CHECK_FUNCS(strdup strspn strstr)
-
-#
-# augment CFLAGS and LIBS temporarily while searching for the xml* functions
-#
-save_CFLAGS="$CFLAGS"
-save_LIBS="$LIBS"
-CFLAGS="$XML_CFLAGS $CFLAGS"
-LIBS="$XML_LIBS $LIBS"
-AC_CHECK_FUNCS(xmlParseFile xmlCreatePushParserCtxt xmlParseChunk xmlFreeParserCtxt xmlFreeDoc xmlDocGetRootElement xmlNodeListGetString)
-CFLAGS="$save_CFLAGS"
-LIBS="$save_LIBS"
 
 # Checks for programs/directories which are used by Foomtic
 
@@ -300,7 +252,7 @@ AC_CONFIG_FILES(Makefile makeDefaults makeMan
 foomatic-configure foomatic-printjob foomatic-kitload
 foomatic-ppdfile foomatic-preferred-driver foomatic-cleanupdrivers
 foomatic-getpjloptions foomatic-addpjloptions
-foomatic-compiledb foomatic-fix-xml
+foomatic-compiledb
 foomatic-nonumericalids foomatic-replaceoldprinterids
 foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
 foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml
