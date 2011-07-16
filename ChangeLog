@@ -1,9 +1,12 @@
 2011-07-15  Daniel Dressler <danieru.dressler@gmail.com>
 
-	* Fixed get overview, I had double quotes arround a glob
+	* Fixed get_overview(), I had double quotes arround a glob
 	  I thought they were option =<. Removed on disk caching of overview
 	  code. This code was already no-op'd and obsolete due to an
 	  in memory cache.
+	  
+	* Fix in get_combo_data(), I was using the default driver instead of the
+	  one passed as an argument.
 
 2011-07-15  Till Kamppeter <till.kamppeter@gmail.com>
 
