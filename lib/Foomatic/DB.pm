@@ -1825,7 +1825,7 @@ sub get_drivers_for_printer {
 	}
     }
 
-    return undef;
+    return ();
 }
 
 
@@ -2715,8 +2715,13 @@ sub get_combo_data ($ $ $) {
     # now, so we do it here
 
     # Some clean-up
-    checklongnames($this->{'dat'});
-    sortoptions($this->{'dat'});
+    if(defined($combo)) {
+        checklongnames($this->{'dat'});
+        sortoptions($this->{'dat'});
+    
+    } else {#An error occured
+	$this->{'log'} = $this->{'comboXmlParser'}{'log'};
+    }
     
     return $combo;
 }

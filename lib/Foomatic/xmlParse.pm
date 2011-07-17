@@ -907,7 +907,7 @@ sub isPairSupported {
 		if(defined($printer->{'drivers_byname'}{$driver->{'id'}})) {
 			return 1;
 		}
-		if(defined($driver->{'printers_byname'}{$printer->{'id'}} {
+		if(defined($driver->{'printers_byname'}{$printer->{'id'}})) {
 			return 1;
 		}
 	} else {
@@ -936,7 +936,7 @@ sub parseCombo {
 	my $printer = $this->parsePrinter($printerPath);
 	
 	my $driver;#In memory driver cache
-	if(!defined($this->{'driverCache'}{$driverPath}) {
+	if(!defined($this->{'driverCache'}{$driverPath})) {
 		$driver = $this->parseDriver($driverPath);
 		$this->{'driverCache'}{$driverPath} = $driver;
 	} else {
