@@ -9,6 +9,9 @@ use XML::LibXML;
 use Clone;
 use Foomatic::phonebook;
 
+#Shared xml parser
+my $parser = XML::LibXML->new();
+
 ### Code style ###
 # - Tabs for indentation
 # - Camel case
@@ -28,7 +31,7 @@ sub new {
 	
 	#default to 0, perfect compatablity with C primary xml parsing
 	# 1 = compatibility of C combo parsing
-	# 2 = multilingual support
+	# 2 = multilingual support and printers_byname in drivers
 	$this->{'version'} = 0;
 	if($version) {
 		$this->{'version'} = $version;
@@ -39,6 +42,12 @@ sub new {
 	$this->{'driverPhonebook'}  = $phonebook->driver();
 	$this->{'optionPhonebook'}  = $phonebook->option();
 	$this->{'comboPhonebook'}   = $phonebook->combo();
+	
+	#If we encounter an error we log to this key and return undef
+	#Caller can then check for messages
+	$this->{'log'} = undef;
+	
+	
 	return $this;
 }
 
@@ -48,12 +57,6 @@ sub cleanID {
 	#remove everything before the leading slash
 	return $id;
 }
-
-
-#xml parser
-my $parser = XML::LibXML->new();
-
-
 
 sub generalGroups {
 	my ($this, $group, $perlData, $destinationKey, $node) = @_;
@@ -183,6 +186,9 @@ sub parsePrinter {
 						$this->setHumanReadableText(\%driver,\"comment", $comments);
 					}
 					push(@{$perlData{$destinationKey}}, \%driver);
+					if ($this->{'version'} > 1) {#drivers_byname
+						$perlData{$destinationKey.'_byname'}->{$driver{'id'}} = \%driver ;
+					}
 				}
 				
 			} elsif ($group == 13) {#lang
@@ -278,7 +284,7 @@ sub parseDriver {
 
 
 					push(@{$perlData{$destinationKey}}, \%printer);
-					if ($this->{'version'} > 1) {
+					if ($this->{'version'} > 1) {#printers_byname
 						$perlData{$destinationKey.'_byname'}->{$printer{'id'}} = \%printer ;
 					}
 				}
@@ -732,6 +738,9 @@ sub parseOverview {
 					}
 				}
 				
+				#add driver to printer's list of drivers
+				push(@{$printers{$id}->{'drivers'}}, $driverName);
+				
 				#add driver data to printer
 				$printers{$id}->{'driverproperties'}{$driverName} = $this->getPrinterSpecificDriver($driver, $printer, 0);
 			}
@@ -890,6 +899,34 @@ sub setPPDFile {
 	$structure->{'ppdfile'} = $ppd if(defined($ppd));
 }
 
+sub isPairSupported {
+	my ($this, $printer, $driver) = @_;
+	
+	if(defined($printer->{'drivers_byname'})) {
+		#fast path, only for version 2 or better
+		if(defined($printer->{'drivers_byname'}{$driver->{'id'}})) {
+			return 1;
+		}
+		if(defined($driver->{'printers_byname'}{$printer->{'id'}} {
+			return 1;
+		}
+	} else {
+		#fallback slow path
+		foreach my $ptrDriver (@{$printer->{'drivers'}}) {
+			if($ptrDriver->{'id'} eq $driver->{'id'}) {
+				return 1;
+			}
+		}
+		foreach my $dvrPrinter (@{$driver->{'printers'}}) {
+			if($dvrPrinter->{'id'} eq $printer->{'id'}) {
+				return 1;
+			}
+		}
+	}
+	
+	return 0;
+}
+
 sub parseCombo {
 	my ($this, $printerPath, $driverPath, $optionXMLs) = @_;
 	die if (! (-r $printerPath));#printer and driver xmls must exist
@@ -904,6 +941,11 @@ sub parseCombo {
 		$this->{'driverCache'}{$driverPath} = $driver;
 	} else {
 		$driver = $this->{'driverCache'}{$driverPath};
+	}
+	
+	if(!$this->isPairSupported($printer, $driver)) {
+		$this->{'log'} = "Error: The $printer->{'id'} and $driver->{'id'} pair is unsupported\n";
+		return undef;
 	}
 	
 	$driver = $this->getPrinterSpecificDriver($driver, $printer, 1);
