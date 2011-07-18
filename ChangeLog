@@ -1,3 +1,8 @@
+2011-07-18  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* Fixed xmlParse attempting to use driver->{'id'} in stead of
+	  driver->{'name'} in isPairSupported() and parseCombo()'s error log
+
 2011-07-17  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* Added printer_byname key to driver data structure for fast lookup, 
