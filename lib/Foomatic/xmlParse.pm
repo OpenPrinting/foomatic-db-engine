@@ -904,16 +904,16 @@ sub isPairSupported {
 	
 	if(defined($printer->{'drivers_byname'})) {
 		#fast path, only for version 2 or better
-		if(defined($printer->{'drivers_byname'}{$driver->{'id'}})) {
+		if(defined($printer->{'drivers_byname'}{$driver->{'name'}})) {
 			return 1;
 		}
-		if(defined($driver->{'printers_byname'}{$printer->{'id'}})) {
+		if(defined($driver->{'printers_byname'}{$printer->{'name'}})) {
 			return 1;
 		}
 	} else {
 		#fallback slow path
 		foreach my $ptrDriver (@{$printer->{'drivers'}}) {
-			if($ptrDriver->{'id'} eq $driver->{'id'}) {
+			if($ptrDriver->{'name'} eq $driver->{'name'}) {
 				return 1;
 			}
 		}
@@ -944,7 +944,7 @@ sub parseCombo {
 	}
 	
 	if(!$this->isPairSupported($printer, $driver)) {
-		$this->{'log'} = "Error: The $printer->{'id'} and $driver->{'id'} pair is unsupported\n";
+		$this->{'log'} = "Error: The $printer->{'id'} and $driver->{'name'} pair is unsupported\n";
 		return undef;
 	}
 	
