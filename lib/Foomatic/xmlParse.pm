@@ -532,7 +532,9 @@ sub getDriverPrinter {
 	my ($this, $driver, $printerID) = @_;
 	my $drvPrinter = 0;
 	if($driver->{'printers_byname'}) {#version 2 or better
-		$drvPrinter = $driver->{'printers_byname'}{$printerID};
+		if(defined($driver->{'printers_byname'}{$printerID})) {
+			$drvPrinter = $driver->{'printers_byname'}{$printerID};
+		}
 	} elsif ($driver->{'printers'}) {#much slower fall back
 		foreach my $hash (@{$driver->{'printers'}}) {
 			if ($hash->{'id'} && $hash->{'id'} eq $printerID) {
@@ -655,6 +657,12 @@ sub parseOverview {
 		
 		my $driverPerlData = $this->parseDriver($driverXML);
 		
+		if($skipPPDs && ((!$driverPerlData->{'cmd'}) &&
+			   (!$driverPerlData->{'cmd_cmd'})) ) {
+			next; #A driver that lacks a cmd or a pdf_cmd (cmd_cmd)
+			      #is useless ad should not appear in overview
+		}
+		
 		#delete unused nodes
 		foreach my $node (@unwantedDriverNodes) {
 			if (exists $driverPerlData->{$node}) {
@@ -673,12 +681,13 @@ sub parseOverview {
 		my $printerDrivers = $printer->{'drivers'};
 		$printer->{'drivers'} = []; #key gets reused
 		
-		foreach my $printerDriver (@{$printerDrivers}) {
-			if(defined($printerDriver->{'ppd'}) && $skipPPDs) { #cupsppd option, skipPPDs
+		foreach my $printerDriver (@{$printerDrivers}) {#cupsppd option, skipPPDs
+			if($skipPPDs && (defined($printerDriver->{'ppd'}) )) { 
+				#the printer driver pair is being skipped
 				my $driverPrinter = $this->getDriverPrinter($drivers{$printerDriver->{'id'}}, $printer->{'id'});
-				$driverPrinter = undef;
+				$driverPrinter->{'id'} = undef if ($driverPrinter);
 				$printerDriver = undef;
-			} else {
+			} elsif( defined($drivers{$printerDriver->{'id'}}->{'type'}) ) {
 				push(@{$printer->{'drivers'}}, $printerDriver->{'id'});
 			}
 		}
@@ -688,7 +697,7 @@ sub parseOverview {
 		
 		#add driver data to printer in memory
 		foreach my $driver ( @{$printerDrivers} ) {
-			next if (!defined($driver));#This pair was skipped because of skipPPDs
+			next if (!defined($driver->{'id'}));#This pair was skipped because of skipPPDs
 			
 			my $id = $driver->{'id'};
 			
@@ -702,7 +711,6 @@ sub parseOverview {
 			}
 			
 			#only add the driver data if the driver is in memory
-			#TODO: Figure out why it only works with the "->{'type'}"
 			if (defined($drivers{$id}->{'type'})) {
 				$printer->{'driverproperties'}{$id} = $this->getPrinterSpecificDriver($drivers{$id}, $printer, 0);
 			}
@@ -758,7 +766,6 @@ sub parseOverview {
 
 #COMBO DATA
 
-my %driverCache;
 my %optionCache;
 my %optionRelations;
 
