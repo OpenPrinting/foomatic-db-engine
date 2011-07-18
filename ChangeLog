@@ -1,5 +1,10 @@
 2011-07-18  Daniel Dressler <danieru.dressler@gmail.com>
 
+	* Fixed xmlParse's parseOverview not skipping drivers with no
+	  command line or pdf command line.
+
+2011-07-18  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* Fixed xmlParse attempting to use driver->{'id'} in stead of
 	  driver->{'name'} in isPairSupported() and parseCombo()'s error log
 
