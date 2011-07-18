@@ -9,6 +9,9 @@ use XML::LibXML;
 use Clone;
 use Foomatic::phonebook;
 
+#Shared xml parser
+my $parser = XML::LibXML->new();
+
 ### Code style ###
 # - Tabs for indentation
 # - Camel case
@@ -28,7 +31,7 @@ sub new {
 	
 	#default to 0, perfect compatablity with C primary xml parsing
 	# 1 = compatibility of C combo parsing
-	# 2 = multilingual support
+	# 2 = multilingual support and printers_byname in drivers
 	$this->{'version'} = 0;
 	if($version) {
 		$this->{'version'} = $version;
@@ -39,6 +42,12 @@ sub new {
 	$this->{'driverPhonebook'}  = $phonebook->driver();
 	$this->{'optionPhonebook'}  = $phonebook->option();
 	$this->{'comboPhonebook'}   = $phonebook->combo();
+	
+	#If we encounter an error we log to this key and return undef
+	#Caller can then check for messages
+	$this->{'log'} = undef;
+	
+	
 	return $this;
 }
 
@@ -49,37 +58,33 @@ sub cleanID {
 	return $id;
 }
 
-
-#xml parser
-my $parser = XML::LibXML->new();
-
-
-
 sub generalGroups {
 	my ($this, $group, $perlData, $destinationKey, $node) = @_;
-	if($group eq 1) {
+	if($group > 10) {
+		return 0;#option is not general
+	} elsif($group == 1) {
 		my $value = $node->to_literal;
 		if(!($value eq '')) {$$perlData{$$destinationKey} = $value;}
 		#basic "take node text and put into hash"
 		
-	} elsif ($group eq 2) {
+	} elsif ($group == 2) {
 		$$perlData{$$destinationKey} = 1;
 		#if the node was found set key to true
 		
-	} elsif ($group eq 3) {
+	} elsif ($group == 3) {
 		$$perlData{$$destinationKey} = 0;
 		#if node was found set key to false
 		
-	} elsif ($group eq 4) {
+	} elsif ($group == 4) {
 		$$perlData{$$destinationKey} = cleanID( $node->to_literal );
 		#ID
 		
-	} elsif ($group eq 5) {
+	} elsif ($group == 5) {
 		$$perlData{$$destinationKey} = {};
 		$this->setMargins($perlData,$destinationKey, $node);
-	} elsif($group eq 6) {
+	} elsif($group == 6) {
 		$this->setHumanReadableText($perlData,$destinationKey, $node);
-	} elsif($group eq 7) {
+	} elsif($group == 7) {
 		my $value = $node->to_literal;
 		$value =~ s/^\s+//;
 		$value =~ s/\s+$//;
@@ -166,7 +171,7 @@ sub parsePrinter {
 			if( $this->generalGroups($group, \%perlData, \$destinationKey, $node) ){
 				
 			#The specific groups
-			} elsif ($group eq 12) {#drivers
+			} elsif ($group == 12) {#drivers
 				foreach my $subnode ($node->findnodes("./driver")) {
 					my %driver;
 					foreach my $driverID ($subnode->findnodes("./id[1]")) {
@@ -181,9 +186,12 @@ sub parsePrinter {
 						$this->setHumanReadableText(\%driver,\"comment", $comments);
 					}
 					push(@{$perlData{$destinationKey}}, \%driver);
+					if ($this->{'version'} > 1) {#drivers_byname
+						$perlData{$destinationKey.'_byname'}->{$driver{'id'}} = \%driver ;
+					}
 				}
 				
-			} elsif ($group eq 13) {#lang
+			} elsif ($group == 13) {#lang
 				foreach my $subnode ($node->findnodes("./*")) {
 					my $name = $subnode->nodeName();
 					if ($name eq "text" || $name eq "pjl") {next()};
@@ -197,7 +205,7 @@ sub parsePrinter {
 					push(@{$perlData{$destinationKey}}, \%lang);
 				}
 				
-			} elsif ($group eq 14) {#printer types
+			} elsif ($group == 14) {#printer types
 				$perlData{$destinationKey} = $node->nodeName;
 				
 			}
@@ -240,12 +248,12 @@ sub parseDriver {
 			if( $this->generalGroups($group, \%perlData, \$destinationKey, $node) ){
 				
 			#The specific groups
-			} elsif ($group eq 11) {#type
+			} elsif ($group == 11) {#type
 				my $type = $node->nodeName;
 				$type = uc(substr($type, 0, 1));
 				$perlData{$destinationKey} = $type;
 			
-			} elsif ($group eq 12) {#printers
+			} elsif ($group == 12) {#printers
 				foreach my $subnode ($node->findnodes("./printer")) {
 					my %printer;
 					
@@ -276,9 +284,12 @@ sub parseDriver {
 
 
 					push(@{$perlData{$destinationKey}}, \%printer);
+					if ($this->{'version'} > 1) {#printers_byname
+						$perlData{$destinationKey.'_byname'}->{$printer{'id'}} = \%printer ;
+					}
 				}
 				
-			} elsif ($group eq 13) {#support contact
+			} elsif ($group == 13) {#support contact
 				foreach my $subnode ($node->findnodes("./supportcontact")) {
 					my %contact;
 
@@ -291,7 +302,7 @@ sub parseDriver {
 					push(@{$perlData{$destinationKey}}, \%contact);
 				}
 				
-			} elsif ($group eq 14) {#packages
+			} elsif ($group == 14) {#packages
 				foreach my $subnode ($node->findnodes("./package")) {
 					my %package;
 
@@ -304,7 +315,7 @@ sub parseDriver {
 					push(@{$perlData{$destinationKey}}, \%package);
 				}
 				
-			} elsif ($group eq 15) {#license link
+			} elsif ($group == 15) {#license link
 				my $pref = $this->{"langPref"};
 				my $link;
 				foreach my $subnode ($node->findnodes("./en/\@url[1]")) {
@@ -379,10 +390,10 @@ sub parseOption {
 			if( $this->generalGroups($group, \%perlData, \$destinationKey, $node) ){
 				
 			#The specific groups
-			} elsif ($group eq 11) { #constraints
+			} elsif ($group == 11) { #constraints
 				setConstraint($node, \$perlData{$destinationKey});
 				
-			} elsif ($group eq 12) { #enum_values
+			} elsif ($group == 12) { #enum_values
 				foreach my $subnode ($node->findnodes("./enum_val")) {
 					my %enumValue;
 					
@@ -412,7 +423,7 @@ sub parseOption {
 					push(@{$perlData{$destinationKey}}, \%enumValue);
 				}
 				
-			} elsif ($group eq 13) {#Style
+			} elsif ($group == 13) {#Style
 				#Style is odd, it needs 
 				my $style = $node->nodeName();
 				if ($style eq 'arg_postscript') {
@@ -494,6 +505,7 @@ sub driverNodesToKeep {
 	'supplier',
 	'photo',
 	'printers',
+	'printers_byname',
 	'packages',
 	'origlicensetext',
 	'licensetext',
@@ -519,10 +531,13 @@ sub nodesToDelete {
 sub getDriverPrinter {
 	my ($this, $driver, $printerID) = @_;
 	my $drvPrinter = 0;
-	if ($driver->{'printers'}) {
+	if($driver->{'printers_byname'}) {#version 2 or better
+		$drvPrinter = $driver->{'printers_byname'}{$printerID};
+	} elsif ($driver->{'printers'}) {#much slower fall back
 		foreach my $hash (@{$driver->{'printers'}}) {
 			if ($hash->{'id'} && $hash->{'id'} eq $printerID) {
 				$drvPrinter = $hash;
+				last;
 			}
 		}
 	}
@@ -533,43 +548,70 @@ sub getPrinterSpecificDriver {
 	my ($this, $driver, $printer, $nonDestructive) = @_;
 	my $printerName = $printer->{'id'};
 	
-	my $specificDriver = Clone::clone($driver);
-	delete $specificDriver->{'printers'};#Unused by both callers
 	
 	#A printer might have a lower dpi than the driver's default
-	#Use the lowwest, can be overwriten by printer specific data.
-	if(defined($printer->{'maxxres'}) && defined($specificDriver->{'drvmaxresx'})
-	 && $printer->{'maxxres'} < $specificDriver->{'drvmaxresx'}) {
-		$specificDriver->{'drvmaxresx'} = $printer->{'maxxres'};
+	#Use the lowwest, can be further overwriten by pair specific data.
+	my $overrideX = 0;
+	if(defined($printer->{'maxxres'}) && defined($driver->{'drvmaxresx'})
+	 && $printer->{'maxxres'} < $driver->{'drvmaxresx'}) {
+		$overrideX = 1;
 	} #X cordanate
-	if(defined($printer->{'maxyres'}) && defined($specificDriver->{'drvmaxresy'})
-	 && $printer->{'maxyres'} < $specificDriver->{'drvmaxresy'}) {
-		$specificDriver->{'drvmaxresy'} = $printer->{'maxyres'};
-	} #Y cordanate, just adding so that code is not mistaken as duplicated
+	my $overrideY = 0;
+	if(defined($printer->{'maxyres'}) && defined($driver->{'drvmaxresy'})
+	 && $printer->{'maxyres'} < $driver->{'drvmaxresy'}) {
+		$overrideX = 1;
+	} #Y cordanate
 	
 	#Find the printer inside the original driver
 	my $drvPrinter = $this->getDriverPrinter($driver, $printerName);
+	my $specificDriver;
 	
-	#source key, key to overwrite with printer specific data, if present
-	my @overrides = ( 
-	['excmaxresy', 'drvmaxresy'],
-	['excmaxresx', 'drvmaxresx'],
-	['exccolor', 'drvcolor'],
-	['excgraphics', 'graphics'],
-	['exclineart', 'lineart'],
-	['exctext', 'text'],
-	['excphoto', 'photo'],
-	['margins', 'combomargins']);
-	
-	foreach my $key (@overrides) {
-		if($drvPrinter && defined( $drvPrinter->{$key->[0]} ) ) {
-			$specificDriver->{$key->[1]} =  $drvPrinter->{$key->[0]};
-			
+	#Do we need to customize the driver data, making a clone
+	#or is the original data ok?
+	if( $overrideX || $overrideY || ($drvPrinter && (
+		defined $drvPrinter->{'excmaxresy'}  ||
+		defined $drvPrinter->{'excmaxresx'}  ||
+		defined $drvPrinter->{'exccolor'}    ||
+		defined $drvPrinter->{'excgraphics'} ||
+		defined $drvPrinter->{'exclineart'}  ||
+		defined $drvPrinter->{'exctext'}     ||
+		defined $drvPrinter->{'excphoto'} )) ) {
+		
+		$specificDriver = Clone::clone($driver);
+		
+		#Overview needs this data removed in a clone
+		delete $specificDriver->{'printers'} if (!$nonDestructive);
+		
+		if($overrideX) {
+			$specificDriver->{'drvmaxresx'} = $printer->{'maxxres'};
 		}
+		if($overrideY) {
+			$specificDriver->{'drvmaxresy'} = $printer->{'maxyres'};
+		}
+		
+		#source key, key to overwrite with printer specific data, if present
+		my @overrides = ( 
+		['excmaxresy', 'drvmaxresy'],
+		['excmaxresx', 'drvmaxresx'],
+		['exccolor', 'drvcolor'],
+		['excgraphics', 'graphics'],
+		['exclineart', 'lineart'],
+		['exctext', 'text'],
+		['excphoto', 'photo'],
+		['margins', 'combomargins']);
+		
+		foreach my $keys (@overrides) {
+			if($drvPrinter && defined( $drvPrinter->{$keys->[0]} ) ) {
+				$specificDriver->{$keys->[1]} =  $drvPrinter->{$keys->[0]};
+				
+			}
+		}
+	} else {#The general driver is the specific one
+		$specificDriver = $driver;
 	}
 
-	#overview needs the original priner specific data removed so that it does not
-	#get reprocessed
+	#overview needs the original priner specific data removed
+	# so that it does not get reprocessed
 	if($drvPrinter && !$nonDestructive) { 
 		$drvPrinter->{'id'} = undef; #We clean out the array later,
 		#Quick and dirty delete.
@@ -695,6 +737,9 @@ sub parseOverview {
 						'noxmlentry' => 1
 					}
 				}
+				
+				#add driver to printer's list of drivers
+				push(@{$printers{$id}->{'drivers'}}, $driverName);
 				
 				#add driver data to printer
 				$printers{$id}->{'driverproperties'}{$driverName} = $this->getPrinterSpecificDriver($driver, $printer, 0);
@@ -854,14 +899,54 @@ sub setPPDFile {
 	$structure->{'ppdfile'} = $ppd if(defined($ppd));
 }
 
+sub isPairSupported {
+	my ($this, $printer, $driver) = @_;
+	
+	if(defined($printer->{'drivers_byname'})) {
+		#fast path, only for version 2 or better
+		if(defined($printer->{'drivers_byname'}{$driver->{'id'}})) {
+			return 1;
+		}
+		if(defined($driver->{'printers_byname'}{$printer->{'id'}})) {
+			return 1;
+		}
+	} else {
+		#fallback slow path
+		foreach my $ptrDriver (@{$printer->{'drivers'}}) {
+			if($ptrDriver->{'id'} eq $driver->{'id'}) {
+				return 1;
+			}
+		}
+		foreach my $dvrPrinter (@{$driver->{'printers'}}) {
+			if($dvrPrinter->{'id'} eq $printer->{'id'}) {
+				return 1;
+			}
+		}
+	}
+	
+	return 0;
+}
+
 sub parseCombo {
 	my ($this, $printerPath, $driverPath, $optionXMLs) = @_;
 	die if (! (-r $printerPath));#printer and driver xmls must exist
 	die if (! (-r $driverPath));
 	 
 	my $combo = $this->defaultComboData();
-	my $driver = $this->parseDriver($driverPath);
 	my $printer = $this->parsePrinter($printerPath);
+	
+	my $driver;#In memory driver cache
+	if(!defined($this->{'driverCache'}{$driverPath})) {
+		$driver = $this->parseDriver($driverPath);
+		$this->{'driverCache'}{$driverPath} = $driver;
+	} else {
+		$driver = $this->{'driverCache'}{$driverPath};
+	}
+	
+	if(!$this->isPairSupported($printer, $driver)) {
+		$this->{'log'} = "Error: The $printer->{'id'} and $driver->{'id'} pair is unsupported\n";
+		return undef;
+	}
 	
 	$driver = $this->getPrinterSpecificDriver($driver, $printer, 1);
 	$this->setPPDFile($combo, $printer, $driver);

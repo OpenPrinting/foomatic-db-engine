@@ -240,27 +240,30 @@ sub generateppd {
 	}
     }
     
-    my @drvlist = $db->get_drivers_for_printer($poid);
+    my @drvlist = $db->get_drivers_for_printer($poid, 1);
     my $found = 0;
-    for my $d (@drvlist) {
-	last if ($found = ($driver eq $d));
-    }
-    if ( not $found ) {
-	warn "ERROR: $progname: Printer '$poid' and driver '$driver' are not compatible\n";
+    if(@drvlist) {
+	for my $d (@drvlist) {
+	    last if ($found = ($driver eq $d));
+	}
+	if ( not $found ) {
+	    warn "ERROR: $progname: Printer '$poid' and driver '$driver' are not compatible\n";
+	}
     }
     $found = 0;
     for my $d (@drivers) {
-	last if ($found = ($driver eq $d));
+        last if ($found = ($driver eq $d));
     }
     if ( not $found ) {
-	print STDERR "DEBUG: $progname: Driver '$driver' not in database!\n" if $debug;
+        print STDERR "DEBUG: $progname: Driver '$driver' not in database!\n" if $debug;
     }
 
     # Get all the data about this driver/printer pair
     my $possible = $db->getdat($driver, $poid);
+    
     # Stop if the printer is not supported by the given driver
-    die "ERROR: $progname: That printer and driver combination is not possible.\n"
-	if (!$possible);
+    die $db->{'log'} if (!$possible);
+    
     # Stop if the driver entry has an empty command line prototype or if there 
     # is no custom PPD file
     die "ERROR: $progname: There is neither a custom PPD file nor the driver database entry contains sufficient data to build a PPD file.\n"

@@ -25,6 +25,7 @@ sub new {
     my $type = shift(@_);
     my $this = bless {@_}, $type;
     $this->{'language'} = "C";
+    $this->{'log'} = undef;
     $this->connect_to_mysql_db;
     return $this;
 }
@@ -1667,16 +1668,17 @@ sub get_overview {
 	return $this->{'overview'};
     }
 
-    # Build a new overview
-    # Generate overview Perl data structure from xml database
-    my $parser = Foomatic::xmlParse->new($this->{'language'},0);
-    
+    # Fall back to XML database
+    my $parser = Foomatic::xmlParse->new($this->{'language'},2);
     my @printers = <$libdir/db/source/printer/*.xml>;
     my @drivers = <$libdir/db/source/driver/*.xml>;
     my $overview = $parser->parseOverview(\@printers, \@drivers, $cupsppds);
+    
+    if(!defined($overview)) {#an error occured
+	$this->{'log'} =  $parser->{'log'};
+    }
+
     $this->{'overview'} = $overview;
-
-
     return $this->{'overview'};
 }
 
@@ -1811,21 +1813,19 @@ sub get_printers_for_driver {
 
 # Routine lookup; just examine the overview
 sub get_drivers_for_printer {
-    my ($this, $printer) = @_;
+    my ($this, $printer, $skipIfXml) = @_;
     return $this->get_drivers_for_printer_from_sql_db($printer) if $this->{'dbh'};
 
-    my @drivers = ();
-
-    my $over = $this->get_overview();
-
-    my $p;
-    for $p (@{$over}) {
-	if ($p->{'id'} eq $printer) {
-	    return @{$p->{'drivers'}};
+    if(!$skipIfXml)  {
+	my $over = $this->get_overview();
+	foreach my $p (@{$over}) {
+	    if ($p->{'id'} eq $printer) {
+		return @{$p->{'drivers'}};
+	    }
 	}
     }
 
-    return undef;
+    return ();
 }
 
 
@@ -2715,8 +2715,13 @@ sub get_combo_data ($ $ $) {
     # now, so we do it here
 
     # Some clean-up
-    checklongnames($this->{'dat'});
-    sortoptions($this->{'dat'});
+    if(defined($combo)) {
+        checklongnames($this->{'dat'});
+        sortoptions($this->{'dat'});
+    
+    } else {#An error occured
+	$this->{'log'} = $this->{'comboXmlParser'}{'log'};
+    }
     
     return $combo;
 }
