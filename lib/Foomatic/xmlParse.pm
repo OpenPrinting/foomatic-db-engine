@@ -511,7 +511,9 @@ sub driverNodesToKeep {
 	'origlicensetext',
 	'licensetext',
 	'obsolete',
-	'patents'];
+	'patents',
+	'cmd',
+	'cmd_cmd'];
 }
 
 sub nodesToDelete {
@@ -658,10 +660,11 @@ sub parseOverview {
 		
 		my $driverPerlData = $this->parseDriver($driverXML);
 		
-		if($cupsMode && ((!$driverPerlData->{'cmd'}) &&
-			   (!$driverPerlData->{'cmd_cmd'})) ) {
-			next; #A driver that lacks a cmd or a pdf_cmd (cmd_cmd)
-			      #is useless ad should not appear in overview
+		if (($cupsMode == 1) && ((!$driverPerlData->{'cmd'}) &&
+			                 (!$driverPerlData->{'cmd_cmd'}))) {
+			next; # In CUPS mode 1 a driver that lacks a cmd or a
+			      # pdf_cmd (cmd_cmd) is useless and should not
+                              # appear in overview
 		}
 		
 		#delete unused nodes
@@ -684,7 +687,13 @@ sub parseOverview {
 		
 		foreach my $printerDriver (@{$printerDrivers}) {
 			#cupsppd mode, skips ppds
-			if(($cupsMode == 1) && (defined($printerDriver->{'ppd'}) )) { 
+			if ((($cupsMode == 1) &&
+			     (defined($printerDriver->{'ppd'}))) ||
+			    (($cupsMode == 2) &&
+			     ((!defined($drivers{$printerDriver->{'id'}}->{'type'})) ||
+			     ((!${drivers{$printerDriver->{'id'}}}->{'cmd'}) &&
+			      (!${drivers{$printerDriver->{'id'}}}->{'cmd_cmd'}))) &&
+			     (!defined($printerDriver->{'ppd'})))) { 
 				#the printer driver pair is being skipped
 				my $driverPrinter = $this->getDriverPrinter($drivers{$printerDriver->{'id'}}, $printer->{'id'});
 				$driverPrinter->{'id'} = undef if ($driverPrinter);
@@ -723,6 +732,17 @@ sub parseOverview {
 	#ADD DRIVER DATA TO PRINTERS WITHOUT XML ENTRIES
 	foreach my $driverName (keys %drivers) {
 		my $driver = $drivers{$driverName};
+		if (($cupsMode) && ((!$driver->{'cmd'}) &&
+				    (!$driver->{'cmd_cmd'}))) {
+			next; # In CUPS mode a driver that lacks a cmd or a
+			      # pdf_cmd (cmd_cmd) is useless and should not
+			      # appear in overview. Note that here we do
+			      # no need to consider that there could be
+			      # also a ready-made PPD file (CUPS mode 2), as
+			      # the links to the PPDs are in the printer
+			      # entry files and here we do not have a
+			      # printer entry.
+		}
 		foreach my $printer (@{$driver->{'printers'}}) {
 			if($printer->{'id'}) {
 				my $id = $printer->{'id'};
