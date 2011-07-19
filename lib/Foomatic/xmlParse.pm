@@ -183,7 +183,7 @@ sub parsePrinter {
 						$driver{"ppd"} = $ppd->to_literal;
 					}
 					foreach my $comments ($subnode->findnodes("./comments")) {
-						$this->setHumanReadableText(\%driver,\"comment", $comments);
+						$this->setHumanReadableText(\%driver,\"comment", $comments); # " Fix emacs sysntax highlighting
 					}
 					push(@{$perlData{$destinationKey}}, \%driver);
 					if ($this->{'version'} > 1) {#drivers_byname
@@ -263,12 +263,12 @@ sub parseDriver {
 					}
 					
 					foreach my $comments ($subnode->findnodes("./comments")) {
-						$this->setHumanReadableText(\%printer,\"comment", $comments);
+						$this->setHumanReadableText(\%printer,\"comment", $comments); # " Fix emacs sysntax highlighting
 					}
 					
 					if($this->{'version'} > 0) {
 						foreach my $margins ($subnode->findnodes("./margins")) {
-							$this->setMargins(\%printer,\"margins", $margins);
+							$this->setMargins(\%printer,\"margins", $margins); # " Fix emacs sysntax highlighting
 						}
 					}
 					
@@ -402,7 +402,7 @@ sub parseOption {
 					}
 					
 					foreach my $longnames ($subnode->findnodes('./ev_longname')) {
-						$this->setHumanReadableText(\%enumValue,\"comment", $longnames);
+						$this->setHumanReadableText(\%enumValue,\"comment", $longnames); # " Fix emacs sysntax highlighting
 					}
 					
 					foreach my $subsubnode ($subnode->findnodes('./ev_shortname')) {

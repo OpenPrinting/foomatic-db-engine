@@ -1,3 +1,9 @@
+2011-07-19  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/xmlParse.pm: Added some comments which work around a bug
+	  in the syntax highlighting of emacs, so that the file appears
+	  correctly highlighted and therefore more readable in emacs.
+
 2011-07-18  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* Fixed xmlParse's parseOverview not skipping drivers with no
@@ -10,24 +16,24 @@
 
 2011-07-17  Daniel Dressler <danieru.dressler@gmail.com>
 
-	* Added printer_byname key to driver data structure for fast lookup, 
+	* Added printer_byname key to driver data structure for fast lookup,
 	  only version 2 and better
-	  
+
 	* parseCombo() now caches the drivers. This speeds up bulk ppd
 	  generation.
-	
+
 	* getPrinterSpecificDriver() now only clones when needed,
 	  saving ~9 seconds off an overview
-	  
+
 	* 'log' keys now exist in DB and xmlParse objects,
 	  errors get logged there.
-	  
+
 	* parseCombo() now checks that the driver/printer pair is supported.
-	
+
 	* skipIfXml argument added to get_drivers_for_printer(), ppdfile uses it
-	  to avoid a overview generation, possible because parseCombo will 
+	  to avoid a overview generation, possible because parseCombo will
 	  now error if a pair is unsupported.
-	
+
 	* Fixed parseOverview not adding a driver to a printer's list of
 	  supported drivers during driver driven combination.
 
@@ -37,7 +43,7 @@
 	  I thought they were option =<. Removed on disk caching of overview
 	  code. This code was already no-op'd and obsolete due to an
 	  in memory cache.
-	  
+
 	* Fix in get_combo_data(), I was using the default driver instead of the
 	  one passed as an argument.
 
