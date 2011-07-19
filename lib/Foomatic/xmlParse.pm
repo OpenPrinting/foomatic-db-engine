@@ -624,10 +624,10 @@ sub getPrinterSpecificDriver {
 }
 
 sub parseOverview {
-	my ($this, $printerXMLs, $driverXMLs, $skipPPDs) = @_;
+	my ($this, $printerXMLs, $driverXMLs, $cupsMode) = @_;
 	$printerXMLs  || die("Need Printer XMLs\n");
 	$driverXMLs  || die("Need Driver XMLs\n");
-	$skipPPDs = 0 if(!defined($skipPPDs));
+	$cupsMode = 0 if(!defined($cupsMode));
 
 	
 	#BULK READ ALL PRINTERS
@@ -658,7 +658,7 @@ sub parseOverview {
 		
 		my $driverPerlData = $this->parseDriver($driverXML);
 		
-		if($skipPPDs && ((!$driverPerlData->{'cmd'}) &&
+		if($cupsMode && ((!$driverPerlData->{'cmd'}) &&
 			   (!$driverPerlData->{'cmd_cmd'})) ) {
 			next; #A driver that lacks a cmd or a pdf_cmd (cmd_cmd)
 			      #is useless ad should not appear in overview
@@ -682,8 +682,9 @@ sub parseOverview {
 		my $printerDrivers = $printer->{'drivers'};
 		$printer->{'drivers'} = []; #key gets reused
 		
-		foreach my $printerDriver (@{$printerDrivers}) {#cupsppd option, skipPPDs
-			if($skipPPDs && (defined($printerDriver->{'ppd'}) )) { 
+		foreach my $printerDriver (@{$printerDrivers}) {
+			#cupsppd mode, skips ppds
+			if(($cupsMode == 1) && (defined($printerDriver->{'ppd'}) )) { 
 				#the printer driver pair is being skipped
 				my $driverPrinter = $this->getDriverPrinter($drivers{$printerDriver->{'id'}}, $printer->{'id'});
 				$driverPrinter->{'id'} = undef if ($driverPrinter);
@@ -698,7 +699,7 @@ sub parseOverview {
 		
 		#add driver data to printer in memory
 		foreach my $driver ( @{$printerDrivers} ) {
-			next if (!defined($driver->{'id'}));#This pair was skipped because of skipPPDs
+			next if (!defined($driver->{'id'}));#This pair was skipped because of cupsMode
 			
 			my $id = $driver->{'id'};
 			
