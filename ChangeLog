@@ -1,9 +1,14 @@
+2011-07-19  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/xmlParse.pm: Fixed the "extended overview" CUPS
+	  overview mode. It did not set the $printer->{'drivers'} keys.
+
 2011-07-19  Daniel Dressler <danieru.dressler@gmail.com>
 
-	* Renamed "skipPPDs" to cupsMode.  
-	  
-	* Addded "extended overview" to parseOverview, when cupsMode == 2 
-	  pairs with ppd specific ppds are not skipped.  
+	* Renamed "skipPPDs" to cupsMode.
+
+	* Addded "extended overview" to parseOverview, when cupsMode == 2
+	  pairs with ppd specific ppds are not skipped.
 
 2011-07-19  Till Kamppeter <till.kamppeter@gmail.com>
 
