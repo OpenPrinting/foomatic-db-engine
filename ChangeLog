@@ -1,5 +1,15 @@
 2011-07-19  Till Kamppeter <till.kamppeter@gmail.com>
 
+	* lib/Foomatic/xmlParse.pm: When reading references to printer IDs
+	  in driver and option XML files, always apply the
+	  translate_printer_id() function from DB.pm, as in foomatic-db
+	  there are still some old references which were forgotten to be
+	  updated (bug).
+
+	* lib/Foomatic/DB.pm: Optimized translate_printer_id() by caching
+	  the translation table in memory instead of reading it again on every
+	  call.
+
 	* lib/Foomatic/xmlParse.pm: Added some comments which work around a bug
 	  in the syntax highlighting of emacs, so that the file appears
 	  correctly highlighted and therefore more readable in emacs.

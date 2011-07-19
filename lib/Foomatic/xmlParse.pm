@@ -8,6 +8,7 @@ use POSIX qw/strftime/;
 use XML::LibXML;
 use Clone;
 use Foomatic::phonebook;
+use Foomatic::DB;
 
 #Shared xml parser
 my $parser = XML::LibXML->new();
@@ -259,7 +260,7 @@ sub parseDriver {
 					
 					foreach my $subsubnode ($subnode->findnodes("./id")) {
 						my $key = $subsubnode->nodeName();
-						$printer{$key} = cleanID( $subsubnode->to_literal );
+						$printer{$key} = Foomatic::DB::translate_printer_id(cleanID( $subsubnode->to_literal ));
 					}
 					
 					foreach my $comments ($subnode->findnodes("./comments")) {
@@ -792,7 +793,7 @@ sub getOptionRelationships {
 			my $driver = '*';
 			my $make = '*';
 			if(defined($constraint->{'printer'})) {
-				$printer = cleanID($constraint->{'printer'});
+				$printer = Foomatic::DB::translate_printer_id(cleanID($constraint->{'printer'}));
 			} 
 			if(defined($constraint->{'driver'})) {
 				$driver = $constraint->{'driver'};

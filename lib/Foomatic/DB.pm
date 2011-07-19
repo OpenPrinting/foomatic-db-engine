@@ -1614,23 +1614,27 @@ sub get_printer_from_make_model_from_sql_db {
 }
 
 # Translate old numerical PostGreSQL printer IDs to the new clear text ones.
+my %id_tramslations = ();
 sub translate_printer_id {
     my ($oldid) = @_;
-    # Read translation table for the printer IDs
-    my $translation_table = "$libdir/db/oldprinterids";
-    open TRTAB, "< $translation_table" or return $oldid;
-    while (<TRTAB>) {
-	chomp;
-	my $searcholdid = quotemeta($oldid);
-	if (/^\s*$searcholdid\s+(\S+)\s*$/) {
-	    # ID found, return new ID
-	    my $newid = $1;
-	    close TRTAB;
-	    return $newid;
+    my $searcholdid = quotemeta($oldid);
+    if (keys(%id_tramslations) <= 0) {
+	# Read translation table for the printer IDs
+	my $translation_table = "$libdir/db/oldprinterids";
+	open TRTAB, "< $translation_table" or return $oldid;
+	while (<TRTAB>) {
+	    chomp;
+	    next if (/^\s*\#/); # Comment line
+	    if (/^\s*(\S+)\s+(\S+)\s*$/) {
+		# Valid line, cache it
+		$id_tramslations{$1} = $2;
+	    }
 	}
+	close TRTAB;
     }
-    # ID not found, return original one
-    close TRTAB;
+    if (my $newid = $id_tramslations{$oldid}) {
+	return $newid;
+    }
     return $oldid;
 }
 
