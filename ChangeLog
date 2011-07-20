@@ -1,3 +1,17 @@
+2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* xmlParse.pm: Changed default combo data to use more 
+	  rebust user detection. Added support for ppdentry in
+	  driver's list of printers. Made this ppdentry get included
+	  in combos under the key comboppentry.
+	
+	* phonebook.pm: Add the obsolete key to the list of keys 
+	  copied from driver data to combos.
+	
+	* DB.pm: put back generalentries() I removed had removed it
+	  thinking that it was obsolete. Also changed get_combo_data
+	  to use the new error logging key.
+
 2011-07-19  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/xmlParse.pm: Fixed the "extended overview" CUPS
