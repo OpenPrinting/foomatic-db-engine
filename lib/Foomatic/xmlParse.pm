@@ -266,6 +266,10 @@ sub parseDriver {
 					foreach my $comments ($subnode->findnodes("./comments")) {
 						$this->setHumanReadableText(\%printer,\"comment", $comments); # " Fix emacs sysntax highlighting
 					}
+
+					foreach my $ppdentry ($subnode->findnodes("./ppdentry")) {
+						$printer->{'ppdentry'} = $subsubnode->to_literal;
+					}
 					
 					if($this->{'version'} > 0) {
 						foreach my $margins ($subnode->findnodes("./margins")) {
@@ -580,7 +584,9 @@ sub getPrinterSpecificDriver {
 		defined $drvPrinter->{'excgraphics'} ||
 		defined $drvPrinter->{'exclineart'}  ||
 		defined $drvPrinter->{'exctext'}     ||
-		defined $drvPrinter->{'excphoto'} )) ) {
+		defined $drvPrinter->{'excphoto'}    ||
+		defined $drvPrinter->{'margin'}      ||
+		defined $drvPrinter->{'ppdentry'} )) ) {
 		
 		$specificDriver = Clone::clone($driver);
 		
@@ -603,6 +609,7 @@ sub getPrinterSpecificDriver {
 		['exclineart', 'lineart'],
 		['exctext', 'text'],
 		['excphoto', 'photo'],
+		['ppdentry', 'comboppdentry'],
 		['margins', 'combomargins']);
 		
 		foreach my $keys (@overrides) {
@@ -1081,9 +1088,9 @@ sub defaultComboData {
 		'args' => [],
 		'args_byname' => {},
 		'drivernopageaccounting' => 0,
-		'compiled-by' => getlogin().'@'.hostname,
+		'compiled-by' => getpwuid($<)'@'.hostname,
 		'color' => undef,
-		'timestamp' => time,
+		'timestamp' => time(),
 		'drivernopjl' => 0,
 		'ascii' => 0, #appears to be unused
 		'pcdriver' => undef,

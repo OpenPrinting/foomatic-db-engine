@@ -254,6 +254,7 @@ my $comboPhonebook =
 	['type', ''],
 	['pcdriver', ''],
 	['comment', ''],
+	['obsolete', ''],
 	['cmd', ''],
 	['color', ''],
 	['packages', ''],

@@ -2706,8 +2706,14 @@ sub get_combo_data ($ $ $) {
 	my @options = <$libdir/db/source/opt/*.xml>;
 	
 	#printer and driver xmls must exist
-	if (! (-r $printerPath)) {die("The Printer XML for $poid does not exist\n");}
-	if (! (-r $driverPath)) {die("The Driver XML for $drv does not exist\n");}
+	if (! (-r $printerPath)) {
+	    $this->{'log'} = "Error: The Printer XML for $poid does not exist\n";
+	    return undef;
+	}
+	if (! (-r $driverPath)) {
+	    $this->{'log'} = "Error: The Driver XML for $drv does not exist\n";
+	    return undef;
+	}
 	
 	$combo = $this->{'comboXmlParser'}->parseCombo($printerPath, $driverPath, \@options);
     }
@@ -4765,6 +4771,21 @@ sub setnumericaldefaults {
 	    }
 	}
     }
+
+}
+
+
+sub generalentries {
+
+    my ($dat) = @_;
+
+    $dat->{'compiled-at'} = localtime(time());
+    $dat->{'timestamp'} = time();
+
+    my $user = `whoami`; chomp $user;
+    my $host = `hostname`; chomp $host;
+
+    $dat->{'compiled-by'} = "$user\@$host";
 
 }
 
