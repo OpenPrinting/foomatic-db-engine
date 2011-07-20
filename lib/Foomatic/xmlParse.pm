@@ -52,14 +52,14 @@ sub new {
 	return $this;
 }
 
-sub cleanID {
+sub getCleanId {
 	my ($id) = @_;
 	$id =~ s/^[^\/]*\///;
 	#remove everything before the leading slash
 	return $id;
 }
 
-sub generalGroups {
+sub setGeneralGroups {
 	my ($this, $group, $perlData, $destinationKey, $node) = @_;
 	if($group > 10) {
 		return 0;#option is not general
@@ -77,7 +77,7 @@ sub generalGroups {
 		#if node was found set key to false
 		
 	} elsif ($group == 4) {
-		$$perlData{$$destinationKey} = cleanID( $node->to_literal );
+		$$perlData{$$destinationKey} = getCleanId( $node->to_literal );
 		#ID
 		
 	} elsif ($group == 5) {
@@ -169,7 +169,7 @@ sub parsePrinter {
 		foreach my $node ($root->findnodes($xpath)) {#takes the last node if multiple found
 			#See phonebook.pm for group lookup table
 			#The general groups
-			if( $this->generalGroups($group, \%perlData, \$destinationKey, $node) ){
+			if( $this->setGeneralGroups($group, \%perlData, \$destinationKey, $node) ){
 				
 			#The specific groups
 			} elsif ($group == 12) {#drivers
@@ -246,7 +246,7 @@ sub parseDriver {
 		
 		foreach my $node ($root->findnodes($xpath)) {
 			#The general groups
-			if( $this->generalGroups($group, \%perlData, \$destinationKey, $node) ){
+			if( $this->setGeneralGroups($group, \%perlData, \$destinationKey, $node) ){
 				
 			#The specific groups
 			} elsif ($group == 11) {#type
@@ -260,7 +260,7 @@ sub parseDriver {
 					
 					foreach my $subsubnode ($subnode->findnodes("./id")) {
 						my $key = $subsubnode->nodeName();
-						$printer{$key} = Foomatic::DB::translate_printer_id(cleanID( $subsubnode->to_literal ));
+						$printer{$key} = Foomatic::DB::translate_printer_id(getCleanId( $subsubnode->to_literal ));
 					}
 					
 					foreach my $comments ($subnode->findnodes("./comments")) {
@@ -392,7 +392,7 @@ sub parseOption {
 		
 		foreach my $node ($root->findnodes($xpath)) {
 			#The general groups
-			if( $this->generalGroups($group, \%perlData, \$destinationKey, $node) ){
+			if( $this->setGeneralGroups($group, \%perlData, \$destinationKey, $node) ){
 				
 			#The specific groups
 			} elsif ($group == 11) { #constraints
@@ -632,6 +632,29 @@ sub getPrinterSpecificDriver {
 	return $specificDriver;
 }
 
+sub getNoXmlPrinter{
+	my ($this, $id);
+	my ($make, $model);
+	if ($id =~ /^([^\-]+)\-(.*)$/) {
+		$make = $1;
+		$model = $2;
+		$make =~ s/_/ /g;
+		$model =~ s/_/ /g;
+	} else {
+		$make = $id;
+		$make =~ s/_/ /g;
+		$model = "Unknown model";
+	}
+	return {
+		'id' => $id,
+		'make' => $make,
+		'model' => $model,
+		'functionality' => 'X',
+		'unverified' => '0',
+		'noxmlentry' => 1
+	}
+}
+
 sub parseOverview {
 	my ($this, $printerXMLs, $driverXMLs, $cupsMode) = @_;
 	$printerXMLs  || die("Need Printer XMLs\n");
@@ -685,7 +708,7 @@ sub parseOverview {
 	}
 	
 
-	#ADD DRIVER DATA TO PRINTER
+	#PRINTER DRIVEN, ADD DRIVER DATA TO PRINTER
 	foreach my $printer (keys %printers) {
 		$printer = $printers{$printer};
 		
@@ -736,7 +759,7 @@ sub parseOverview {
 	}
 	
 
-	#ADD DRIVER DATA TO PRINTERS WITHOUT XML ENTRIES
+	#DRIVER DRIVEN, ADD DRIVER DATA TO PRINTER
 	foreach my $driverName (keys %drivers) {
 		my $driver = $drivers{$driverName};
 		if (($cupsMode) && ((!$driver->{'cmd'}) &&
@@ -753,26 +776,9 @@ sub parseOverview {
 		foreach my $printer (@{$driver->{'printers'}}) {
 			if($printer->{'id'}) {
 				my $id = $printer->{'id'};
+				
 				if (!$printers{$id}) {#create new no xml printer
-					my ($make, $model);
-					if ($id =~ /^([^\-]+)\-(.*)$/) {
-						$make = $1;
-						$model = $2;
-						$make =~ s/_/ /g;
-						$model =~ s/_/ /g;
-					} else {
-						$make = $id;
-						$make =~ s/_/ /g;
-						$model = "Unknown model";
-					}
-					$printers{$id} = {
-						'id' => $id,
-						'make' => $make,
-						'model' => $model,
-						'functionality' => 'X',
-						'unverified' => '0',
-						'noxmlentry' => 1
-					}
+					$printers{$id} = $this->getNoXmlPrinter($id);
 				}
 				
 				#add driver to printer's list of drivers
@@ -821,7 +827,7 @@ sub getOptionRelationships {
 			my $driver = '*';
 			my $make = '*';
 			if(defined($constraint->{'printer'})) {
-				$printer = Foomatic::DB::translate_printer_id(cleanID($constraint->{'printer'}));
+				$printer = Foomatic::DB::translate_printer_id(getCleanId($constraint->{'printer'}));
 			} 
 			if(defined($constraint->{'driver'})) {
 				$driver = $constraint->{'driver'};
@@ -938,21 +944,24 @@ sub setPPDFile {
 sub isPairSupported {
 	my ($this, $printer, $driver) = @_;
 	
-	if(defined($printer->{'drivers_byname'})) {
-		#fast path, only for version 2 or better
+	#fast paths, only for version 2 or better
+	if (defined($printer->{'drivers_byname'})) {
 		if(defined($printer->{'drivers_byname'}{$driver->{'name'}})) {
 			return 1;
 		}
-		if(defined($driver->{'printers_byname'}{$printer->{'name'}})) {
+	} elsif (defined($driver->{'printers_byname'})) {
+		if(defined($driver->{'printers_byname'}{$printer->{'id'}})) {
 			return 1;
 		}
-	} else {
-		#fallback slow path
+		
+	#fallback slow path
+	} elsif (defined($printer->{'drivers'})) {
 		foreach my $ptrDriver (@{$printer->{'drivers'}}) {
 			if($ptrDriver->{'name'} eq $driver->{'name'}) {
 				return 1;
 			}
 		}
+	} elsif (defined($driver->{'printers'})) {
 		foreach my $dvrPrinter (@{$driver->{'printers'}}) {
 			if($dvrPrinter->{'id'} eq $printer->{'id'}) {
 				return 1;
@@ -963,21 +972,64 @@ sub isPairSupported {
 	return 0;
 }
 
-sub parseCombo {
-	my ($this, $printerPath, $driverPath, $optionXMLs) = @_;
-	die if (! (-r $printerPath));#printer and driver xmls must exist
-	die if (! (-r $driverPath));
-	 
-	my $combo = $this->defaultComboData();
-	my $printer = $this->parsePrinter($printerPath);
+sub getXmlPath {
+	my ($this, $type, $id) = @_;
 	
-	my $driver;#In memory driver cache
-	if(!defined($this->{'driverCache'}{$driverPath})) {
-		$driver = $this->parseDriver($driverPath);
-		$this->{'driverCache'}{$driverPath} = $driver;
-	} else {
-		$driver = $this->{'driverCache'}{$driverPath};
+	my $potentialPath = $libdir.'/db/source/'.$type.'/'.$id.'.xml';
+	return $potentialPath if(-r $potentialPath);
+	
+	$potentialPath = './'.$id.'.xml';
+	return $potentialPath if(-r $potentialPath);
+	
+	$potentialPath = './'.$id;
+	return $potentialPath if(-r $potentialPath);
+	
+	return undef;
+}
+
+sub getCached{
+	my ($this, $type, $path) = @_;
+	
+	#build cache entry
+	if(!defined($this->{$type .'Cache'}{$path})) {
+		my $data;
+		if($type eq 'printer') {
+			$data = $this->parsePrinter($path);
+		} elsif ($type eq 'driver') {
+			$data = $this->parseDriver($path);
+		} elsif ($type eq 'option') {
+			$data = $this->parseOption($path);
+		}
+		$this->{$type .'Cache'}{$path} = $data;
 	}
+	
+	return $this->{$type .'Cache'}{$path};
+}
+
+sub parseCombo {
+	my ($this, $printerId, $driverId, $optionXMLs) = @_;
+
+	my $printerPath = $this->getXmlPath('printer', $printerId);
+	my $driverPath  = $this->getXmlPath('driver' , $driverId );
+
+	#driver xml must exist
+	if (!$driverPath) {
+	    $this->{'log'} = "Error: The Driver XML for $drv does not exist\n";
+	    return undef;
+	}
+
+	
+	#Get printer, printer xml need not exist
+	my $printer;
+	if ($printerPath) {
+		$printer = $this->getCached('printer', $printerPath);
+	} else {
+		$printer = $this->getNoXmlPrinter($printerId);
+	}
+
+	#Get driver
+	my $driver $this->getCached('driver', $driverPath);
+
 	
 	if(!$this->isPairSupported($printer, $driver)) {
 		$this->{'log'} = "Error: The $printer->{'id'} and $driver->{'name'} pair is unsupported\n";
@@ -990,7 +1042,9 @@ sub parseCombo {
 	#option relationships, and option cache
 	my $relationships = $this->getOptionRelationships($optionXMLs);
 	
-	#printer entries
+	
+	my $combo = $this->defaultComboData();
+	#add printer entries
 	foreach my $keys (@{$this->{'comboPhonebook'}->{'printer'}}) {
 		my ($source, $destination) = @{$keys};
 		$destination = $source if (!$destination);
@@ -1000,7 +1054,7 @@ sub parseCombo {
 		}
 	}
 	
-	#driver entries
+	#add driver entries
 	foreach my $keys (@{$this->{'comboPhonebook'}->{'driver'}}) {
 		my ($source, $destination) = @{$keys};
 		$destination = $source if (!$destination);
@@ -1012,7 +1066,7 @@ sub parseCombo {
 
 	}
 	
-	#option entries
+	#add option entries
 	my $printerName = $combo->{'id'};
 	my $driverName = $combo->{'driver'};
 	my $make = $combo->{'make'};
