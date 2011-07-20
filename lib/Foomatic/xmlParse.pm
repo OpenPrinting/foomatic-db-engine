@@ -268,7 +268,7 @@ sub parseDriver {
 					}
 
 					foreach my $ppdentry ($subnode->findnodes("./ppdentry")) {
-						$printer->{'ppdentry'} = $subsubnode->to_literal;
+						$printer{'ppdentry'} = $ppdentry->to_literal;
 					}
 					
 					if($this->{'version'} > 0) {
@@ -1088,7 +1088,7 @@ sub defaultComboData {
 		'args' => [],
 		'args_byname' => {},
 		'drivernopageaccounting' => 0,
-		'compiled-by' => getpwuid($<)'@'.hostname,
+		'compiled-by' => getpwuid($<).'@'.hostname,
 		'color' => undef,
 		'timestamp' => time(),
 		'drivernopjl' => 0,
