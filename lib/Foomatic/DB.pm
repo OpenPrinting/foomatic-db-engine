@@ -2697,25 +2697,11 @@ sub get_combo_data ($ $ $) {
 	#Memory wise the cache is very small yet requires processing the
 	#entire option xml set to generate
 	if(!defined($this->{'comboXmlParser'})) {
-	    $this->{'comboXmlParser'} = Foomatic::xmlParse->new($this->{'language'}, 1);
+	    $this->{'comboXmlParser'} = Foomatic::xmlParse->new($this->{'language'}, 2);
 	}
 	
-	#TODO: Allow an xml that exists in the working dir
-	my $printerPath = "$libdir/db/source/printer/".$poid.".xml";
-	my $driverPath =  "$libdir/db/source/driver/".$drv.".xml";
 	my @options = <$libdir/db/source/opt/*.xml>;
-	
-	#printer and driver xmls must exist
-	if (! (-r $printerPath)) {
-	    $this->{'log'} = "Error: The Printer XML for $poid does not exist\n";
-	    return undef;
-	}
-	if (! (-r $driverPath)) {
-	    $this->{'log'} = "Error: The Driver XML for $drv does not exist\n";
-	    return undef;
-	}
-	
-	$combo = $this->{'comboXmlParser'}->parseCombo($printerPath, $driverPath, \@options);
+	$combo = $this->{'comboXmlParser'}->parseCombo($poid, $drv, \@options);
     }
 
     # Funky one-at-a-time cache thing

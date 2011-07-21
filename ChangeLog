@@ -1,5 +1,24 @@
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
+	* DB.pm: now uses xmlParse version 2 for combos
+	
+	* phonebook.pm: comboppdentry and cmd_pdf are now copied for
+	  combos.
+	  
+	* xmlParse.pm: renamed cleanID to getCleanId. renamed
+	  generalGroups to setGeneralGroups. Fixed getDriverPrinter().
+	  Fixed two typos in  getPrinterSpecificDriver(). Brought noXml
+	  printer data generation into own function. Fixed isPairSupported
+	  now works if only one xml contains printer/driver entries.
+	  Added getXmlPath() which supports getting the paths for xmls
+	  in the library path and in the working directory.
+	  Brought driver and printer caching into its own function, used
+	  by parseCombo. Provided the xmlParse object stays alive combo
+	  generation will be cpu bound. Added support in parseCombo for
+	  noXml printers.
+
+2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* xmlParse.pm: Changed default combo data to use more 
 	  rebust user detection. Added support for ppdentry in
 	  driver's list of printers. Made this ppdentry get included
