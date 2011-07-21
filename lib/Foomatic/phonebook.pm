@@ -256,6 +256,7 @@ my $comboPhonebook =
 	['comment', ''],
 	['obsolete', ''],
 	['cmd', ''],
+	['cmd_cmd', 'cmd_pdf'],
 	['color', ''],
 	['packages', ''],
 	['license', ''],
@@ -278,6 +279,7 @@ my $comboPhonebook =
 	['ppdentry', 'driverppdentry'],
 	['margins', 'drivermargins'],
 	['combomargins', ''],
+	['comboppdentry', ''],
 	['nopageaccounting', 'drivernopageaccounting'],
 ]};
 sub combo {

@@ -2697,7 +2697,7 @@ sub get_combo_data ($ $ $) {
 	#Memory wise the cache is very small yet requires processing the
 	#entire option xml set to generate
 	if(!defined($this->{'comboXmlParser'})) {
-	    $this->{'comboXmlParser'} = Foomatic::xmlParse->new($this->{'language'}, 1);
+	    $this->{'comboXmlParser'} = Foomatic::xmlParse->new($this->{'language'}, 2);
 	}
 	
 	my @options = <$libdir/db/source/opt/*.xml>;

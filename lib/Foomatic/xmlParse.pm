@@ -9,6 +9,7 @@ use XML::LibXML;
 use Clone;
 use Foomatic::phonebook;
 use Foomatic::DB;
+use Foomatic::Defaults qw(:DEFAULT $DEBUG);
 
 #Shared xml parser
 my $parser = XML::LibXML->new();
@@ -538,7 +539,7 @@ sub nodesToDelete {
 sub getDriverPrinter {
 	my ($this, $driver, $printerID) = @_;
 	my $drvPrinter = 0;
-	if($driver->{'printers_byname'}) {#version 2 or better
+	if($this->{'version'} > 1) {#version 2 or better
 		if(defined($driver->{'printers_byname'}{$printerID})) {
 			$drvPrinter = $driver->{'printers_byname'}{$printerID};
 		}
@@ -568,7 +569,7 @@ sub getPrinterSpecificDriver {
 	my $overrideY = 0;
 	if(defined($printer->{'maxyres'}) && defined($driver->{'drvmaxresy'})
 	 && $printer->{'maxyres'} < $driver->{'drvmaxresy'}) {
-		$overrideX = 1;
+		$overrideY = 1;
 	} #Y cordanate
 	
 	#Find the printer inside the original driver
@@ -585,7 +586,7 @@ sub getPrinterSpecificDriver {
 		defined $drvPrinter->{'exclineart'}  ||
 		defined $drvPrinter->{'exctext'}     ||
 		defined $drvPrinter->{'excphoto'}    ||
-		defined $drvPrinter->{'margin'}      ||
+		defined $drvPrinter->{'margins'}      ||
 		defined $drvPrinter->{'ppdentry'} )) ) {
 		
 		$specificDriver = Clone::clone($driver);
@@ -633,7 +634,7 @@ sub getPrinterSpecificDriver {
 }
 
 sub getNoXmlPrinter{
-	my ($this, $id);
+	my ($this, $id) = @_;
 	my ($make, $model);
 	if ($id =~ /^([^\-]+)\-(.*)$/) {
 		$make = $1;
@@ -652,7 +653,7 @@ sub getNoXmlPrinter{
 		'functionality' => 'X',
 		'unverified' => '0',
 		'noxmlentry' => 1
-	}
+	};
 }
 
 sub parseOverview {
@@ -945,26 +946,25 @@ sub isPairSupported {
 	my ($this, $printer, $driver) = @_;
 	
 	#fast paths, only for version 2 or better
-	if (defined($printer->{'drivers_byname'})) {
-		if(defined($printer->{'drivers_byname'}{$driver->{'name'}})) {
-			return 1;
-		}
-	} elsif (defined($driver->{'printers_byname'})) {
-		if(defined($driver->{'printers_byname'}{$printer->{'id'}})) {
-			return 1;
-		}
+	if (defined($printer->{'drivers_byname'}{$driver->{'name'}})) {
+		return 1;
+	} elsif (defined($driver->{'printers_byname'}{$printer->{'id'}})) {
+		return 1;
 		
 	#fallback slow path
-	} elsif (defined($printer->{'drivers'})) {
-		foreach my $ptrDriver (@{$printer->{'drivers'}}) {
-			if($ptrDriver->{'name'} eq $driver->{'name'}) {
-				return 1;
+	} else {
+		if (defined($printer->{'drivers'})) {
+			foreach my $ptrDriver (@{$printer->{'drivers'}}) {
+				if($ptrDriver->{'name'} eq $driver->{'name'}) {
+					return 1;
+				}
 			}
 		}
-	} elsif (defined($driver->{'printers'})) {
-		foreach my $dvrPrinter (@{$driver->{'printers'}}) {
-			if($dvrPrinter->{'id'} eq $printer->{'id'}) {
-				return 1;
+		if (defined($driver->{'printers'})) {
+			foreach my $dvrPrinter (@{$driver->{'printers'}}) {
+				if($dvrPrinter->{'id'} eq $printer->{'id'}) {
+					return 1;
+				}
 			}
 		}
 	}
@@ -999,7 +999,7 @@ sub getCached{
 			$data = $this->parseDriver($path);
 		} elsif ($type eq 'option') {
 			$data = $this->parseOption($path);
-		}
+		} else {die('getCached must be passed a valid type.\n');}
 		$this->{$type .'Cache'}{$path} = $data;
 	}
 	
@@ -1014,7 +1014,7 @@ sub parseCombo {
 
 	#driver xml must exist
 	if (!$driverPath) {
-	    $this->{'log'} = "Error: The Driver XML for $drv does not exist\n";
+	    $this->{'log'} = "Error: The Driver XML for $driverId does not exist\n";
 	    return undef;
 	}
 
@@ -1028,22 +1028,20 @@ sub parseCombo {
 	}
 
 	#Get driver
-	my $driver $this->getCached('driver', $driverPath);
+	my $driver = $this->getCached('driver', $driverPath);
 
 	
 	if(!$this->isPairSupported($printer, $driver)) {
 		$this->{'log'} = "Error: The $printer->{'id'} and $driver->{'name'} pair is unsupported\n";
 		return undef;
 	}
-	
 	$driver = $this->getPrinterSpecificDriver($driver, $printer, 1);
-	$this->setPPDFile($combo, $printer, $driver);
 	
 	#option relationships, and option cache
 	my $relationships = $this->getOptionRelationships($optionXMLs);
-	
-	
+		
 	my $combo = $this->defaultComboData();
+	$this->setPPDFile($combo, $printer, $driver);
 	#add printer entries
 	foreach my $keys (@{$this->{'comboPhonebook'}->{'printer'}}) {
 		my ($source, $destination) = @{$keys};
