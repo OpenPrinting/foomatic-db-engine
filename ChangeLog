@@ -1,3 +1,10 @@
+2011-07-22  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/xmlParse.pm: Delete also the "printers_byname" fields
+	  in clones of driver entries during the overview. Otherwise it comes
+	  to memory explosions if only a few big driver entries get added to
+	  the database. Now scalability seems to work well.
+
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* xmlParse.pm: noXml printers now default to color == true.
@@ -5,10 +12,10 @@
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: now uses xmlParse version 2 for combos
-	
+
 	* phonebook.pm: comboppdentry and cmd_pdf are now copied for
 	  combos.
-	  
+
 	* xmlParse.pm: renamed cleanID to getCleanId. renamed
 	  generalGroups to setGeneralGroups. Fixed getDriverPrinter().
 	  Fixed two typos in  getPrinterSpecificDriver(). Brought noXml
@@ -23,14 +30,14 @@
 
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
-	* xmlParse.pm: Changed default combo data to use more 
+	* xmlParse.pm: Changed default combo data to use more
 	  rebust user detection. Added support for ppdentry in
 	  driver's list of printers. Made this ppdentry get included
 	  in combos under the key comboppentry.
-	
+
 	* phonebook.pm: Add the obsolete key to the list of keys 
 	  copied from driver data to combos.
-	
+
 	* DB.pm: put back generalentries() I removed had removed it
 	  thinking that it was obsolete. Also changed get_combo_data
 	  to use the new error logging key.
