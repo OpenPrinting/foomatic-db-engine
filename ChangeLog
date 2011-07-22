@@ -1,5 +1,9 @@
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
+	* xmlParse.pm: noXml printers now default to color == true.
+
+2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* DB.pm: now uses xmlParse version 2 for combos
 	
 	* phonebook.pm: comboppdentry and cmd_pdf are now copied for
