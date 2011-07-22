@@ -213,20 +213,6 @@ sub generateppd {
 
     my $lcname = lc( $poid );
     my $pentry = $db->get_printer($poid);
-    if (!$pentry || ($pentry->{'noxmlentry'} != 0)) {
-	$pentry = undef;
-	$db->get_overview();
-	for $printer (@{$db->{'overview'}}) {
-	    my $name = lc( $printer->{'id'} );
-	    print STDERR "DEBUG2: $progname: compare '$lcname' to '$name'\n" if $debug;
-	    if( $name eq $lcname ){
-		$pentry = $printer;
-		$poid = $pentry->{'id'};
-		print STDERR "DEBUG: $progname: Using printer entry '$poid'\n" if $debug;
-		last;
-	    }
-	}
-    }
 
     print STDERR "DEBUG: Printer '$poid' not found!\n" if ($debug && not defined $pentry );
     print STDERR "DEBUG: $progname: Found $pentry->{id}\nDEBUG2: $progname: " .
