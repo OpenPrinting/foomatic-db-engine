@@ -652,7 +652,8 @@ sub getNoXmlPrinter{
 		'model' => $model,
 		'functionality' => 'X',
 		'unverified' => '0',
-		'noxmlentry' => 1
+		'noxmlentry' => 1,
+		'color' => 1
 	};
 }
 
