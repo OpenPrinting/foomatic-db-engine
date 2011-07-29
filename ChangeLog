@@ -1,3 +1,10 @@
+2011-07-29  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* DB.pm: Fixed a typo in get_driver(), added the function get_option(),
+	  and made the primary get_*() functions take an optional version argument.
+	  Version argument then gets passed to xmlParse, defaults to 0, which is
+	  compatability with the C programs.
+
 2011-07-22  Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppdfile.in: Removed unneeded creation of the overview

@@ -1765,15 +1765,16 @@ sub get_printer_xml {
 	return $this->_get_object_xml("source/printer/$poid", 1);
     }
 }
+
 sub get_option {
     my ($this, $opt, $version) = @_;
     $version = 0 if !defined($version);
     # Generate driver Perl data structure from database
-    my $driver;
-    if (-r "$drv") {
+    my $option;
+    if (-r "$opt") {
 	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
 	$option = $parser->parseOption("$opt");
-    } elsif (-r "$libdir/db/source/opt/$drv.xml") {
+    } elsif (-r "$libdir/db/source/opt/$opt.xml") {
 	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
 	$option = $parser->parseOption("$libdir/db/source/opt/$opt.xml");
     } else {
