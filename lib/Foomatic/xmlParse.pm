@@ -592,7 +592,10 @@ sub getPrinterSpecificDriver {
 		$specificDriver = Clone::clone($driver);
 		
 		#Overview needs this data removed in a clone
-		delete $specificDriver->{'printers'} if (!$nonDestructive);
+		if (!$nonDestructive) {
+			delete $specificDriver->{'printers'};
+			delete $specificDriver->{'printers_byname'};
+		}
 		
 		if($overrideX) {
 			$specificDriver->{'drvmaxresx'} = $printer->{'maxxres'};

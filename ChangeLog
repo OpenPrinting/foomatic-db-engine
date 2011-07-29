@@ -1,3 +1,20 @@
+2011-07-22  Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppdfile.in: Removed unneeded creation of the overview
+	  if foomatic-ppdfile is called with a printer for which there is no
+	  XML file. Formerly, as printer/driver pairs with a printer without
+	  XML entry were not valid, the use of a non-listed printer was
+	  assumed to be a typo and a case-insensitive search in the database
+	  was done. Now an invalid printer input leads to an error message
+	  when requesting the combo, which is much faster, both for getting
+	  a PPD for a non-listed valid printer and an error message for an
+	  invalid printer.
+
+	* lib/Foomatic/xmlParse.pm: Delete also the "printers_byname" fields
+	  in clones of driver entries during the overview. Otherwise it comes
+	  to memory explosions if only a few big driver entries get added to
+	  the database. Now scalability seems to work well.
+
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* xmlParse.pm: noXml printers now default to color == true.
@@ -5,10 +22,10 @@
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: now uses xmlParse version 2 for combos
-	
+
 	* phonebook.pm: comboppdentry and cmd_pdf are now copied for
 	  combos.
-	  
+
 	* xmlParse.pm: renamed cleanID to getCleanId. renamed
 	  generalGroups to setGeneralGroups. Fixed getDriverPrinter().
 	  Fixed two typos in  getPrinterSpecificDriver(). Brought noXml
@@ -23,14 +40,14 @@
 
 2011-07-20  Daniel Dressler <danieru.dressler@gmail.com>
 
-	* xmlParse.pm: Changed default combo data to use more 
+	* xmlParse.pm: Changed default combo data to use more
 	  rebust user detection. Added support for ppdentry in
 	  driver's list of printers. Made this ppdentry get included
 	  in combos under the key comboppentry.
-	
+
 	* phonebook.pm: Add the obsolete key to the list of keys 
 	  copied from driver data to combos.
-	
+
 	* DB.pm: put back generalentries() I removed had removed it
 	  thinking that it was obsolete. Also changed get_combo_data
 	  to use the new error logging key.
