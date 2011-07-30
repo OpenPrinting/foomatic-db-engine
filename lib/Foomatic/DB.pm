@@ -1698,16 +1698,17 @@ sub get_combo_data_xml {
 }
 
 sub get_printer {
-    my ($this, $poid) = @_;
+    my ($this, $poid, $version) = @_;
+    $version = 0 if !defined($version);
     # Generate printer Perl data structure from database
     my $printer;
     if (-r "$poid") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
+	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
 	$printer = $parser->parsePrinter($poid);
     } elsif ($this->{'dbh'}) {
 	return $this->get_printer_from_sql_db($poid);
     } elsif (-r "$libdir/db/source/printer/$poid.xml") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
+	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
 	$printer = $parser->parsePrinter("$libdir/db/source/printer/$poid.xml");
     } else {
 	my ($make, $model);
@@ -1765,18 +1766,36 @@ sub get_printer_xml {
     }
 }
 
+sub get_option {
+    my ($this, $opt, $version) = @_;
+    $version = 0 if !defined($version);
+    # Generate driver Perl data structure from database
+    my $option;
+    if (-r "$opt") {
+	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	$option = $parser->parseOption("$opt");
+    } elsif (-r "$libdir/db/source/opt/$opt.xml") {
+	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	$option = $parser->parseOption("$libdir/db/source/opt/$opt.xml");
+    } else {
+	return undef;
+    }
+    return $option;
+}
+
 sub get_driver {
-    my ($this, $drv) = @_;
+    my ($this, $drv, $version) = @_;
+    $version = 0 if !defined($version);
     # Generate driver Perl data structure from database
     my $driver;
     if (-r "$drv") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
-	$driver = $parser->parseDriver("$drv");
+	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	$driver = $parser->parseDriver($drv);
     } elsif ($this->{'dbh'}) {
 	return $this->get_driver_from_sql_db($drv);
     } elsif (-r "$libdir/db/source/driver/$drv.xml") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},0);
-	$driver = $parser->parseDriver("$libdir/db/source/printer/$drv.xml");
+	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	$driver = $parser->parseDriver("$libdir/db/source/driver/$drv.xml");
     } else {
 	return undef;
     }
