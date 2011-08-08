@@ -93,8 +93,8 @@ sub connect_to_mysql_db {
 				      { RaiseError => 1, AutoCommit => 0 }) or
 				      warn $this->{'dbh'}->errstr;
     } elsif(-r $sqlitedb) {
-	$sqlitedb = "$libdir/db/openprinting.db"
-	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","")
+	$sqlitedb = "$libdir/db/openprinting.db";
+	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","");
     } else {
 	$this->{'dbh'} = NULL;
     }
