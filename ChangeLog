@@ -1,6 +1,8 @@
 2011-08-08  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: Added creation of sqlite database handle.
+	
+	* DB.pm: Fixed typos in my last commit.
 
 2011-07-29  Daniel Dressler <danieru.dressler@gmail.com>
 
