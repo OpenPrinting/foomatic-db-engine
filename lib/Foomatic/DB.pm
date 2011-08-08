@@ -77,6 +77,8 @@ sub read_conf_file {
 sub connect_to_mysql_db {
     my ($this) = @_;
     my %mysqlconf = read_conf_file($sysdeps->{'foo-etc'} . "/mysql.conf");
+    my $sqlitedb = "$libdir/db/openprinting.db";
+    
     if (defined($mysqlconf{'server'}) || defined($mysqlconf{'user'}) ||
 	defined($mysqlconf{'password'}) || defined($mysqlconf{'database'})) {
 	$mysqlconf{'server'} = 'localhost' if !$mysqlconf{'server'};
@@ -90,6 +92,9 @@ sub connect_to_mysql_db {
 				      $mysqlconf{'password'},
 				      { RaiseError => 1, AutoCommit => 0 }) or
 				      warn $this->{'dbh'}->errstr;
+    } elsif(-r $sqlitedb) {
+	$sqlitedb = "$libdir/db/openprinting.db"
+	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","")
     } else {
 	$this->{'dbh'} = NULL;
     }
