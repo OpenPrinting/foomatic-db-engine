@@ -92,9 +92,12 @@ sub connect_to_mysql_db {
 				      $mysqlconf{'password'},
 				      { RaiseError => 1, AutoCommit => 0 }) or
 				      warn $this->{'dbh'}->errstr;
+	$this->{'dbtype'} = 'mysql';
     } elsif(-r $sqlitedb) {
 	$sqlitedb = "$libdir/db/openprinting.db";
-	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","");
+	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","")or
+	    warn $this->{'dbh'}->errstr;
+	$this->{'dbtype'} = 'sqlite';
     } else {
 	$this->{'dbh'} = NULL;
     }
@@ -110,7 +113,7 @@ sub disconnect_from_sql_db {
 
 sub printer_approved_in_sql_db {
     my ($this, $pid) = @_;
-    if ($this->{'dbh'}) {
+    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
 	# Get list of approval state of printer
 	my $unapprovedprinterquerystr =
 	    "SELECT id FROM printer_approval " .
@@ -134,7 +137,7 @@ sub printer_approved_in_sql_db {
 
 sub driver_approved_in_sql_db {
     my ($this, $driver) = @_;
-    if ($this->{'dbh'}) {
+    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
 	# Get list of approval state of driver
 	my $unapproveddriverquerystr =
 	    "SELECT id FROM driver_approval " .
@@ -158,7 +161,7 @@ sub driver_approved_in_sql_db {
 
 sub get_unapproved_printers_from_sql_db {
     my ($this) = @_;
-    if ($this->{'dbh'}) {
+    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
 	# Get list of unapproved printers
 	my $unapprovedprinterquerystr =
 	    "SELECT id FROM printer_approval " .
@@ -184,7 +187,7 @@ sub get_unapproved_printers_from_sql_db {
 
 sub get_unapproved_drivers_from_sql_db {
     my ($this) = @_;
-    if ($this->{'dbh'}) {
+    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
 	# Get list of unapproved drivers
 	my $unapproveddriverquerystr =
 	    "SELECT id FROM driver_approval " .
@@ -383,7 +386,7 @@ sub get_overview_from_sql_db {
 	    "printer.snmp_model, printer.snmp_commandset, " .
 	    "printer.snmp_description " .
 	    "FROM printer " .
-	    "ORDER BY BINARY(printer.id);";
+	    "ORDER BY printer.id;";
 	my $sthp = $this->{'dbh'}->prepare($printerquerystr);
 	$sthp->execute();
 	my $sthd;
@@ -419,8 +422,8 @@ sub get_overview_from_sql_db {
 		  "driver_printer_assoc.ppd IS NULL)" :
 		  " OR (driver_printer_assoc.ppd != '' AND " .
 		  "driver_printer_assoc.ppd IS NOT NULL)") . ") " : "") .
-		  "ORDER BY BINARY(driver_printer_assoc.printer_id), " .
-		  "BINARY(driver_printer_assoc.driver_id);";
+		  "ORDER BY driver_printer_assoc.printer_id, " .
+		  "driver_printer_assoc.driver_id;";
 	    $sthd = $this->{'dbh'}->prepare($driverquerystr);
 	    $sthd->execute();
 	    do {
@@ -878,7 +881,7 @@ sub get_printer_from_sql_db {
 		"driver_printer_assoc.pcomments " .
 		"FROM driver_printer_assoc " .
 		"WHERE driver_printer_assoc.printer_id=\"$poid\" " .
-		"ORDER BY BINARY(driver_printer_assoc.driver_id);";
+		"ORDER BY driver_printer_assoc.driver_id;";
 	    my $sthd = $this->{'dbh'}->prepare($driverquerystr);
 	    $sthd->execute();
 	    my @driverlist = ();

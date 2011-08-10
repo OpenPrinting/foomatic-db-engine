@@ -1,3 +1,9 @@
+2011-08-09  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* DB.pm: working creation of overview with sqlite backend. Made three
+	  openprinting website specific functions no-op for none mysql dbs.
+	  Removed order by binary() from two sql statements.
+	
 2011-08-08  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: Added creation of sqlite database handle.
