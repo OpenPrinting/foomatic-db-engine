@@ -1335,7 +1335,8 @@ sub get_combo_data_from_sql_db {
 	    $mfg =~ s/^([^\-]*)\-.*$/$1/;
 	    my @optionchoicequerystr;
 	    $optionchoicequerystr[0] =
-		"CREATE TEMPORARY TABLE o1 AS " .
+		"CREATE TEMPORARY TABLE o1 " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_id, sense, defval, " .
 		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
 		"case printer when '$printer' then 4 when '' then 0 " .
@@ -1347,18 +1348,21 @@ sub get_combo_data_from_sql_db {
 		"OR printer=\"\") AND is_choice_constraint=0) ".
 		"ORDER BY option_id;";
 	    $optionchoicequerystr[1] =
-		"CREATE TEMPORARY TABLE o2  AS " .
+		"CREATE TEMPORARY TABLE o2 " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_id, max(score) AS score " .
 		"FROM o1 " .
 		"GROUP BY option_id;";
 	    $optionchoicequerystr[2] =
-		"CREATE TEMPORARY TABLE o3 AS  " .
+		"CREATE TEMPORARY TABLE o3  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT o1.option_id, o1.defval " .
 		"FROM o1, o2 " .
 		"WHERE o1.score=o2.score " .
 		"AND o1.option_id=o2.option_id AND o1.sense=\"true\";";
 	    $optionchoicequerystr[3] =
-		"CREATE TEMPORARY TABLE needed_options  AS " .
+		"CREATE TEMPORARY TABLE needed_options  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT id, option_type, shortname, longname, execution, " .
 		"required, prototype, option_spot, option_order, " .
 		"option_section, option_group, comments, max_value, " .
@@ -1368,7 +1372,8 @@ sub get_combo_data_from_sql_db {
 		"WHERE options.id=o3.option_id " .
 		"ORDER BY id;";
 	    $optionchoicequerystr[4] =
-		"CREATE TEMPORARY TABLE o4  AS " .
+		"CREATE TEMPORARY TABLE o4  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_constraint.option_id, " .
 		"option_constraint.choice_id, sense, " .
 		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
@@ -1384,25 +1389,29 @@ sub get_combo_data_from_sql_db {
 		"ORDER BY option_constraint.option_id, " .
 		"option_constraint.choice_id;";
 	    $optionchoicequerystr[5] =
-		"CREATE TEMPORARY TABLE o5  AS " .
+		"CREATE TEMPORARY TABLE o5  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_id, choice_id, max(score) AS score " .
 		"FROM o4 " .
 		"GROUP BY option_id, choice_id;";
 	    $optionchoicequerystr[6] =
-		"CREATE TEMPORARY TABLE o6  AS " .
+		"CREATE TEMPORARY TABLE o6  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT o4.option_id, o4.choice_id, o4.sense, o4.score " .
 		"FROM o4 JOIN o5 " .
 		"ON o4.option_id=o5.option_id AND o4.choice_id=o5.choice_id " .
 		"AND o4.score=o5.score;";
 	    $optionchoicequerystr[7] =
-		"CREATE TEMPORARY TABLE o7 AS  " .
+		"CREATE TEMPORARY TABLE o7 " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_choice.option_id AS option_id, " .
 		"option_choice.id AS choice_id, option_choice.shortname, " .
 		"option_choice.longname, option_choice.driverval " .
 		"FROM option_choice, needed_options " .
 		"WHERE option_choice.option_id=needed_options.id;";
 	    $optionchoicequerystr[8] =
-		"CREATE TEMPORARY TABLE needed_choices  AS " .
+		"CREATE TEMPORARY TABLE needed_choices  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT o7.option_id, o7.choice_id, shortname, longname, " .
 		"driverval " .
 		"FROM o7 LEFT JOIN o6 " .
