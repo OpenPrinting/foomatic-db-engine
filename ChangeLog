@@ -1,3 +1,10 @@
+2011-08-11  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* DB.pm: Working code path for generating ppds from sqlite backend.
+	  Required altering several sql to avoid mysql specific behaviour.
+	  Removed use of if() function replaced with sql cases, split multistatement
+	  Drop table calls into single statement calls.
+
 2011-08-09  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: working creation of overview with sqlite backend. Made three
