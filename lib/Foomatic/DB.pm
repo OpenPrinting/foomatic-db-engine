@@ -1336,10 +1336,12 @@ sub get_combo_data_from_sql_db {
 	    my @optionchoicequerystr;
 	    $optionchoicequerystr[0] =
 		"CREATE TEMPORARY TABLE o1 " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_id, sense, defval, " .
-		"if(driver=\"$drv\", 2, if(driver=\"\", 0, -9)) + " .
-		"if(printer=\"$poid\", 4, if(printer=\"$mfg-\", 1, " .
-		"if(printer=\"\", 0, -9))) AS score " .
+		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
+		"case printer when '$printer' then 4 when '' then 0 " .
+		"when '$mfg-' then 1 else -9 end" .
+		" AS score " .
 		"FROM option_constraint " .
 		"WHERE ((driver=\"$drv\" OR driver=\"\") " .
 		"AND (printer=\"$poid\" OR printer=\"$mfg-\" " .
@@ -1347,17 +1349,20 @@ sub get_combo_data_from_sql_db {
 		"ORDER BY option_id;";
 	    $optionchoicequerystr[1] =
 		"CREATE TEMPORARY TABLE o2 " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_id, max(score) AS score " .
 		"FROM o1 " .
 		"GROUP BY option_id;";
 	    $optionchoicequerystr[2] =
-		"CREATE TEMPORARY TABLE o3 " .
+		"CREATE TEMPORARY TABLE o3  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT o1.option_id, o1.defval " .
 		"FROM o1, o2 " .
 		"WHERE o1.score=o2.score " .
 		"AND o1.option_id=o2.option_id AND o1.sense=\"true\";";
 	    $optionchoicequerystr[3] =
-		"CREATE TEMPORARY TABLE needed_options " .
+		"CREATE TEMPORARY TABLE needed_options  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT id, option_type, shortname, longname, execution, " .
 		"required, prototype, option_spot, option_order, " .
 		"option_section, option_group, comments, max_value, " .
@@ -1367,12 +1372,14 @@ sub get_combo_data_from_sql_db {
 		"WHERE options.id=o3.option_id " .
 		"ORDER BY id;";
 	    $optionchoicequerystr[4] =
-		"CREATE TEMPORARY TABLE o4 " .
+		"CREATE TEMPORARY TABLE o4  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_constraint.option_id, " .
 		"option_constraint.choice_id, sense, " .
-		"if(driver=\"$drv\", 2, " .
-		"if(driver=\"\", 0, -9)) + if(printer=\"$poid\", 4, " .
-		"if(printer=\"$mfg-\", 1, if(printer=\"\", 0, -9))) AS score " .
+		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
+		"case printer when '$printer' then 4 when '' then 0 " .
+		"when '$mfg-' then 1 else -9 end" .
+		" AS score " .
 		"FROM option_constraint, needed_options " .
 		"WHERE option_constraint.option_id=needed_options.id " .
 		"AND (driver=\"$drv\" OR driver=\"\") " .
@@ -1382,25 +1389,29 @@ sub get_combo_data_from_sql_db {
 		"ORDER BY option_constraint.option_id, " .
 		"option_constraint.choice_id;";
 	    $optionchoicequerystr[5] =
-		"CREATE TEMPORARY TABLE o5 " .
+		"CREATE TEMPORARY TABLE o5  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_id, choice_id, max(score) AS score " .
 		"FROM o4 " .
 		"GROUP BY option_id, choice_id;";
 	    $optionchoicequerystr[6] =
-		"CREATE TEMPORARY TABLE o6 " .
+		"CREATE TEMPORARY TABLE o6  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT o4.option_id, o4.choice_id, o4.sense, o4.score " .
 		"FROM o4 JOIN o5 " .
 		"ON o4.option_id=o5.option_id AND o4.choice_id=o5.choice_id " .
 		"AND o4.score=o5.score;";
 	    $optionchoicequerystr[7] =
 		"CREATE TEMPORARY TABLE o7 " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT option_choice.option_id AS option_id, " .
 		"option_choice.id AS choice_id, option_choice.shortname, " .
 		"option_choice.longname, option_choice.driverval " .
 		"FROM option_choice, needed_options " .
 		"WHERE option_choice.option_id=needed_options.id;";
 	    $optionchoicequerystr[8] =
-		"CREATE TEMPORARY TABLE needed_choices " .
+		"CREATE TEMPORARY TABLE needed_choices  " .
+		($this->{'dbtype'} eq 'sqlite'? "AS " , '') .
 		"SELECT o7.option_id, o7.choice_id, shortname, longname, " .
 		"driverval " .
 		"FROM o7 LEFT JOIN o6 " .
@@ -1408,11 +1419,20 @@ sub get_combo_data_from_sql_db {
 		"WHERE o6.sense IS NULL OR o6.sense=\"\" OR " .
 		"o6.sense=\"true\" " .
 		"ORDER BY o7.option_id, o7.choice_id;";
-	    $optionchoicequerystr[9] =
-		"DROP TABLE o1, o2, o3, o4, o5, o6, o7;";
+	    #Execute will only ever process one statement and
+	    #Sqlite will only drop one table at a time.
+	    push( @optionchoicequerystr, "DROP TABLE o1;");
+	    push( @optionchoicequerystr, "DROP TABLE o2;");
+	    push( @optionchoicequerystr, "DROP TABLE o3;");
+	    push( @optionchoicequerystr, "DROP TABLE o4;");
+	    push( @optionchoicequerystr, "DROP TABLE o5;");
+	    push( @optionchoicequerystr, "DROP TABLE o6;");
+	    push( @optionchoicequerystr, "DROP TABLE o7;");
+		
+
 	    for my $q (@optionchoicequerystr) {
-		my $ocsth = $this->{'dbh'}->prepare($q);
-		$ocsth->execute();
+		my $ocsth = $this->{'dbh'}->prepare($q) || print $q;
+		$ocsth->execute() or die $ocsth->errstr . "\n------\n";
 	    }
 	    my $optionlistquerystr =
 		"SELECT * FROM needed_options;";
@@ -1537,10 +1557,10 @@ sub get_combo_data_from_sql_db {
 		    }
 		}
 	    }
-	    my $cleanupquerystr =
-		"DROP TABLE needed_options, needed_choices;";
-	    my $custh = $this->{'dbh'}->prepare($cleanupquerystr);
-	    $custh->execute();
+	    
+	    #Clean up temp databases for next run
+	    $this->{'dbh'}->do('DROP TABLE needed_options');
+	    $this->{'dbh'}->do('DROP TABLE  needed_choices;');
 	} else {
 	    # Printer $poid not supported by driver $drv
 	}
