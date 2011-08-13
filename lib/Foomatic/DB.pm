@@ -1269,7 +1269,6 @@ sub get_combo_data_from_sql_db {
 	    return undef if !defined($driver) and !defined($printer);
 	    if (defined($printer)) {
 		for my $k (keys %{$printer}) {
-		    next() if (!defined($driver->{$k}));
 		    if ($k eq "driver") {
 			$dat->{'recdriver'} = $printer->{$k};
 		    } elsif ($k eq "ppdentry") {
@@ -1286,7 +1285,6 @@ sub get_combo_data_from_sql_db {
 	    }
 	    if (defined($driver)) {
 		for my $k (keys %{$driver}) {
-		    next() if (!defined($driver->{$k}));
 		    if ($k eq "id") {
 			# Do nothing
 		    } elsif ($k eq "name") {
