@@ -1,3 +1,9 @@
+2011-08-12  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* DB.pm: Fixed typo in last commit, mixed much older typo in
+	  get_combo_from_sql() that was causing a printer's margins to be duplicated
+	  as combo margins.
+
 2011-08-11  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: Working code path for generating ppds from sqlite backend.
