@@ -1268,6 +1268,22 @@ sub get_combo_data_from_sql_db {
 	    my $printer = $this->get_printer_from_sql_db($poid, 1);
 	    my $driver = $this->get_driver_from_sql_db($drv, 1);
 	    return undef if !defined($driver) and !defined($printer);
+	    if (defined($printer)) {
+		for my $k (keys %{$printer}) {
+		    if ($k eq "driver") {
+			$dat->{'recdriver'} = $printer->{$k};
+		    } elsif ($k eq "ppdentry") {
+			$dat->{'printerppdentry'} = $printer->{$k};
+		    } elsif ($k eq "margins") {
+			$dat->{'printermargins'} = $printer->{$k};
+		    } elsif ($k eq "comment") {
+			$dat->{'printercomment'} = $printer->{$k};
+		    } else {
+			$dat->{$k} = $printer->{$k};
+		    }
+		}
+		$printer = undef;
+	    }
 	    if (defined($driver)) {
 		for my $k (keys %{$driver}) {
 		    if ($k eq "id") {
@@ -1285,22 +1301,6 @@ sub get_combo_data_from_sql_db {
 		    }
 		}
 		$driver = undef;
-	    }
-	    if (defined($printer)) {
-		for my $k (keys %{$printer}) {
-		    if ($k eq "driver") {
-			$dat->{'recdriver'} = $printer->{$k};
-		    } elsif ($k eq "ppdentry") {
-			$dat->{'printerppdentry'} = $printer->{$k};
-		    } elsif ($k eq "margins") {
-			$dat->{'printermargins'} = $printer->{$k};
-		    } elsif ($k eq "comment") {
-			$dat->{'printercomment'} = $printer->{$k};
-		    } else {
-			$dat->{$k} = $printer->{$k};
-		    }
-		}
-		$printer = undef;
 	    }
 	    
 	    #A printer xml might claim lowwer dpi than the default driver
@@ -1387,6 +1387,7 @@ sub get_combo_data_from_sql_db {
 		"allowed_regexp, defval " .
 		"FROM options, o3 " .
 		"WHERE options.id=o3.option_id " .
+		($dat->{'drivernopjl'} ? "AND options.execution <> 'pjl' " : "") .
 		"ORDER BY id;";
 	    $optionchoicequerystr[4] =
 		"CREATE TEMPORARY TABLE o4  " .
