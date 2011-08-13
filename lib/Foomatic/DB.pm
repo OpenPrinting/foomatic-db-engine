@@ -1351,7 +1351,7 @@ sub get_combo_data_from_sql_db {
 	    my $mfg = $poid;
 	    $mfg =~ s/^([^\-]*)\-.*$/$1/;
 	    
-	    my $pjlUnsupported = !( $dat->{'drivernopjl'} || !($dat->{'pjl'}) );
+	    my $pjlUnsupported = $dat->{'drivernopjl'};
 	    
 	    my @optionchoicequerystr;
 	    $optionchoicequerystr[0] =
