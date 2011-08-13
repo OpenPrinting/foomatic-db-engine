@@ -97,6 +97,7 @@ sub connect_to_mysql_db {
 	$sqlitedb = "$libdir/db/openprinting.db";
 	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","")or
 	    warn $this->{'dbh'}->errstr;
+	$this->{'dbh'}->do('PRAGMA synchronous = OFF;');
 	$this->{'dbtype'} = 'sqlite';
     } else {
 	$this->{'dbh'} = NULL;
@@ -1339,7 +1340,7 @@ sub get_combo_data_from_sql_db {
 		($this->{'dbtype'} eq 'sqlite' ? "AS " : '') .
 		"SELECT option_id, sense, defval, " .
 		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
-		"case printer when '$printer' then 4 when '' then 0 " .
+		"case printer when '$poid' then 4 when '' then 0 " .
 		"when '$mfg-' then 1 else -9 end" .
 		" AS score " .
 		"FROM option_constraint " .
@@ -1377,7 +1378,7 @@ sub get_combo_data_from_sql_db {
 		"SELECT option_constraint.option_id, " .
 		"option_constraint.choice_id, sense, " .
 		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
-		"case printer when '$printer' then 4 when '' then 0 " .
+		"case printer when '$poid' then 4 when '' then 0 " .
 		"when '$mfg-' then 1 else -9 end" .
 		" AS score " .
 		"FROM option_constraint, needed_options " .
