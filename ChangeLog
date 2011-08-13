@@ -5,7 +5,10 @@
 	  as combo margins.
 	  
 	* DB.pm: Added useing a printer's dpi if it is lower than the driver's
-	  default to the sql code path. 
+	  default to the sql code path. Fixed typo in sql. Noxml printers now
+	  default to colour=true, this matches the behaviour of the C programs which
+	  if how xmlParse does things. Fixed driver nopjl option by properly
+	  prefixing the key with 'driver'.
 
 2011-08-11  Daniel Dressler <danieru.dressler@gmail.com>
 
