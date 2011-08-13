@@ -1350,9 +1350,6 @@ sub get_combo_data_from_sql_db {
 	    # file
 	    my $mfg = $poid;
 	    $mfg =~ s/^([^\-]*)\-.*$/$1/;
-	    
-	    my $pjlUnsupported = $dat->{'drivernopjl'};
-	    
 	    my @optionchoicequerystr;
 	    $optionchoicequerystr[0] =
 		"CREATE TEMPORARY TABLE o1 " .
@@ -1390,7 +1387,7 @@ sub get_combo_data_from_sql_db {
 		"allowed_regexp, defval " .
 		"FROM options, o3 " .
 		"WHERE options.id=o3.option_id " .
-		($pjlUnsupported ? "AND options.execution <> 'pjl' " : "") .
+		($dat->{'drivernopjl'} ? "AND options.execution <> 'pjl' " : "") .
 		"ORDER BY id;";
 	    $optionchoicequerystr[4] =
 		"CREATE TEMPORARY TABLE o4  " .
