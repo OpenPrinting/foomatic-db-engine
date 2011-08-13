@@ -1269,6 +1269,7 @@ sub get_combo_data_from_sql_db {
 	    return undef if !defined($driver) and !defined($printer);
 	    if (defined($printer)) {
 		for my $k (keys %{$printer}) {
+		    next() if (!defined($driver->{$k}));
 		    if ($k eq "driver") {
 			$dat->{'recdriver'} = $printer->{$k};
 		    } elsif ($k eq "ppdentry") {
@@ -1285,6 +1286,7 @@ sub get_combo_data_from_sql_db {
 	    }
 	    if (defined($driver)) {
 		for my $k (keys %{$driver}) {
+		    next() if (!defined($driver->{$k}));
 		    if ($k eq "id") {
 			# Do nothing
 		    } elsif ($k eq "name") {
@@ -1428,7 +1430,7 @@ sub get_combo_data_from_sql_db {
 	    push( @optionchoicequerystr, "DROP TABLE o5;");
 	    push( @optionchoicequerystr, "DROP TABLE o6;");
 	    push( @optionchoicequerystr, "DROP TABLE o7;");
-		
+	    
 
 	    for my $q (@optionchoicequerystr) {
 		my $ocsth = $this->{'dbh'}->prepare($q) || print $q;
