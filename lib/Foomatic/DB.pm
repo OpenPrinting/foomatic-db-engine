@@ -1305,12 +1305,12 @@ sub get_combo_data_from_sql_db {
 	    #If this is the case use the printer's lowwer dpi.
 	    #Can still be overrode by explicitly defining the pair's dpi
 	    if( (defined($dat->{'drvmaxresx'}) && defined($dat->{'maxxres'}))
-		%% $dat->{'maxxres'} && $dat->{'maxxres'} < $dat->{'drvmaxresx'}) {
+		&& $dat->{'maxxres'} && $dat->{'maxxres'} < $dat->{'drvmaxresx'}) {
 		
 		$dat->{'drvmaxresx'} = $dat->{'maxxres'}; 
 	    }
 	    if( (defined($dat->{'drvmaxresy'}) && defined($dat->{'maxyres'}))
-		%% $dat->{'maxyres'} && $dat->{'maxyres'} < $dat->{'drvmaxresy'}) {
+		&& $dat->{'maxyres'} && $dat->{'maxyres'} < $dat->{'drvmaxresy'}) {
 		
 		$dat->{'drvmaxresy'} = $dat->{'maxyres'}; 
 	    }
