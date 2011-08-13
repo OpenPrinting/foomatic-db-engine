@@ -1268,6 +1268,22 @@ sub get_combo_data_from_sql_db {
 	    my $printer = $this->get_printer_from_sql_db($poid, 1);
 	    my $driver = $this->get_driver_from_sql_db($drv, 1);
 	    return undef if !defined($driver) and !defined($printer);
+	    if (defined($printer)) {
+		for my $k (keys %{$printer}) {
+		    if ($k eq "driver") {
+			$dat->{'recdriver'} = $printer->{$k};
+		    } elsif ($k eq "ppdentry") {
+			$dat->{'printerppdentry'} = $printer->{$k};
+		    } elsif ($k eq "margins") {
+			$dat->{'printermargins'} = $printer->{$k};
+		    } elsif ($k eq "comment") {
+			$dat->{'printercomment'} = $printer->{$k};
+		    } else {
+			$dat->{$k} = $printer->{$k};
+		    }
+		}
+		$printer = undef;
+	    }
 	    if (defined($driver)) {
 		for my $k (keys %{$driver}) {
 		    if ($k eq "id") {
@@ -1285,22 +1301,6 @@ sub get_combo_data_from_sql_db {
 		    }
 		}
 		$driver = undef;
-	    }
-	    if (defined($printer)) {
-		for my $k (keys %{$printer}) {
-		    if ($k eq "driver") {
-			$dat->{'recdriver'} = $printer->{$k};
-		    } elsif ($k eq "ppdentry") {
-			$dat->{'printerppdentry'} = $printer->{$k};
-		    } elsif ($k eq "margins") {
-			$dat->{'printermargins'} = $printer->{$k};
-		    } elsif ($k eq "comment") {
-			$dat->{'printercomment'} = $printer->{$k};
-		    } else {
-			$dat->{$k} = $printer->{$k};
-		    }
-		}
-		$printer = undef;
 	    }
 	    
 	    #A printer xml might claim lowwer dpi than the default driver
@@ -1350,6 +1350,9 @@ sub get_combo_data_from_sql_db {
 	    # file
 	    my $mfg = $poid;
 	    $mfg =~ s/^([^\-]*)\-.*$/$1/;
+	    
+	    my $pjlUnsupported = !( $dat->{'drivernopjl'} || !($dat->{'pjl'}) );
+	    
 	    my @optionchoicequerystr;
 	    $optionchoicequerystr[0] =
 		"CREATE TEMPORARY TABLE o1 " .
@@ -1387,6 +1390,7 @@ sub get_combo_data_from_sql_db {
 		"allowed_regexp, defval " .
 		"FROM options, o3 " .
 		"WHERE options.id=o3.option_id " .
+		($pjlUnsupported ? "AND options.execution <> 'pjl' " : "") .
 		"ORDER BY id;";
 	    $optionchoicequerystr[4] =
 		"CREATE TEMPORARY TABLE o4  " .
@@ -1533,16 +1537,10 @@ sub get_combo_data_from_sql_db {
 				$arg->{'help'} = $tr[1]
 				    if defined($tr[1]) && ($tr[1] ne "");
 			    }
-			    
-			    #If the option is pjl, then both driver and printer
-			    #must support pjl.
-			    if(! ( ($arg->{'style'} eq 'J') &&
-			      ($dat->{'drivernopjl'} || !($dat->{'pjl'}))
-			    ) ) {
-				push(@{$dat->{'args'}}, $arg);
-				$dat->{'args_byname'}{$olrow[2]} =
-				    $dat->{'args'}[scalar(@{$dat->{'args'}})-1];
-			    }
+			    push(@{$dat->{'args'}}, $arg);
+			    $dat->{'args_byname'}{$olrow[2]} =
+				$dat->{'args'}[scalar(@{$dat->{'args'}})-1];
+
 			}
 			last if $option eq $olrow[0];
 		    }
@@ -1571,16 +1569,14 @@ sub get_combo_data_from_sql_db {
 			$choice->{'comment'} = $tr[0]
 			    if defined($tr[0]) && ($tr[0] ne "");
 		    }
+		    $arg->{'vals_byname'}{$clrow[2]} = $choice;
+		    push(@{$arg->{'vals'}}, $arg->{'vals_byname'}{$clrow[2]});
 		    if (($defaultset == 0) &&
 			($choice->{'idx'} eq $arg->{'default'})) {
 			$arg->{'default'} = $choice->{'value'};
 			$defaultset = 1;
 		    }
-		    #only add the choice if the parent option exists
-		    if(defined( $arg->{'vals_byname'}{$clrow[2]})) {
-			$arg->{'vals_byname'}{$clrow[2]} = $choice;
-			push(@{$arg->{'vals'}}, $arg->{'vals_byname'}{$clrow[2]});
-		    }
+
 		}
 	    }
 	    
