@@ -97,6 +97,7 @@ sub connect_to_mysql_db {
 	$sqlitedb = "$libdir/db/openprinting.db";
 	$this->{'dbh'} = DBI->connect("dbi:SQLite:dbname=$sqlitedb","","")or
 	    warn $this->{'dbh'}->errstr;
+	$this->{'dbh'}->do('PRAGMA synchronous = OFF;');
 	$this->{'dbtype'} = 'sqlite';
     } else {
 	$this->{'dbh'} = NULL;
@@ -1267,6 +1268,24 @@ sub get_combo_data_from_sql_db {
 	    my $printer = $this->get_printer_from_sql_db($poid, 1);
 	    my $driver = $this->get_driver_from_sql_db($drv, 1);
 	    return undef if !defined($driver) and !defined($printer);
+	    if (defined($driver)) {
+		for my $k (keys %{$driver}) {
+		    if ($k eq "id") {
+			# Do nothing
+		    } elsif ($k eq "name") {
+			$dat->{'driver'} = $driver->{$k};
+		    } elsif ($k eq "ppdentry") {
+			$dat->{'driverppdentry'} = $driver->{$k};
+		    } elsif ($k eq "margins") {
+			$dat->{'drivermargins'} = $driver->{$k};
+		    } elsif ($k eq "nopjl") {
+			$dat->{'drivernopjl'} = $driver->{$k};
+		    } else {
+			$dat->{$k} = $driver->{$k};
+		    }
+		}
+		$driver = undef;
+	    }
 	    if (defined($printer)) {
 		for my $k (keys %{$printer}) {
 		    if ($k eq "driver") {
@@ -1283,21 +1302,19 @@ sub get_combo_data_from_sql_db {
 		}
 		$printer = undef;
 	    }
-	    if (defined($driver)) {
-		for my $k (keys %{$driver}) {
-		    if ($k eq "id") {
-			# Do nothing
-		    } elsif ($k eq "name") {
-			$dat->{'driver'} = $driver->{$k};
-		    } elsif ($k eq "ppdentry") {
-			$dat->{'driverppdentry'} = $driver->{$k};
-		    } elsif ($k eq "margins") {
-			$dat->{'drivermargins'} = $driver->{$k};
-		    } else {
-			$dat->{$k} = $driver->{$k};
-		    }
-		}
-		$driver = undef;
+	    
+	    #A printer xml might claim lowwer dpi than the default driver
+	    #If this is the case use the printer's lowwer dpi.
+	    #Can still be overrode by explicitly defining the pair's dpi
+	    if( (defined($dat->{'drvmaxresx'}) && defined($dat->{'maxxres'}))
+		&& $dat->{'maxxres'} && $dat->{'maxxres'} < $dat->{'drvmaxresx'}) {
+		
+		$dat->{'drvmaxresx'} = $dat->{'maxxres'}; 
+	    }
+	    if( (defined($dat->{'drvmaxresy'}) && defined($dat->{'maxyres'}))
+		&& $dat->{'maxyres'} && $dat->{'maxyres'} < $dat->{'drvmaxresy'}) {
+		
+		$dat->{'drvmaxresy'} = $dat->{'maxyres'}; 
 	    }
 
 	    # Get data specific to printer/driver combo
@@ -1339,7 +1356,7 @@ sub get_combo_data_from_sql_db {
 		($this->{'dbtype'} eq 'sqlite' ? "AS " : '') .
 		"SELECT option_id, sense, defval, " .
 		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
-		"case printer when '$printer' then 4 when '' then 0 " .
+		"case printer when '$poid' then 4 when '' then 0 " .
 		"when '$mfg-' then 1 else -9 end" .
 		" AS score " .
 		"FROM option_constraint " .
@@ -1377,7 +1394,7 @@ sub get_combo_data_from_sql_db {
 		"SELECT option_constraint.option_id, " .
 		"option_constraint.choice_id, sense, " .
 		"case driver when '$drv' then 2 when '' then 0 else -9 end + " .
-		"case printer when '$printer' then 4 when '' then 0 " .
+		"case printer when '$poid' then 4 when '' then 0 " .
 		"when '$mfg-' then 1 else -9 end" .
 		" AS score " .
 		"FROM option_constraint, needed_options " .
@@ -1753,6 +1770,7 @@ sub get_printer {
 	    'id' => $poid,
 	    'make' => $make,
 	    'model' => $model,
+	    'color' => 1,
 	    'noxmlentry' => 1
 	}
     }
