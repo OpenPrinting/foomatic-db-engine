@@ -1,5 +1,11 @@
 2011-08-12  Daniel Dressler <danieru.dressler@gmail.com>
 
+	* DB.pm: Fixed a regression introduced in my last patch. Fixed handling of
+	  pjl options in nopjl drivers. DB.pm with sqlite backend now produces the
+	  same ppds are xlmParse backend.  
+
+2011-08-12  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* DB.pm: Fixed typo in last commit, mixed much older typo in
 	  get_combo_from_sql() that was causing a printer's margins to be duplicated
 	  as combo margins.
