@@ -1768,6 +1768,7 @@ sub get_printer {
 	    'id' => $poid,
 	    'make' => $make,
 	    'model' => $model,
+	    'color' => 1,
 	    'noxmlentry' => 1
 	}
     }
