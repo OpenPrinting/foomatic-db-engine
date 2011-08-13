@@ -1278,6 +1278,8 @@ sub get_combo_data_from_sql_db {
 			$dat->{'driverppdentry'} = $driver->{$k};
 		    } elsif ($k eq "margins") {
 			$dat->{'drivermargins'} = $driver->{$k};
+		    } elsif ($k eq "nopjl") {
+			$dat->{'drivernopjl'} = $driver->{$k};
 		    } else {
 			$dat->{$k} = $driver->{$k};
 		    }
