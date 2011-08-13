@@ -3,6 +3,9 @@
 	* DB.pm: Fixed typo in last commit, mixed much older typo in
 	  get_combo_from_sql() that was causing a printer's margins to be duplicated
 	  as combo margins.
+	  
+	* DB.pm: Added useing a printer's dpi if it is lower than the driver's
+	  default to the sql code path. 
 
 2011-08-11  Daniel Dressler <danieru.dressler@gmail.com>
 
