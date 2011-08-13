@@ -1537,7 +1537,6 @@ sub get_combo_data_from_sql_db {
 			    push(@{$dat->{'args'}}, $arg);
 			    $dat->{'args_byname'}{$olrow[2]} =
 				$dat->{'args'}[scalar(@{$dat->{'args'}})-1];
-
 			}
 			last if $option eq $olrow[0];
 		    }
@@ -1573,7 +1572,6 @@ sub get_combo_data_from_sql_db {
 			$arg->{'default'} = $choice->{'value'};
 			$defaultset = 1;
 		    }
-
 		}
 	    }
 	    
