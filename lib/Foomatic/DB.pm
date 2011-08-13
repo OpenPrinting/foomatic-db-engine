@@ -1533,9 +1533,16 @@ sub get_combo_data_from_sql_db {
 				$arg->{'help'} = $tr[1]
 				    if defined($tr[1]) && ($tr[1] ne "");
 			    }
-			    push(@{$dat->{'args'}}, $arg);
-			    $dat->{'args_byname'}{$olrow[2]} =
-				$dat->{'args'}[scalar(@{$dat->{'args'}})-1];
+			    
+			    #If the option is pjl, then both driver and printer
+			    #must support pjl.
+			    if(! ( ($arg->{'style'} eq 'J') &&
+			      ($dat->{'drivernopjl'} || !($dat->{'pjl'}))
+			    ) ) {
+				push(@{$dat->{'args'}}, $arg);
+				$dat->{'args_byname'}{$olrow[2]} =
+				    $dat->{'args'}[scalar(@{$dat->{'args'}})-1];
+			    }
 			}
 			last if $option eq $olrow[0];
 		    }
@@ -1564,12 +1571,15 @@ sub get_combo_data_from_sql_db {
 			$choice->{'comment'} = $tr[0]
 			    if defined($tr[0]) && ($tr[0] ne "");
 		    }
-		    $arg->{'vals_byname'}{$clrow[2]} = $choice;
-		    push(@{$arg->{'vals'}}, $arg->{'vals_byname'}{$clrow[2]});
 		    if (($defaultset == 0) &&
 			($choice->{'idx'} eq $arg->{'default'})) {
 			$arg->{'default'} = $choice->{'value'};
 			$defaultset = 1;
+		    }
+		    #only add the choice if the parent option exists
+		    if(defined( $arg->{'vals_byname'}{$clrow[2]})) {
+			$arg->{'vals_byname'}{$clrow[2]} = $choice;
+			push(@{$arg->{'vals'}}, $arg->{'vals_byname'}{$clrow[2]});
 		    }
 		}
 	    }
