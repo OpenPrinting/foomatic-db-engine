@@ -1326,7 +1326,7 @@ sub get_combo_data_from_sql_db {
 		if defined($row[10]) && ($row[10] ne "");
 
 	    # Get unprintable margins from separate table
-	    my $margins = $this->get_margins_from_sql_db($driver, $poid);
+	    my $margins = $this->get_margins_from_sql_db($drv, $poid);
 	    $dat->{'combomargins'} = $margins if defined($margins);
 
 	    # Compute the options and choices which should appear in the PPD
