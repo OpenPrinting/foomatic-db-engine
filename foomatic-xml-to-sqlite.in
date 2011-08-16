@@ -1,0 +1,84 @@
+#!@PERL@
+# -*- perl -*-
+
+# foomatic-xml-to-sqlite takes the xml library and creates a stand alone sqlite 
+# database usable by Foomatic::DB as a backend. Any existing database is
+# deleted. On a quad core AMD the process takes about one minute.
+
+
+use strict;
+use warnings;
+use Data::Dumper;
+
+use DBI;
+use Foomatic::DB;
+use Foomatic::Defaults;
+use Foomatic::sqlLayer;
+
+my $dbFile = "$libdir/db/openprinting.db";
+
+if ($#ARGV > -1) {
+    if ($ARGV[0] eq "-h" || $ARGV[0] eq '--help') {
+	print STDERR "
+Usage: foomatic-xml-to-sqlite.pl [\"SQlite_DB_Path\"]
+
+	SQlite_DB_Path: By default we export to openprinting.db in foomatic-db
+	  optionaly a different destination db can be specified. Note: when using a
+	  non-default path there is no guaranty that DB.pm will use the
+	  XML backend.
+
+		\"$libdir/db/openprinting.db\"
+	
+	
+Example:
+	foomatic-xml-to-sqlite.pl '../foomatic-db/db/openprinting.db'
+";
+	exit(1);
+    } else {
+		$dbFile = $ARGV[0] if defined($ARGV[0]);
+    }
+}
+
+# Delete any existing database.
+unlink($dbFile); 
+
+# Foomatic::DB uses a sqlite database if present, thus the file must be deleted
+# while we init our foomatic::db. This will only work for the default db
+# location.
+my $db = new Foomatic::DB;
+
+my $dbh = DBI->connect("dbi:SQLite:dbname=$dbFile","","");
+my $sqlLayer = Foomatic::sqlLayer->new($dbh, 'sqlite', 2);
+$sqlLayer->initDatabase();# Creates tables
+
+
+my @options = <$libdir/db/source/opt/*.xml>;
+my @printers = <$libdir/db/source/printer/*.xml>;
+my @drivers = <$libdir/db/source/driver/*.xml>;
+
+my $now = time;
+my $i = 1;
+for my $driver (@drivers) {
+	printf("Xml #: %004d - driver - $driver\n", $i);
+	$driver = $db->get_driver($driver, 2);
+	$sqlLayer->pushDriver($driver, 2);
+	$i++;
+}
+for my $option (@options) {
+	printf("Xml #: %004d - option  - $option\n", $i);
+	$option = $db->get_option( $option, 2);
+	$sqlLayer->pushOption( $option, 2);
+	$i++;
+}
+for my $printer (@printers) {
+	printf("Xml #: %004d - printer - $printer\n", $i);
+	$printer = $db->get_printer($printer, 2);
+	$sqlLayer->pushPrinter($printer, 2);
+	$i++;
+}
+
+
+$now = time - $now;
+printf("\n\nTotal running time: %02d:%02d:%02d\n\n", int($now / 3600), int(($now % 3600) / 60), 
+int($now % 60));
+
