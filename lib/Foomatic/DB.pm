@@ -1448,8 +1448,8 @@ sub get_combo_data_from_sql_db {
 	    push( @optionchoicequerystr, "DROP TABLE o7;");
 
 	    for my $q (@optionchoicequerystr) {
-		my $ocsth = $this->{'dbh'}->prepare($q) || print $q;
-		$ocsth->execute() or die $ocsth->errstr . "\n------\n";
+		my $ocsth = $this->{'dbh'}->prepare($q);
+		$ocsth->execute();
 	    }
 	    my $optionlistquerystr =
 		"SELECT * FROM needed_options;";
@@ -1815,18 +1815,19 @@ sub get_printer_xml {
 sub get_option {
     my ($this, $opt, $version) = @_;
     $version = 0 if !defined($version);
+    
+    #TODO: Write a sql backed get_option
+    
     # Generate driver Perl data structure from database
-    my $option;
     if (-r "$opt") {
 	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
-	$option = $parser->parseOption("$opt");
+	return $parser->parseOption("$opt");
     } elsif (-r "$libdir/db/source/opt/$opt.xml") {
 	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
-	$option = $parser->parseOption("$libdir/db/source/opt/$opt.xml");
+	return $parser->parseOption("$libdir/db/source/opt/$opt.xml");
     } else {
 	return undef;
     }
-    return $option;
 }
 
 sub get_driver {
