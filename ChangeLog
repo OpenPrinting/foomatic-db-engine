@@ -1,5 +1,10 @@
 2011-08-15  Daniel Dressler <danieru.dressler@gmail.com>
 
+	* DB.pm: Removed debug code, added note about get_option missing support
+	  for sql backend.
+
+2011-08-15  Daniel Dressler <danieru.dressler@gmail.com>
+
 	* phonebook.pm: Added elements for sql support, added sql schema
 	
 	* sqlLayer.pm: Initial commit from dev branch: 
