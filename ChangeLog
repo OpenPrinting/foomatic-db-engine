@@ -1,3 +1,13 @@
+2011-08-15  Daniel Dressler <danieru.dressler@gmail.com>
+
+	* phonebook.pm: Added elements for sql support, added sql schema
+	
+	* sqlLayer.pm: Initial commit from dev branch: 
+	  https://launchpad.net/gsoc2011danieldressler/sqllayer 
+	  Handles the brunt work of sqlite exportation.
+
+	* foomatic-xml-to-sqlite: Initial commit from dev branch
+
 2011-08-12  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: Fixed a regression introduced in my last patch. Fixed handling of
