@@ -1,3 +1,11 @@
+2011-12-10 Daniel Dressler <danieru.dressler@gmail.com>
+
+	* ./unit-tests/: Added a unit test directory. In preparation for
+	  get_option() I want to bring the unit tests I wrote over the summer
+	  into mainline. get_option() will of course require another unit test.
+
+	* foomatic-verify-xml.in: Moved into ./unit-tests/.
+
 2011-08-15  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* DB.pm: Removed debug code, added note about get_option missing support

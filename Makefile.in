@@ -145,13 +145,13 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
 	foomatic-ppd-options foomatic-printermap-to-gutenprint-xml \
 	foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml \
-	foomatic-verify-xml foomatic-xml-to-sqlite
+	unit-tests/foomatic-verify-xml foomatic-xml-to-sqlite
 
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
 	foomatic-ppdfile foomatic-compiledb \
 	foomatic-ppd-options foomatic-searchprinter foomatic-ppd-to-xml \
-	foomatic-verify-xml foomatic-xml-to-sqlite
+	unit-tests/foomatic-verify-xml foomatic-xml-to-sqlite
 
 # Administrative commands, only useful for admins
 SBINFILES:=foomatic-kitload \
