@@ -1,3 +1,9 @@
+2011-12-11 Daniel Dressler <danieru.dressler@gmail.com>
+
+	* configure.ac: I missed a configuration change in last commit.
+	  The verify xml script did not have its location changed in 
+	  configure.ac. Apologies to Yuji Saito who caught my mistake.
+
 2011-12-10 Daniel Dressler <danieru.dressler@gmail.com>
 
 	* ./unit-tests/: Added a unit test directory. In preparation for

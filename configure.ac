@@ -256,7 +256,7 @@ foomatic-compiledb
 foomatic-nonumericalids foomatic-replaceoldprinterids
 foomatic-ppd-options foomatic-printermap-to-gutenprint-xml
 foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml
-foomatic-verify-xml foomatic-xml-to-sqlite
+unit-tests/foomatic-verify-xml foomatic-xml-to-sqlite
 
 )
 AC_OUTPUT
