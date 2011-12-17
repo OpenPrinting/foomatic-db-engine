@@ -145,13 +145,12 @@ AC_OUTPUT_FILES:=Makefile makeDefaults makeMan \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
 	foomatic-ppd-options foomatic-printermap-to-gutenprint-xml \
 	foomatic-extract-text foomatic-searchprinter foomatic-ppd-to-xml \
-	unit-tests/foomatic-verify-xml foomatic-xml-to-sqlite
+	foomatic-verify-xml foomatic-xml-to-sqlite foomatic-test-build
 
 # User programs and helper programs
 BINFILES:=foomatic-printjob foomatic-configure \
-	foomatic-ppdfile foomatic-compiledb \
-	foomatic-ppd-options foomatic-searchprinter foomatic-ppd-to-xml \
-	unit-tests/foomatic-verify-xml foomatic-xml-to-sqlite
+	foomatic-ppdfile \
+	foomatic-ppd-options foomatic-searchprinter foomatic-ppd-to-xml 
 
 # Administrative commands, only useful for admins
 SBINFILES:=foomatic-kitload \
@@ -159,7 +158,9 @@ SBINFILES:=foomatic-kitload \
 	foomatic-preferred-driver \
 	foomatic-nonumericalids foomatic-replaceoldprinterids \
 	foomatic-printermap-to-gutenprint-xml \
-	foomatic-cleanupdrivers foomatic-extract-text
+	foomatic-cleanupdrivers foomatic-extract-text \
+	foomatic-verify-xml foomatic-xml-to-sqlite \
+	foomatic-test-build foomatic-compiledb
 
 # Foomatic XML templates
 TEMPLATES:=pjl_enum_choice.xml pjl_enum_option.xml pjl_num_option.xml

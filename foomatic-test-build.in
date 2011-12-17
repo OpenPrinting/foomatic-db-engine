@@ -1,0 +1,53 @@
+#!@PERL@
+# -*- perl -*-
+
+# Automated build script for rapid development
+# To use first do a manual build in a directory other than
+# foomatic-db-engine-test-build
+# then run this script. 
+
+use Foomatic::Defaults;
+use File::Basename;
+use strict;
+use warnings;
+use Getopt::Long;
+
+my $now = time;
+my $parent = '../../';
+my $source = 'foomatic-db-engine/';
+my $dest = "foomatic-db-engine-test-build/";
+if ($#ARGV > -1) {
+	if ($ARGV[1] eq "-h" || $ARGV[1] eq '--help') {
+		print STDERR "
+Usage: foomatic-test-build.pl [ source_directory build_destination ]
+
+	source_directory: The directory with the source code we want
+	  to build. Defaults to foomatic-db-engine/ Either either
+	  option is specificed the other must be as well. The order
+	  of options is importent.
+
+	build_destination: The destination directory for the test
+	  build. Relative to the parent of foomatic-db-engine 
+	  pakage source folder.
+	
+Example:
+	foomatic-test-build.pl 'foomatic-db-engine/' 'foomatic-db-engine-test-build/'
+";
+		exit(1);
+	} else {
+		$source = $ARGV[1] if defined($ARGV[1]);
+		$dest = $ARGV[2] if defined($ARGV[2]);
+	}
+}
+
+print(`mkdir $parent$dest 2>&1`);
+print(`cp -r $parent$source $parent$dest 2>&1`);
+
+print();
+
+# Print buildtime #
+$now = time - $now;
+printf("\n-------------\nBuild time: %02d:%02d:%02d\n\n", 
+                     int($now / 3600), int(($now % 3600) / 60), 
+                                                 int($now % 60));
+$age = <>

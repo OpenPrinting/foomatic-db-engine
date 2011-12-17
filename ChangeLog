@@ -1,3 +1,16 @@
+2011-12-17 Daniel Dressler <danieru.dressler@gmail.com>
+
+	* unit-test/: I'm reverting my addition of this folder.
+	  I do not want to mess with the build script. Maybe
+	  sometime when I am more familiar with the scripts I'll
+	  feel safe adding a new directory.
+
+	* foomatic-test-build.ln: added work in progress automated
+	  build script. Will make the write&test process faster.
+
+	* configure.ac, Makefile.in: Reflected file moves. Moved
+	  the scripts I wrote into the admin scripts section.
+
 2011-12-11 Daniel Dressler <danieru.dressler@gmail.com>
 
 	* configure.ac: I missed a configuration change in last commit.
