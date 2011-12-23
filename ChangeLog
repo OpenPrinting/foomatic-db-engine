@@ -1,3 +1,12 @@
+2011-12-23 Daniel Dressler <danieru.dressler@gmail.com>
+
+	* foomatic-test-build.in: finished this test script.
+	  The script has already helped, turns out I had a error
+	  in my standard build process that meant I wasn't
+	  actaully building the new sources. I whiched foomatic-
+	  test-build to use the standard perl option parsing
+	  functions.
+
 2011-12-17 Daniel Dressler <danieru.dressler@gmail.com>
 
 	* unit-test/: I'm reverting my addition of this folder.

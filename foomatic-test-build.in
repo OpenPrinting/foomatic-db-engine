@@ -13,41 +13,44 @@ use warnings;
 use Getopt::Long;
 
 my $now = time;
-my $parent = '../../';
+my $parent = '../';
 my $source = 'foomatic-db-engine/';
 my $dest = "foomatic-db-engine-test-build/";
-if ($#ARGV > -1) {
-	if ($ARGV[1] eq "-h" || $ARGV[1] eq '--help') {
-		print STDERR "
-Usage: foomatic-test-build.pl [ source_directory build_destination ]
+my $show_help = 0;
+
+GetOptions('help' => \$show_help,
+           'source' => \$source,
+           'destination' => \$dest);
+
+if ($show_help) {
+	print STDERR "
+Usage: foomatic-test-build.pl [ -s source_directory -d build_destination ]
 
 	source_directory: The directory with the source code we want
-	  to build. Defaults to foomatic-db-engine/ Either either
-	  option is specificed the other must be as well. The order
-	  of options is importent.
+	  to build. Defaults to foomatic-db-engine
 
 	build_destination: The destination directory for the test
 	  build. Relative to the parent of foomatic-db-engine 
-	  pakage source folder.
+	  source folder.
 	
 Example:
-	foomatic-test-build.pl 'foomatic-db-engine/' 'foomatic-db-engine-test-build/'
+	foomatic-test-build.pl -s 'foomatic-db-engine/' -d 'foomatic-db-engine-test-build/'
 ";
-		exit(1);
-	} else {
-		$source = $ARGV[1] if defined($ARGV[1]);
-		$dest = $ARGV[2] if defined($ARGV[2]);
-	}
+exit(1);
 }
 
-print(`mkdir $parent$dest 2>&1`);
-print(`cp -r $parent$source $parent$dest 2>&1`);
+# Let's make our soup #
+print(`(cd $parent
+mkdir $dest
+cp -R $source/* $dest 
+cd $dest
+./make_configure
+./configure
+make inplace) 2>&1`);
 
-print();
 
 # Print buildtime #
 $now = time - $now;
 printf("\n-------------\nBuild time: %02d:%02d:%02d\n\n", 
                      int($now / 3600), int(($now % 3600) / 60), 
                                                  int($now % 60));
-$age = <>
