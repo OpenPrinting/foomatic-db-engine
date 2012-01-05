@@ -2266,6 +2266,8 @@ sub find_printer {
 			   [$searchterm, $p->{id}, 0]];
 
 	foreach my $task (@{$searchtasks}) {
+	    my $task0norm = normalize($task->[0]);
+	    my $task1norm = normalize($task->[1]);
 
 	    # Do not try to match search terms or database entries without
 	    # real content
@@ -2275,7 +2277,7 @@ sub find_printer {
 	    # If make and model match exactly, we have found the correct
 	    # entry and we can stop searching human-readable makes and
 	    # models
-	    if (normalize($task->[1]) eq normalize($task->[0])) {
+	    if ($task1norm eq $task0norm) {
 		$matchlength = 100;
 		if (!$p->{noxmlentry}) {
 		    $bestmatchlength += 1;
@@ -2306,11 +2308,11 @@ sub find_printer {
 		 "XEROX|WorkCentre",
 		 "XEROX|DocuPrint");
 	    if (!member($task->[0], @badsearchterms)) {
-		my $searcht = normalize($task->[0]);
+		my $searcht = $task0norm;
 		my $lsearcht = length($searcht);
 		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
 		$searcht =~ s!(\\\|)!$1.*!g;
-		my $s = normalize($task->[1]);
+		my $s = $task1norm;
 		if ((1 || $lsearcht >= $matchlength) &&
 		    $s =~ m!$searcht!i) {
 		    $matchlength = $lsearcht;
@@ -2322,11 +2324,11 @@ sub find_printer {
 		}
 	    }
 	    if (!member($task->[1], @badsearchterms)) {
-		my $searcht = normalize($task->[1]);
+		my $searcht = $task1norm;
 		my $lsearcht = length($searcht);
 		$searcht =~ s!([\\/\(\)\[\]\|\.\$\@\%\*\?])!\\$1!g;
 		$searcht =~ s!(\\\|)!$1.*!g;
-		my $s = normalize($task->[0]);
+		my $s = $task0norm;
 		if ((1 || $lsearcht >= $matchlength) &&
 		    $s =~ m!$searcht!i) {
 		    $matchlength = $lsearcht;
