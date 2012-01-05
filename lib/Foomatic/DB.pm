@@ -1240,6 +1240,7 @@ sub get_drivers_for_printer_from_sql_db {
 	    "WHERE printer_id=\"$poid\";";
 	my $sth = $this->{'dbh'}->prepare($querystr);
 	$sth->execute();
+	
 	while (my @row = $sth->fetchrow_array) {
 	    push(@driverlist, $row[0]) if
 		(!@udl || !member($row[0], @udl));
@@ -1252,8 +1253,14 @@ sub get_combo_data_from_sql_db {
     my ($this, $drv, $poid) = @_;
     my $dat = undef;
     if ($this->{'dbh'}) {
-	return undef if !$this->printer_approved_in_sql_db($poid);
-	return undef if !$this->driver_approved_in_sql_db($drv);
+	#Do this printer and driver exist?
+	if ( !$this->printer_approved_in_sql_db($poid) 
+	|| !$this->driver_approved_in_sql_db($drv) {
+	    $this->{'log'} = 
+	    "Error: Either $poid or $drv does not exist in the sql db";
+	    return undef;
+	}
+	
 	# Is this printer/driver combo valid?
 	my $querystr =
 	    "SELECT max_res_x, max_res_y, color, text, lineart, graphics, " .
@@ -1580,6 +1587,8 @@ sub get_combo_data_from_sql_db {
 	    $this->{'dbh'}->do('DROP TABLE  needed_choices;');
 	} else {
 	    # Printer $poid not supported by driver $drv
+	    $this->{'log'} = "Error: $poid is not suported by $drv";
+	    return undef;
 	}
     }
     return $dat;
@@ -1829,6 +1838,7 @@ sub get_option {
 	return undef;
     }
 }
+
 
 sub get_driver {
     my ($this, $drv, $version) = @_;
@@ -2782,7 +2792,8 @@ sub get_combo_data ($ $ $) {
         sortoptions($this->{'dat'});
     
     } else {#An error occured
-	$this->{'log'} = $this->{'comboXmlParser'}{'log'};
+	$this->{'log'} = $this->{'comboXmlParser'}{'log'} if !$this->{'dbh'};
+	#else: the log already has our error
     }
     
     return $combo;
