@@ -2011,9 +2011,7 @@ sub normalize {
     my ($str) = @_;
     $str = lc($str);
     $str =~ s/\+/plus/g;
-    $str =~ s/[^a-z0-9\|]+/ /g;
-    $str =~ s/(?<=[a-z])(?=[0-9])/ /g;
-    $str =~ s/(?<=[0-9])(?=[a-z])/ /g;
+    $str =~ s/[^a-z0-9\|]+//g;
     $str =~ s/ //g;
     return $str;
 }
