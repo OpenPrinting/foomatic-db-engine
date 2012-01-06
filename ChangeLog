@@ -1,3 +1,10 @@
+2012-01-06 Jeff Licquia <licquia@linuxfoundation.org>
+
+	* lib/Foomatic/DB.pm: Optimized regexps in the normalize() function
+	  and removed unneeded calls of normalize(), vastly improving speed
+	  of printer search operations, as they are done for queries via
+	  the web query API on the OpenPrinting web server.
+
 2011-12-23 Daniel Dressler <danieru.dressler@gmail.com>
 
 	* foomatic-test-build.in: finished this test script.
