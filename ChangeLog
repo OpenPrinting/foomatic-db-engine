@@ -1,3 +1,8 @@
+2012-01-06 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Fixed typo in get_combo_data_from_sql_db()
+	  method.
+
 2012-01-06 Jeff Licquia <licquia@linuxfoundation.org>
 
 	* lib/Foomatic/DB.pm: Optimized regexps in the normalize() function
@@ -49,7 +54,7 @@
 2011-08-15  Daniel Dressler <danieru.dressler@gmail.com>
 
 	* phonebook.pm: Added elements for sql support, added sql schema
-	
+
 	* sqlLayer.pm: Initial commit from dev branch: 
 	  https://launchpad.net/gsoc2011danieldressler/sqllayer 
 	  Handles the brunt work of sqlite exportation.

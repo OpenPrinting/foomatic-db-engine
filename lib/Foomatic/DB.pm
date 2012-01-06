@@ -1255,7 +1255,7 @@ sub get_combo_data_from_sql_db {
     if ($this->{'dbh'}) {
 	#Do this printer and driver exist?
 	if ( !$this->printer_approved_in_sql_db($poid) 
-	|| !$this->driver_approved_in_sql_db($drv) {
+	     || !$this->driver_approved_in_sql_db($drv) ) {
 	    $this->{'log'} = 
 	    "Error: Either $poid or $drv does not exist in the sql db";
 	    return undef;
