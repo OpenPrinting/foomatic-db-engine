@@ -12,7 +12,7 @@ use Encode;
 @EXPORT = qw(ppdtoperl ppdfromvartoperl);
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
-use Foomatic::xmlParse;
+use Foomatic::filters::xml::xmlParse;
 use DBI;
 use Data::Dumper;
 use POSIX;                      # for rounding integers
@@ -1727,7 +1727,7 @@ sub get_overview {
     }
 
     # Fall back to XML database
-    my $parser = Foomatic::xmlParse->new($this->{'language'},2);
+    my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},2);
     my @printers = <$libdir/db/source/printer/*.xml>;
     my @drivers = <$libdir/db/source/driver/*.xml>;
     my $overview = $parser->parseOverview(\@printers, \@drivers, $cupsppds);
@@ -1757,12 +1757,12 @@ sub get_printer {
     # Generate printer Perl data structure from database
     my $printer;
     if (-r "$poid") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	$printer = $parser->parsePrinter($poid);
     } elsif ($this->{'dbh'}) {
 	return $this->get_printer_from_sql_db($poid);
     } elsif (-r "$libdir/db/source/printer/$poid.xml") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	$printer = $parser->parsePrinter("$libdir/db/source/printer/$poid.xml");
     } else {
 	my ($make, $model);
@@ -1829,10 +1829,10 @@ sub get_option {
     
     # Generate driver Perl data structure from database
     if (-r "$opt") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	return $parser->parseOption("$opt");
     } elsif (-r "$libdir/db/source/opt/$opt.xml") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	return $parser->parseOption("$libdir/db/source/opt/$opt.xml");
     } else {
 	return undef;
@@ -1846,12 +1846,12 @@ sub get_driver {
     # Generate driver Perl data structure from database
     my $driver;
     if (-r "$drv") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	$driver = $parser->parseDriver($drv);
     } elsif ($this->{'dbh'}) {
 	return $this->get_driver_from_sql_db($drv);
     } elsif (-r "$libdir/db/source/driver/$drv.xml") {
-	my $parser = Foomatic::xmlParse->new($this->{'language'},$version);
+	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	$driver = $parser->parseDriver("$libdir/db/source/driver/$drv.xml");
     } else {
 	return undef;
@@ -2773,7 +2773,7 @@ sub get_combo_data ($ $ $) {
 	#Memory wise the cache is very small yet requires processing the
 	#entire option xml set to generate
 	if(!defined($this->{'comboXmlParser'})) {
-	    $this->{'comboXmlParser'} = Foomatic::xmlParse->new($this->{'language'}, 2);
+	    $this->{'comboXmlParser'} = Foomatic::filters::xml::xmlParse->new($this->{'language'}, 2);
 	}
 	
 	my @options = <$libdir/db/source/opt/*.xml>;

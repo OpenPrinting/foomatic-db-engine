@@ -1,4 +1,4 @@
-package Foomatic::xmlParse;
+package Foomatic::filters::xml::xmlParse;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use POSIX qw/strftime/;
 #use Data::Dumper;
 use XML::LibXML;
 use Clone;
-use Foomatic::phonebook;
+use Foomatic::filters::phonebook;
 use Foomatic::DB;
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
 
@@ -39,7 +39,7 @@ sub new {
 		$this->{'version'} = $version;
 	}
 	
-	my $phonebook = Foomatic::phonebook->new($this->{'version'});
+	my $phonebook = Foomatic::filters::phonebook->new($this->{'version'});
 	$this->{'printerPhonebook'} = $phonebook->printer();
 	$this->{'driverPhonebook'}  = $phonebook->driver();
 	$this->{'optionPhonebook'}  = $phonebook->option();

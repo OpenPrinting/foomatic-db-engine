@@ -13,7 +13,7 @@ use Data::Dumper;
 use DBI;
 use Foomatic::DB;
 use Foomatic::Defaults;
-use Foomatic::sqlLayer;
+use Foomatic::filters::sql::to;
 
 my $dbFile = "$libdir/db/openprinting.db";
 
@@ -48,7 +48,7 @@ unlink($dbFile);
 my $db = new Foomatic::DB;
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$dbFile","","");
-my $sqlLayer = Foomatic::sqlLayer->new($dbh, 'sqlite', 2);
+my $sqlLayer = Foomatic::filters::sql::to->new($dbh, 'sqlite', 2);
 $sqlLayer->initDatabase();# Creates tables
 
 

@@ -123,11 +123,6 @@ my $fileh=spawn_child();
 while($combo=pop(@rcombos)) {
     print "PROCESS $n - $$, $combo" if $debug;;
     print $fileh $combo;
-    if ($pcount++ > 25) {
-	close $fileh or die "\nError in child...\n";
-	$fileh = spawn_child();
-	$pcount=0;
-    }
 }
 close $fileh;
 

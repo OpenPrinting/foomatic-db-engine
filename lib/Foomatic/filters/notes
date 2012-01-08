@@ -1,0 +1,4 @@
+The refactoring of backends into formal objects is a work in progress.
+
+Notably currently (2012-01-07) what should be xml::out and much of
+sql::in is still in DB.pm

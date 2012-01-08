@@ -1,3 +1,21 @@
+2012-01-07 Daniel Dressler <danieru.dressler@gmail.com>
+	* lib/Foomatic/(sqlLayer.pm|xmlParse.pm|phonebook.pm):
+	  Subdivided these into categories under 
+	  lib/Foomatic/filters/*/ thus reducing clutter. I'm working on
+	  refactoring (or at least moving arround) to get DB.pm down to
+	  a managable size.
+
+	* lib/Foomatic/DB.pm, foomatic-xml-to-sqlite.in:
+	  Changed refernces to the above files to match their new homes.
+
+	* foomatic-compiledb.in: Removed killing of childern threads. 
+	  This speeds up generating the ppd db by letting the cache fill
+	  with drivers and options.
+	  Achived a complete ppd build in ~4 minutes using a child worker
+	  thread for each core of my early 2009 quad core amd.
+	  Should be noted that the c xml parers had no caching so this
+	  speed up does not work in 4 series foomatic.
+
 2012-01-06 Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Fixed typo in get_combo_data_from_sql_db()
