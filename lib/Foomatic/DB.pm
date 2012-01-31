@@ -1754,16 +1754,19 @@ sub get_combo_data_xml {
 sub get_printer {
     my ($this, $poid, $version) = @_;
     $version = 0 if !defined($version);
+    
     # Generate printer Perl data structure from database
-    my $printer;
     if (-r "$poid") {
 	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
-	$printer = $parser->parsePrinter($poid);
+	return $parser->parsePrinter($poid);
+	
     } elsif ($this->{'dbh'}) {
 	return $this->get_printer_from_sql_db($poid);
+	
     } elsif (-r "$libdir/db/source/printer/$poid.xml") {
 	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
-	$printer = $parser->parsePrinter("$libdir/db/source/printer/$poid.xml");
+	return $parser->parsePrinter("$libdir/db/source/printer/$poid.xml");
+	
     } else {
 	my ($make, $model);
 	if ($poid =~ /^([^\-]+)\-(.*)$/) {
@@ -1776,7 +1779,7 @@ sub get_printer {
 	    $make =~ s/_/ /g;
 	    $model = "Unknown model";
 	}
-	$printer = {
+	return {
 	    'id' => $poid,
 	    'make' => $make,
 	    'model' => $model,
@@ -1784,7 +1787,6 @@ sub get_printer {
 	    'noxmlentry' => 1
 	}
     }
-    return $printer;
 }
 
 sub make_exists {
@@ -1825,15 +1827,19 @@ sub get_option {
     my ($this, $opt, $version) = @_;
     $version = 0 if !defined($version);
     
-    #TODO: Write a sql backed get_option
-    
-    # Generate driver Perl data structure from database
+    # Generate option Perl data
     if (-r "$opt") {
 	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	return $parser->parseOption("$opt");
+	
+    } elsif ($this->{'dbh'}) {
+	my $sqlLayer = Foomatic::filters::sql::from->new($this->{'dbh'}, 'sqlite', $version);
+	return $sqlLayer->pullOption($opt);
+	
     } elsif (-r "$libdir/db/source/opt/$opt.xml") {
 	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
 	return $parser->parseOption("$libdir/db/source/opt/$opt.xml");
+	
     } else {
 	return undef;
     }
@@ -1843,20 +1849,22 @@ sub get_option {
 sub get_driver {
     my ($this, $drv, $version) = @_;
     $version = 0 if !defined($version);
+    
     # Generate driver Perl data structure from database
-    my $driver;
     if (-r "$drv") {
 	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
-	$driver = $parser->parseDriver($drv);
+	return $parser->parseDriver($drv);
+	
     } elsif ($this->{'dbh'}) {
 	return $this->get_driver_from_sql_db($drv);
+	
     } elsif (-r "$libdir/db/source/driver/$drv.xml") {
 	my $parser = Foomatic::filters::xml::xmlParse->new($this->{'language'},$version);
-	$driver = $parser->parseDriver("$libdir/db/source/driver/$drv.xml");
+	return $parser->parseDriver("$libdir/db/source/driver/$drv.xml");
+	
     } else {
 	return undef;
     }
-    return $driver;
 }
 
 sub get_driver_xml {

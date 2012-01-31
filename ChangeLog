@@ -1,3 +1,15 @@
+2012-01-30 Daniel Dressler <danieru.dressler@gmail.com>
+	* lib/Foomatic/filters/sql/from.pm: Added initial pull_option()
+	  loop. So far only pulls basic data from the sql db.
+
+	* lib/Foomatic/filters/sql/to.pm: Fixed bug where style
+	  was not getting set if the style was "forced_composite"
+	  Removed redundent commit that sqlite was complaing about.
+
+	* lib/Fooamtic/DB.pm: Cleaned up get_driver(), get_option(),
+	  and get_printer() unifying them with a control flow with
+	  early returns.
+
 2012-01-07 Daniel Dressler <danieru.dressler@gmail.com>
 	* lib/Foomatic/(sqlLayer.pm|xmlParse.pm|phonebook.pm):
 	  Subdivided these into categories under 

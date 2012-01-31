@@ -350,7 +350,7 @@ sub setPreparedData {
 					$style = 'postscript' if($style eq 'G');
 					$style = 'pjl' if($style eq 'J');
 					$style = 'composite' if($style eq 'X');
-					$style = 'forced_composite' if($style eq 'F');
+					$style = 'forced_composite' if($data->{'substyle'} eq 'F');
 					
 					$data->{'prepared'}{$table}{$destination} = $style
 				}
@@ -504,8 +504,6 @@ sub pushOption {
 	$this->insertArrayData($option, 'option_constraint', 'constraints');
 	$this->insertArrayData($option, 'option_choice', 'vals');
 	$this->insertArrayData($option, 'option_choice_translation', 'comments');
-	
-	$this->{'dbh'}->commit;
 }
 
 sub pushPrinter {
@@ -519,8 +517,6 @@ sub pushPrinter {
 	$this->insertArrayData($printer, 'driver_printer_assoc', 'drivers');
 	$this->insertAssocs($printer->{'prepared'}{'driver_printer_assoc'}{'drivers'});
 	$this->insertArrayData($printer, 'driver_printer_assoc_translation', 'comments');
-	
-	$this->{'dbh'}->commit;
 }
 
 sub pushDriver {
@@ -540,8 +536,6 @@ sub pushDriver {
 	$this->insertArrayData($driver, 'margin', 'margins');
 	$this->insertAssocs($driver->{'prepared'}{'driver_printer_assoc'}{'printers'});
 	$this->insertArrayData($driver, 'driver_printer_assoc_translation', 'comments');
-	
-	$this->{'dbh'}->commit;
 }
 
 1;
