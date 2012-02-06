@@ -10,30 +10,30 @@ use Foomatic::util;
 
 
 sub new( $ $ $ ) {
-	my $class = shift;
-	my $this = {};
-	return bless($this, $class);
+    my $class = shift;
+    my $this = {};
+    return bless($this, $class);
 }
 
 sub generateDriver {
     my ($this, $data) = @_;
-	return $this->generator('d', $data);
+    return $this->generator('d', $data);
 }
 
 sub generateOption {
-	#Not actually functional
+    #Not actually functional
     my ($this, $data) = @_;
-	return $this->generator('o', $data);
+    return $this->generator('o', $data);
 }
 
 sub generatePrinter {
     my ($this, $data) = @_;
-	return $this->generator('p', $data);
+    return $this->generator('p', $data);
 }
 
 sub generateCombo {
     my ($this, $data) = @_;
-	return $this->generator('c', $data);
+    return $this->generator('c', $data);
 }
 
 

@@ -3,6 +3,8 @@
 	  Moved xml generation functionality to filter.
 
 	* lib/Foomatic/DB.pm: Typo fix.
+	
+	* lib/Foomatic/filters/xml/to.pm: Fixed indentation.
 
 2012-01-30 Daniel Dressler <danieru.dressler@gmail.com>
 	* lib/Foomatic/filters/sql/from.pm: Added initial pull_option()
