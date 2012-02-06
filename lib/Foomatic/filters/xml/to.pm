@@ -1,4 +1,4 @@
-package Foomatic::filters::ppd::to;
+package Foomatic::filters::xml::to;
 
 use strict;
 use warnings;

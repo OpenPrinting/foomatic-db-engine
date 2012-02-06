@@ -2,6 +2,8 @@
 	* lib/Foomatic/filters/xml/to.pm, lib/Foomatic/DB.pm:
 	  Moved xml generation functionality to filter.
 
+	* lib/Foomatic/DB.pm: Typo fix.
+
 2012-01-30 Daniel Dressler <danieru.dressler@gmail.com>
 	* lib/Foomatic/filters/sql/from.pm: Added initial pull_option()
 	  loop. So far only pulls basic data from the sql db.

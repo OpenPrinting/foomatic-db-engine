@@ -21,6 +21,8 @@ sub pullOption {
 	
 	my $perlOpt = Foomatic::filters::xml::xmlParse->defaultOptionData;
 	
+	
+	#Data from option table
 	my $querystr =
 	    "SELECT * ".
 	    "FROM options " .

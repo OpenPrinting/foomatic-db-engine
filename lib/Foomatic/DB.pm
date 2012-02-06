@@ -3968,13 +3968,13 @@ sub perltoxml {
     my $generator = Foomatic::filters::xml::to->new();
     # Generate xml
     if (!$mode || ($mode =~ /^[c]/i)) {
-	return $generator->generateCombo($drv);
+	return $generator->generateCombo($dat);
 	
     } elsif ($mode =~ /^[p]/i) {
-	return $generator->generatePrinter($drv);
+	return $generator->generatePrinter($dat);
 	
     } elsif ($mode =~ /^[d]/i) {
-	return $generator->generateDriver($drv);
+	return $generator->generateDriver($dat);
     }
 }
 
