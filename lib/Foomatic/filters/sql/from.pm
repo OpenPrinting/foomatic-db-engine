@@ -70,6 +70,24 @@ sub pullOption {
 		}
 	}
 	
+	#option_choice data
+	$querystr =
+	    "SELECT * ".
+	    "FROM option_choice " .
+	    "WHERE option_id=\"".$optionId."\"";
+	$sth = $this->{'dbh'}->prepare($querystr);
+	$sth->execute();
+	my @choices = ();
+	while ($sqlOpt = $sth->fetchrow_hashref) {
+	    my %choice = ();
+	    $choice{'idx'} = $sqlOpt->{'id'};
+	    $choice{'comment'} = $sqlOpt->{'longname'} if $sqlOpt->{'longname'};
+	    $choice{'value'} = $sqlOpt->{'shortname'} if $sqlOpt->{'shortname'};
+	    $choice{'driverval'} = $sqlOpt->{'driverval'} if defined($sqlOpt->{'driverval'});
+	    push(@choices, \%choice);
+	}
+	$perlOpt->{'vals'} = \@choices;
+	
 	return $perlOpt;
 }
 
