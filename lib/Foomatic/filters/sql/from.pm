@@ -21,14 +21,28 @@ sub pullOption {
 	
 	my $perlOpt = Foomatic::filters::xml::xmlParse->defaultOptionData;
 	
+	#main data
+	$perlOpt = $this->optionMain($perlOpt, $optionId);
+	
+	#choices
+	$perlOpt = $this->optionChoices($perlOpt, $optionId);
+	
+	#multilang comments
+	$perlOpt = $this->optionTranslations($perlOpt, $optionId);
+	
+
+	
+	return $perlOpt;
+}
+
+sub optionMain {
+	my ($this, $perlOpt, $id) = @_;
 	
 	#Data from option table
-	my $querystr =
+	my $sth = $this->_query(
 	    "SELECT * ".
 	    "FROM options " .
-	    "WHERE id=\"".$optionId."\"";
-	my $sth = $this->{'dbh'}->prepare($querystr);
-	$sth->execute();
+	    "WHERE id=\"".$id."\"");
 	my $sqlOpt = $sth->fetchrow_hashref;
 	
 	foreach my $rule (@{$this->{'optionPhonebook'}}) {
@@ -70,25 +84,82 @@ sub pullOption {
 		}
 	}
 	
+	return $perlOpt;
+}
+
+sub optionChoices {
+	my ($this, $perlOpt, $id) = @_;
+	
 	#option_choice data
-	$querystr =
+	my $sth = $this->_query(
 	    "SELECT * ".
 	    "FROM option_choice " .
-	    "WHERE option_id=\"".$optionId."\"";
-	$sth = $this->{'dbh'}->prepare($querystr);
-	$sth->execute();
+	    "WHERE option_id=\"".$id."\"");
 	my @choices = ();
-	while ($sqlOpt = $sth->fetchrow_hashref) {
-	    my %choice = ();
-	    $choice{'idx'} = $sqlOpt->{'id'};
-	    $choice{'comment'} = $sqlOpt->{'longname'} if $sqlOpt->{'longname'};
-	    $choice{'value'} = $sqlOpt->{'shortname'} if $sqlOpt->{'shortname'};
-	    $choice{'driverval'} = $sqlOpt->{'driverval'} if defined($sqlOpt->{'driverval'});
-	    push(@choices, \%choice);
+	while (my $sqlOpt = $sth->fetchrow_hashref) {
+		my %choice = ();
+		$choice{'idx'} = $sqlOpt->{'id'};
+		$choice{'comment'} = $sqlOpt->{'longname'} if $sqlOpt->{'longname'};
+		$choice{'value'} = $sqlOpt->{'shortname'} if $sqlOpt->{'shortname'};
+		$choice{'driverval'} = $sqlOpt->{'driverval'} if defined($sqlOpt->{'driverval'});
+		push(@choices, \%choice);
+		
+		#get the comments,
+		#This will overwrite the comment
+		#we just got from the choice table
+		%choice = %{ $this->optionTranslations(\%choice, $choice{'idx'}, $id) };
 	}
+	
+	#yup, they are called 'choices' and 'values'.
+	#personally I think 'choices' is more specific.
 	$perlOpt->{'vals'} = \@choices;
 	
 	return $perlOpt;
+}
+
+sub optionTranslations {
+	my ($this, $perlOpt, $id, $secondId) = @_;
+	#notice how 'comments' are also called 'translations',
+	#'longnames'. 
+	
+	my $table = "options_translation";
+	my $appendim = "";
+	
+	#Are we dealing with a option or choice translation
+	if(defined($secondId)) {
+		#must be a choice translation
+		$table = "option_choice_translation";
+		$appendim = "AND option_id = \"$secondId\""
+	}
+	
+	#option_choice data
+	my $sth = $this->_query(
+	    "SELECT * ".
+	    "FROM $table " .
+	    "WHERE id=\"$id\" $appendim");
+	my %translations = ();
+	while (my $sqlOpt = $sth->fetchrow_hashref) {
+		$translations{$sqlOpt->{'lang'}} = $sqlOpt->{'longname'};
+	}
+	
+	#the multilang goes into 'comments'
+	#legacy: english is stored in 'comment'
+	$perlOpt->{'comments'} = \%translations;
+	$perlOpt->{'comment'} = $translations{'en'} if defined($translations{'en'});
+	
+	
+	return $perlOpt;
+}
+
+# Returns a loaded statement handle for query
+sub _query {
+	my ($this, $query) = @_;
+	my $sth = $this->{'dbh'}->prepare($query);
+	if(!$sth) {
+		print "\n\n$query\n\n";
+	}
+	$sth->execute();
+	return $sth;
 }
 
 1;

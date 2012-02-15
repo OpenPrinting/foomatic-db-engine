@@ -1,3 +1,8 @@
+2012-02-14 Daniel Dressler <danieru.dressler@gmail.com>
+	* lib/Foomatic/filters/sql/from.pm: Added support
+	  for the option_choice_translation and 
+	  options_translation table. Refactored existing code.
+
 2012-02-09 Daniel Dressler <danieru.dressler@gmail.com>
 	* lib/Foomatic/filters/sql/from.pm: Added support
 	  for the option_choice table.
