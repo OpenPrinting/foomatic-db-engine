@@ -41,6 +41,8 @@ sub getConstraints {
 		if($constraint->{'sense'}) {
 			#correct, the schema uses strings not booleans =\
 			#or even ints
+			#The reason for this is because the original implmentation
+			#for pushing to this sql schema was written in php, I think.
 			$preparedConstraint{'sense'} = 'true';
 		} else {
 			$preparedConstraint{'sense'} = 'false';

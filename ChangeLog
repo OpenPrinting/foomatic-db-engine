@@ -1,21 +1,32 @@
+2012-02-15 Daniel Dressler <danieru.dressler@gmail.com>
+
+	* lib/Foomatic/filters/sql/from.pm: Finished support for
+	  pulling options from the sql database.
+
+	* ChangeLog: Fixed spacing in last five commit comments.
+
 2012-02-14 Daniel Dressler <danieru.dressler@gmail.com>
+
 	* lib/Foomatic/filters/sql/from.pm: Added support
 	  for the option_choice_translation and 
 	  options_translation table. Refactored existing code.
 
 2012-02-09 Daniel Dressler <danieru.dressler@gmail.com>
+
 	* lib/Foomatic/filters/sql/from.pm: Added support
 	  for the option_choice table.
 
 2012-02-05 Daniel Dressler <danieru.dressler@gmail.com>
+
 	* lib/Foomatic/filters/xml/to.pm, lib/Foomatic/DB.pm:
 	  Moved xml generation functionality to filter.
 
 	* lib/Foomatic/DB.pm: Typo fix.
-	
+
 	* lib/Foomatic/filters/xml/to.pm: Fixed indentation.
 
 2012-01-30 Daniel Dressler <danieru.dressler@gmail.com>
+
 	* lib/Foomatic/filters/sql/from.pm: Added initial pull_option()
 	  loop. So far only pulls basic data from the sql db.
 
@@ -28,6 +39,7 @@
 	  early returns.
 
 2012-01-07 Daniel Dressler <danieru.dressler@gmail.com>
+
 	* lib/Foomatic/(sqlLayer.pm|xmlParse.pm|phonebook.pm):
 	  Subdivided these into categories under 
 	  lib/Foomatic/filters/*/ thus reducing clutter. I'm working on

@@ -30,6 +30,9 @@ sub pullOption {
 	#multilang comments
 	$perlOpt = $this->optionTranslations($perlOpt, $optionId);
 	
+	#constraints on the option
+	$perlOpt = $this->optionConstraints($perlOpt, $optionId);
+	
 
 	
 	return $perlOpt;
@@ -108,6 +111,10 @@ sub optionChoices {
 		#This will overwrite the comment
 		#we just got from the choice table
 		%choice = %{ $this->optionTranslations(\%choice, $choice{'idx'}, $id) };
+		
+		#constraints on choice
+		%choice = %{ $this->optionConstraints(\%choice, $id, $choice{'idx'}) };
+
 	}
 	
 	#yup, they are called 'choices' and 'values'.
@@ -132,7 +139,7 @@ sub optionTranslations {
 		$appendim = "AND option_id = \"$secondId\""
 	}
 	
-	#option_choice data
+	# data
 	my $sth = $this->_query(
 	    "SELECT * ".
 	    "FROM $table " .
@@ -148,6 +155,51 @@ sub optionTranslations {
 	$perlOpt->{'comment'} = $translations{'en'} if defined($translations{'en'});
 	
 	
+	return $perlOpt;
+}
+
+sub optionConstraints {
+	my ($this, $perlOpt, $id, $choiceId) = @_;
+	
+	my $appendim = "";
+	#Are we dealing with a option or choice constraint?
+	if(defined($choiceId)) {
+		#must be a choice constraint
+		$appendim = "AND choice_id = \"$choiceId\""
+	} else {
+		$appendim = "AND is_choice_constraint = 0"
+	}
+	
+	# data
+	my $sth = $this->_query(
+	    "SELECT * ".
+	    "FROM option_constraint " .
+	    "WHERE option_id=\"$id\" $appendim");
+	my @constraints = ();
+	while (my $sqlOpt = $sth->fetchrow_hashref) {
+		my %constraint;
+		$constraint{'printer'} = $sqlOpt->{'printer'} if ($sqlOpt->{'printer'});
+		$constraint{'driver'} = $sqlOpt->{'driver'} if ($sqlOpt->{'driver'});
+		$constraint{'arg_defval'} = $sqlOpt->{'defval'} if ($sqlOpt->{'defval'});
+		
+		#table uses 'true' and 'false' as strings
+		$constraint{'sense'} = ($sqlOpt->{'sense'} eq 'true') ? 1 : 0;
+		
+		#the 'make' aka brand gets put into the printer field.
+		#Yes this can be lossy. I did not write the original
+		#sql schema so...
+		#normally printer is formated as make-model.
+		#for only make it will be make-
+		if($constraint{'printer'} && $constraint{'printer'} =~ m/(.*)-$/) {
+			$constraint{'make'} = $1;
+			delete $constraint{'printer'};
+		}
+		
+		push(@constraints, \%constraint);
+	}
+	
+	#set and return
+	$perlOpt->{'constraints'} = \@constraints if (@constraints);
 	return $perlOpt;
 }
 
