@@ -9,7 +9,7 @@ use Encode;
 		getexecdocs
 		translate_printer_id
 		);
-@EXPORT = qw(ppdtoperl ppdfromvartoperl);
+@EXPORT = qw(ppdtoperl ppdfromvartoperl getpage);
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
 use Foomatic::filters::xml::xmlParse;
@@ -27,7 +27,14 @@ sub new {
     $this->{'language'} = "C";
     $this->{'log'} = undef;
     $this->connect_to_mysql_db;
-    return $this;
+    if ($this->{'dbh'} ||
+	(-d "$libdir/db/source/printer/" &&
+	 -d "$libdir/db/source/driver/" &&
+	 -d "$libdir/db/source/opt/")) {
+	return $this;
+    } else {
+	die("No Foomatic database present!\n");
+    }
 }
 
 # destructor for Foomatic::DB, only closes an SQL database connection if an
@@ -6599,7 +6606,7 @@ EOFPGSZ
 
 # Utility function; returns content of a URL
 sub getpage {
-    my ($this, $url, $dontdie) = @_;
+    my ($url, $dontdie) = @_;
 
     my $failed = 0;
     my $page = undef;

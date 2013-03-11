@@ -1,3 +1,15 @@
+2013-03-11 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Error out when initializing the DB object
+	  without any form of a Foomatic database being present, made
+	  the getpage() method a normal, object-independent function as
+	  it does not need a Foomatic database.
+
+	* foomatic-configure.in, foomatic-printjob.in: Updated to use
+	  getpage() as a normal function, fixed CUPS check, made
+	  foomatic-printjob working without presence of a Foomatic
+	  database.
+
 2012-02-15 Daniel Dressler <danieru.dressler@gmail.com>
 
 	* lib/Foomatic/filters/sql/from.pm: Finished support for

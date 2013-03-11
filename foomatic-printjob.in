@@ -35,8 +35,6 @@ GetOptions("P=s" => \$opt_P,         # which queue (Printer)?
 
 help() if ($opt_h && !$opt_P);
 
-my $db = new Foomatic::DB;
-
 my $in_config = {'queue'   => $opt_P,
 		 'options' => \@opt_o,
 		 'spooler' => $opt_s};
@@ -985,8 +983,8 @@ sub pdq_check_printer {
 
 sub detect_spooler {
     # If tcp/localhost:631 opens, cups
-    my $page = $db->getpage('http://localhost:631/', 1);
-    if ($page =~ m!Common UNIX Printing System!) {
+    my $page = getpage('http://localhost:631/', 1);
+    if ($page =~ m!CUPS!) {
 	return 'cups';
     }
 

@@ -4340,8 +4340,8 @@ sub detect_spooler {
     # If tcp/localhost:631 opens, cups CUPS is the most sophisticated
     # spooler, if it is running, it is usually the primary printing
     # system
-    my $page = ($db->getpage('http://localhost:631/', 1) || "");
-    if ($page =~ m!Common UNIX Printing System!) {
+    my $page = (getpage('http://localhost:631/', 1) || "");
+    if ($page =~ m!CUPS!) {
 	return 'cups';
     }
 
