@@ -13,6 +13,7 @@ use Encode;
 
 use Foomatic::Defaults qw(:DEFAULT $DEBUG);
 use Foomatic::filters::xml::xmlParse;
+use Foomatic::filters::xml::to;
 use DBI;
 use Data::Dumper;
 use POSIX;                      # for rounding integers

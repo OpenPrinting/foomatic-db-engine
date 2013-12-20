@@ -7,6 +7,7 @@ use Data::Dumper;
 use DBI;
 use Foomatic::filters::phonebook;
 use Foomatic::util;
+use Foomatic::DB;
 
 
 sub new( $ $ $ ) {
@@ -126,7 +127,7 @@ sub generator {
 	$xml .=
 	    "  <comments>\n" .
 	    "    <en>\n";
-	$xml .= htmlify($dat->{'comment'}) . "\n" if $dat->{'comment'};
+	$xml .= Foomatic::DB::htmlify($dat->{'comment'}) . "\n" if $dat->{'comment'};
 	$xml .=
 	    "    </en>\n" .
 	    "  </comments>\n" .
