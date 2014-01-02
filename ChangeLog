@@ -1,3 +1,8 @@
+2014-01-02 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-addpjloptions.in: Make foomatic-addpjloptions work with
+	  the system's Foomatic database, too.
+
 2013-03-11 Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Error out when initializing the DB object

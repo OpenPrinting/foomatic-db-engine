@@ -21,6 +21,7 @@
  
 use strict;
 use FileHandle;
+use Foomatic::Defaults;
 
 my $dir = "./foomatic-db/opt";
 
@@ -216,9 +217,6 @@ if( $opt->{a} ){
 }
 
 $dir = $opt->{o} if $opt->{o};
-
-
-my $libdir = ".";
 
 my($printer,$manufacturer,$model,$templatename);
 # Check presence of a printer ID
