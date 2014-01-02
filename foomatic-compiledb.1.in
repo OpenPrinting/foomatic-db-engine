@@ -42,7 +42,7 @@ returns 0 unless something unexpected happens.
 
 .SH AUTHORS
 Manfred Wassmann <\fImanolo@NCC-1701.B.Shuttle.de\fR> and Till Kamppeter
-<\fItill.kamppeter@gmx.net\fR> for the foomatic
+<\fItill.kamppeter@gmail.com\fR> for the foomatic
 project using output from the associated binary.
 
 .SH BUGS
