@@ -3725,7 +3725,8 @@ sub ppdfromvartoperl {
 		checksetting ($dat, $argname, $setting);
 		# Make sure that this argument has a default setting, even
 		# if none is defined in this PPD file
-		if (!$dat->{'args_byname'}{$argname}{'default'}) {
+		if (!defined($dat->{'args_byname'}{$argname}{'default'}) ||
+		    ($dat->{'args_byname'}{$argname}{'default'} eq "")) {
 		    $dat->{'args_byname'}{$argname}{'default'} = $setting;
 		}
 	    }

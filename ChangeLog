@@ -1,3 +1,9 @@
+2014-03-20 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* lib/Foomatic/DB.pm: Do not interpret option default values set to
+	  "0" in PPD files as no default setting defined. Thanks to Deng
+	  Pang from Ricoh (DengPang at rst dot ricoh dot com) for the report.
+
 2014-01-02 Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-addpjloptions.in: Make foomatic-addpjloptions work with
