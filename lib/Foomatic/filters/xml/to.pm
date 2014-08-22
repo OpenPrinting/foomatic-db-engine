@@ -47,21 +47,23 @@ sub generator {
 
     if (!$mode || ($mode =~ /^[cp]/i)) { 
 	$xml .=
-	    "<printer id=\"printer/" . $dat->{'id'} . "\">\n" .
-	    "  <make>" . $dat->{'make'} . "</make>\n" .
-	    "  <model>" . $dat->{'model'} . "</model>\n" .
+	    "<printer id=\"printer/" . ($dat->{'id'} ? $dat->{'id'} : "") .
+	    "\">\n" .
+	    "  <make>" . ($dat->{'make'} ? $dat->{'make'} : "") . "</make>\n" .
+	    "  <model>" . ($dat->{'model'} ? $dat->{'model'} : "") .
+	    "</model>\n" .
 	    "  <mechanism>\n" .
-	    ($dat->{'type'} ? "    <" . $dat->{'type'} . " />\n" : ()) .
-	    ($dat->{'color'} ? "    <color />\n" : ()) .
+	    ($dat->{'type'} ? "    <" . $dat->{'type'} . " />\n" : "") .
+	    ($dat->{'color'} ? "    <color />\n" : "") .
 	    ($dat->{'maxxres'} || $dat->{'maxyres'} ?
 	     "    <resolution>\n" .
 	     "      <dpi>\n" .
 	     ($dat->{'maxxres'} ?
-	      "        <x>" . $dat->{'maxxres'} . "</x>\n" : ()) .
+	      "        <x>" . $dat->{'maxxres'} . "</x>\n" : "") .
 	     ($dat->{'maxyres'} ?
-	      "        <y>" . $dat->{'maxyres'} . "</y>\n" : ()) .
+	      "        <y>" . $dat->{'maxyres'} . "</y>\n" : "") .
 	     "      </dpi>\n" .
-	     "    </resolution>\n" : ()) .
+	     "    </resolution>\n" : "") .
 	     "  </mechanism>\n";
 	if (defined($dat->{'languages'}) ||
 	    defined($dat->{'pjl'}) ||

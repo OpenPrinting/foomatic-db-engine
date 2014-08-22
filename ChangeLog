@@ -1,3 +1,12 @@
+2014-08-22 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppd-to-xml.in: Let missing XML files be added when to a
+	  PPD with already existing XML files new "*Product:" lines get
+	  added.
+
+	* lib/Foomatic/filters/xml/to.pm: Silenced warnings about
+	  uninitialized strings.
+
 2014-03-20 Till Kamppeter <till.kamppeter@gmail.com>
 
 	* lib/Foomatic/DB.pm: Do not interpret option default values set to

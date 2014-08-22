@@ -35,7 +35,6 @@ my $nocheck = $opt_x;
 
 my @ppddrivers = ();
 my @driverslist = ($drivers ? split(',', $drivers) : ());
-my @newxmlentries = ();
 my $commentadded = 0;
 
 foreach $ppdfile (@ARGV) {
@@ -112,6 +111,41 @@ foreach $ppdfile (@ARGV) {
 	$pdddlpath = "PPD/$mk/$ppd";    
     }
     $ppddlpath =~ s/\.gz$//i;
+
+    $db->{'dat'} = $dat;
+    $db->{'dat'}{'comment'} =
+	"      This database entry was automatically generated\n" .
+	"      from the PPD file for this printer.<p>\n\n" .
+	$db->{'dat'}{'comment'} if !$parameters->{'nodefaultcomment'};
+    $db->{'dat'}{'functionality'} = "A";
+    foreach my $product (@{$db->{'dat'}{ppdproduct}}) {
+	$db->{'dat'}{'model'} =
+	    Foomatic::DB::clean_manufacturer_name(Foomatic::DB::clean_model_name($product))
+	    if scalar(@{$db->{'dat'}{ppdproduct}}) > 1;
+	$db->{'dat'}{'model'} =~ s/^$db->{'dat'}{'make'}\s*//i;
+	$db->{'dat'}{'id'} =
+	    Foomatic::DB::generatepid($db->{'dat'}{'make'},
+				      $db->{'dat'}{'model'});
+	if (scalar(@{$db->{'dat'}{ppdproduct}}) > 1) {
+	    $db->{'dat'}{'general_mfg'} = $db->{'dat'}{'ppdmanufacturer'} if
+		$db->{'dat'}{'ppdmanufacturer'} &&
+		!$db->{'dat'}{'general_mfg'};
+	    $db->{'dat'}{'general_mdl'} = $product;
+	    $db->{'dat'}{'general_ieee'} = "MFG:" .
+		$db->{'dat'}{'general_mfg'} .
+		";MDL:" . $db->{'dat'}{'general_mdl'} . ";" .
+		($db->{'dat'}{'general_cmd'} ?
+		 "CMD:" . $db->{'dat'}{'general_cmd'} . ";" : "");
+	}
+	$result = $db->perltoxml('p');
+	print "  Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
+	my $f = ($destdir ? $destdir . "/" : ()) . 
+	    $db->{'dat'}{'id'} . ".xml";
+	open FILE, "> " . $f or
+	    die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
+	print FILE $result;
+	close FILE;
+    }
     my @existing = ();
     if (!$nocheck) {
 	@existing = $db->find_printer("$dat->{'make'}|$dat->{'model'}", 4, 1);
@@ -132,13 +166,11 @@ foreach $ppdfile (@ARGV) {
 	     } split(/\n/s, 
 		     `find $libdir/db/source/printer -name "*.xml" -print0 | xargs -0 grep -l $ppddlpath`));
     }
-    unshift(@existing, @newxmlentries) if @newxmlentries;
-    my $entryfound = 0;
+    delete($db->{'dat'});
     foreach my $entry (@existing) {
 	my $d = $db->get_printer($entry);
 	my $result;
 	next if $d->{'noxmlentry'};
-	$entryfound = 1;
 	next if $nomod and $entry !~ /\.xml$/i;
 	$db->{'dat'} = $d;
 	if (!defined($parameters->{'drivers'})) {
@@ -199,44 +231,6 @@ foreach $ppdfile (@ARGV) {
 	    die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
 	print FILE $result;
 	close FILE;
-	delete($db->{'dat'});
-    }
-    if (!$entryfound) {
-	$db->{'dat'} = $dat;
-	$db->{'dat'}{'comment'} =
-	    "      This database entry was automatically generated\n" .
-	    "      from the PPD file for this printer.<p>\n\n" .
-	    $db->{'dat'}{'comment'} if !$parameters->{'nodefaultcomment'};
-	$db->{'dat'}{'functionality'} = "A";
-	foreach my $product (@{$db->{'dat'}{ppdproduct}}) {
-	    $db->{'dat'}{'model'} =
-		Foomatic::DB::clean_manufacturer_name(Foomatic::DB::clean_model_name($product))
-		if scalar(@{$db->{'dat'}{ppdproduct}}) > 1;
-	    $db->{'dat'}{'model'} =~ s/^$db->{'dat'}{'make'}\s*//i;
-	    $db->{'dat'}{'id'} =
-		Foomatic::DB::generatepid($db->{'dat'}{'make'},
-					  $db->{'dat'}{'model'});
-	    if (scalar(@{$db->{'dat'}{ppdproduct}}) > 1) {
-		$db->{'dat'}{'general_mfg'} = $db->{'dat'}{'ppdmanufacturer'} if
-		    $db->{'dat'}{'ppdmanufacturer'} &&
-		    !$db->{'dat'}{'general_mfg'};
-		$db->{'dat'}{'general_mdl'} = $product;
-		$db->{'dat'}{'general_ieee'} = "MFG:" .
-		    $db->{'dat'}{'general_mfg'} .
-		    ";MDL:" . $db->{'dat'}{'general_mdl'} . ";" .
-		    ($db->{'dat'}{'general_cmd'} ?
-		     "CMD:" . $db->{'dat'}{'general_cmd'} . ";" : "");
-	    }
-	    $result = $db->perltoxml('p');
-	    print "  Creating new printer entry $db->{'dat'}{'id'}.xml ...\n";
-	    my $f = ($destdir ? $destdir . "/" : ()) . 
-		$db->{'dat'}{'id'} . ".xml";
-	    open FILE, "> " . $f or
-		die "Cannot write file $db->{'dat'}{'id'}.xml!\n";
-	    print FILE $result;
-	    close FILE;
-	    push(@newxmlentries, $f);
-	}
 	delete($db->{'dat'});
     }
     undef($db);
