@@ -1,3 +1,8 @@
+2014-11-14 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* foomatic-ppdfile.in: Foomatic doesn't provide some offered PPD
+	  files. Thanks to Marek Kasik for the patch (bug #1238).
+
 2014-08-22 Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppd-to-xml.in: Let missing XML files be added when to a
@@ -40,7 +45,7 @@
 2012-02-14 Daniel Dressler <danieru.dressler@gmail.com>
 
 	* lib/Foomatic/filters/sql/from.pm: Added support
-	  for the option_choice_translation and 
+	  for the option_choice_translation and
 	  options_translation table. Refactored existing code.
 
 2012-02-09 Daniel Dressler <danieru.dressler@gmail.com>
