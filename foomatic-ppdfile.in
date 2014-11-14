@@ -195,8 +195,10 @@ sub generateppd {
 	    unshift(@drivercomponents, pop(@poidcomponents));
 	    $driver = join('-', @drivercomponents);
 	    $printer = join('-', @poidcomponents);
-	    next if (!Foomatic::DB::member($driver, @drivers) or
-		     !Foomatic::DB::member($printer, @printers));
+	    my @driver_printers = $db->get_printers_for_driver ($driver);
+	    next if ((!Foomatic::DB::member($driver, @drivers) or
+		      !Foomatic::DB::member($printer, @printers)) and
+		     !Foomatic::DB::member($printer, @driver_printers));
 	    $poid = $printer;
 	    last;
 	}
