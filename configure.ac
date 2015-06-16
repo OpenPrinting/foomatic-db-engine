@@ -148,13 +148,17 @@ else
   PREFIX=$prefix
 fi
 echo -n Checking where Perl will find its libraries...
-eval `${PERL} -V:installprefix`
-PERLPREFIX=`echo $installprefix`
-if test -n "$PERLPREFIX"; then
-  echo " $PERLPREFIX"
+if test "$PERLPREFIX" = "" ; then
+    eval `${PERL} -V:installprefix`
+    PERLPREFIX=`echo $installprefix`
+    if test -n "$PERLPREFIX"; then
+      echo " $PERLPREFIX"
+    else
+      PERLPREFIX=/usr
+      echo " not found, installing the Perl libraries with prefix /usr."
+    fi
 else
-  PERLPREFIX=/usr
-  echo " not found, installing the Perl libraries with prefix /usr."
+    echo " $PERLPREFIX"
 fi
 AC_SUBST(PERLPREFIX)
 

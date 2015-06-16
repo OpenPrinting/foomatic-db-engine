@@ -1,3 +1,8 @@
+2015-06-16 Till Kamppeter <till.kamppeter@gmail.com>
+
+	* configure.ac: Allow user-configurable PERLPREFIX via environment
+	  variable (Bug #1294).
+
 2014-11-14 Till Kamppeter <till.kamppeter@gmail.com>
 
 	* foomatic-ppdfile.in: Foomatic doesn't provide some offered PPD
