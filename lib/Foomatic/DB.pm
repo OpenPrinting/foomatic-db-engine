@@ -5533,7 +5533,7 @@ sub getppd (  $ $ $ ) {
 			# option.
 			my $size = $v->{'driverval'};
 			if ($size =~ /([\d\.]+)x([\d\.]+)([a-z]+)\b/) {
-			    # 2 positive integers separated by 
+			    # 2 positive numbers separated by
 			    # an 'x' with a unit
 			    my $w = $1;
 			    my $h = $2;
@@ -5551,8 +5551,8 @@ sub getppd (  $ $ $ ) {
 			    $w = sprintf("%.2f", $w) if $w =~ /\./;
 			    $h = sprintf("%.2f", $h) if $h =~ /\./;
 			    $size = "$w $h";
-			} elsif (($size =~ /(\d+)[x\s]+(\d+)/) ||
-			    # 2 positive integers separated by 
+			} elsif (($size =~ /([\d\.]+)[x\s]+([\d\.]+)/) ||
+			    # 2 positive numbers separated by
 			    # whitespace or an 'x'
 				 ($size =~ /\-dDEVICEWIDTHPOINTS\=(\d+)\s+\-dDEVICEHEIGHTPOINTS\=(\d+)/)) {
 			    # "-dDEVICEWIDTHPOINTS=..."/"-dDEVICEHEIGHTPOINTS=..."
