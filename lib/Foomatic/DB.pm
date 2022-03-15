@@ -309,46 +309,6 @@ sub get_driver_support_contacts_from_sql_db {
     return @supportcontacts;
 }
 
-sub get_margins_from_sql_db {
-    my ($this, $drv, $poid) = @_;
-    my $margins = undef;
-    if ($this->{'dbh'}) {
-	my $marginsquerystr =
-	    "SELECT margin_type, pagesize, margin_unit, margin_absolute, " .
-	    "margin_left, margin_bottom, margin_right, margin_top " .
-	    "FROM margin " .
-	    "WHERE " .
-	    ($drv ? "driver_id=\"$drv\" " :
-	     "(driver_id IS NULL OR driver_id=\"\") ") .
-	    "AND " .
-	    ($poid ? "printer_id=\"$poid\" " :
-	     "(printer_id IS NULL OR printer_id=\"\") ") .
-	    ";";
-	my $sthm = $this->{'dbh'}->prepare($marginsquerystr);
-	$sthm->execute();
-	while (my @mrow = $sthm->fetchrow_array) {
-	    my $rec = undef;
-	    $rec->{'absolute'} = 1 if defined($mrow[3]) && (int($mrow[3]) != 0);
-	    $rec->{'absolute'} = 0 if defined($mrow[3]) && (int($mrow[3]) == 0);
-	    $rec->{'unit'} = $mrow[2] if defined($mrow[2]) && ($mrow[2] ne "");
-	    $rec->{'left'} = $mrow[4] if defined($mrow[4]) && ($mrow[4] ne "");
-	    $rec->{'bottom'} = $mrow[5]
-		if defined($mrow[5]) && ($mrow[5] ne "");
-	    $rec->{'right'} = $mrow[6] if defined($mrow[6]) && ($mrow[6] ne "");
-	    $rec->{'top'} = $mrow[7] if defined($mrow[7]) && ($mrow[7] ne "");
-	    if (defined($rec) && defined($mrow[0])) {
-		if ($mrow[0] eq "general") {
-		    $margins->{"_general"} = $rec;
-		} elsif (($mrow[0] eq "exception") && defined($mrow[1]) &&
-			 $mrow[1]) {
-		    $margins->{$mrow[1]} = $rec;
-		}
-	    }
-	}
-    }
-    return $margins;
-}
-
 sub get_driver_packages_from_sql_db {
     my ($this, $driver) = @_;
     my @packages;
@@ -871,10 +831,6 @@ sub get_printer_from_sql_db {
 		 ["comments"]);
 	    $pentry->{'comment'} = $tr[0]
 		if defined($tr[0]) && ($tr[0] ne "");
-
-	    # Get unprintable margins from separate table
-	    my $margins = $this->get_margins_from_sql_db(undef, $poid);
-	    $pentry->{'margins'} = $margins if defined($margins);
 	} else {
 	    $pentry->{'noxmlentry'} = 1;
 	    $pentry->{'id'} = $poid;
@@ -1042,10 +998,6 @@ sub get_driver_from_sql_db {
 		if defined($tr[4]) && ($tr[4] ne "");
 	    $dentry->{'comment'} = $tr[5]
 		if defined($tr[5]) && ($tr[5] ne "");
-
-	    # Get unprintable margins from separate table
-	    my $margins = $this->get_margins_from_sql_db($driver, undef);
-	    $dentry->{'margins'} = $margins if defined($margins);
 
 	    # Get dependencies from separate table
 	    my @dependencies =
@@ -1356,10 +1308,6 @@ sub get_combo_data_from_sql_db {
 		if defined($row[9]) && ($row[9] ne "");
 	    $dat->{'comboppdentry'} = $row[10]
 		if defined($row[10]) && ($row[10] ne "");
-
-	    # Get unprintable margins from separate table
-	    my $margins = $this->get_margins_from_sql_db($drv, $poid);
-	    $dat->{'combomargins'} = $margins if defined($margins);
 
 	    # Compute the options and choices which should appear in the PPD
 	    # file
