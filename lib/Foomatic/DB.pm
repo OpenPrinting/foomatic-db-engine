@@ -120,54 +120,6 @@ sub disconnect_from_sql_db {
     }
 }
 
-sub printer_approved_in_sql_db {
-    my ($this, $pid) = @_;
-    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
-	# Get list of approval state of printer
-	my $unapprovedprinterquerystr =
-	    "SELECT id FROM printer_approval " .
-	    "WHERE id=\"$pid\" AND " .
-	    "(approved IS NULL OR approved=0 OR approved='' OR " .
-	    "(rejected IS NOT NULL AND rejected!=0 AND rejected!='') OR " .
-	    "(showentry IS NOT NULL AND showentry!='' AND showentry!=1 AND " .
-	    "showentry>CAST(NOW() AS DATE)));";
-	my $sth = $this->{'dbh'}->prepare($unapprovedprinterquerystr);
-	if ($sth->execute()) {
-	    my @row = $sth->fetchrow_array;
-	    return 0 if ($row[0]);
-	    return 1;
-	} else {
-	    return 1;
-	}
-    } else {
-	return 1;
-    }
-}
-
-sub driver_approved_in_sql_db {
-    my ($this, $driver) = @_;
-    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
-	# Get list of approval state of driver
-	my $unapproveddriverquerystr =
-	    "SELECT id FROM driver_approval " .
-	    "WHERE id=\"$driver\" AND " .
-	    "(approved IS NULL OR approved=0 OR approved='' OR " .
-	    "(rejected IS NOT NULL AND rejected!=0 AND rejected!='') OR " .
-	    "(showentry IS NOT NULL AND showentry!='' AND showentry!=1 AND " .
-	    "showentry>CAST(NOW() AS DATE)));";
-	my $sth = $this->{'dbh'}->prepare($unapproveddriverquerystr);
-	if ($sth->execute()) {
-	    my @row = $sth->fetchrow_array;
-	    return 0 if ($row[0]);
-	    return 1;
-	} else {
-	    return 1;
-	}
-    } else {
-	return 1;
-    }
-}
-
 sub get_translation_from_sql_db {
     my ($this, $table, $pkeys, $fields) = @_;
     if ($this->{'dbh'} &&
@@ -608,7 +560,6 @@ sub get_printer_from_sql_db {
     my ($this, $poid, $nodriverlist) = @_;
     my $pentry;
     if ($this->{'dbh'}) {
-	return undef if !$this->printer_approved_in_sql_db($poid);
 	# Get printer record
 	my $printerquerystr =
 	    "SELECT * " .
@@ -821,7 +772,6 @@ sub get_driver_from_sql_db {
     my ($this, $driver, $noprinterlist) = @_;
     my $dentry;
     if ($this->{'dbh'}) {
-	return undef if !$this->driver_approved_in_sql_db($driver);
 	# Get driver record
 	my $driverquerystr =
 	    "SELECT * " .
@@ -1044,7 +994,6 @@ sub printer_exists_in_sql_db {
     my ($this, $poid) = @_;
     # Check whether a printer entry exists in the database
     if ($this->{'dbh'}) {
-	return undef if !$this->printer_approved_in_sql_db($poid);
 	# Get printer record
 	my $printerquerystr =
 	    "SELECT id " .
@@ -1064,7 +1013,6 @@ sub driver_exists_in_sql_db {
     my ($this, $drv) = @_;
     # Check whether a driver entry exists in the database
     if ($this->{'dbh'}) {
-	return undef if !$this->driver_approved_in_sql_db($drv);
 	# Get driver record
 	my $driverquerystr =
 	    "SELECT id " .
@@ -1084,7 +1032,6 @@ sub get_printers_for_driver_from_sql_db {
     my ($this, $drv) = @_;
     my @printerlist = ();
     if ($this->{'dbh'}) {
-	return () if !$this->driver_approved_in_sql_db($drv);
 	# Get printer IDs of printer/driver combos with the given driver
 	my $querystr =
 	    "SELECT printer_id " .
@@ -1103,7 +1050,6 @@ sub get_drivers_for_printer_from_sql_db {
     my ($this, $poid) = @_;
     my @driverlist = ();
     if ($this->{'dbh'}) {
-	return () if !$this->printer_approved_in_sql_db($poid);
 	# Get drivers of printer/driver combos with the given printer ID
 	my $querystr =
 	    "SELECT driver_id " .
@@ -1123,14 +1069,6 @@ sub get_combo_data_from_sql_db {
     my ($this, $drv, $poid) = @_;
     my $dat = undef;
     if ($this->{'dbh'}) {
-	#Do this printer and driver exist?
-	if ( !$this->printer_approved_in_sql_db($poid) 
-	     || !$this->driver_approved_in_sql_db($drv) ) {
-	    $this->{'log'} = 
-	    "Error: Either $poid or $drv does not exist in the sql db";
-	    return undef;
-	}
-	
 	# Is this printer/driver combo valid?
 	my $querystr =
 	    "SELECT max_res_x, max_res_y, color, text, lineart, graphics, " .
