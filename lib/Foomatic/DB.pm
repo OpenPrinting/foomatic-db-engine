@@ -168,58 +168,6 @@ sub driver_approved_in_sql_db {
     }
 }
 
-sub get_unapproved_printers_from_sql_db {
-    my ($this) = @_;
-    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
-	# Get list of unapproved printers
-	my $unapprovedprinterquerystr =
-	    "SELECT id FROM printer_approval " .
-	    "WHERE (approved IS NULL OR approved=0 OR approved='' OR " .
-	    "(rejected IS NOT NULL AND rejected!=0 AND rejected!='') OR " .
-	    "(showentry IS NOT NULL AND showentry!='' AND showentry!=1 AND " .
-	    "showentry>CAST(NOW() AS DATE))) " .
-	    "ORDER BY id;";
-	my $sth = $this->{'dbh'}->prepare($unapprovedprinterquerystr);
-	if ($sth->execute()) {
-	    my @upl = ();
-	    while (my @row = $sth->fetchrow_array) {
-		push(@upl, $row[0]);
-	    }
-	    return @upl;
-	} else {
-	    return ();
-	}
-    } else {
-	return ();
-    }
-}
-
-sub get_unapproved_drivers_from_sql_db {
-    my ($this) = @_;
-    if ($this->{'dbh'} && $this->{'dbtype'} eq 'mysql') {
-	# Get list of unapproved drivers
-	my $unapproveddriverquerystr =
-	    "SELECT id FROM driver_approval " .
-	    "WHERE (approved IS NULL OR approved=0 OR approved='' OR " .
-	    "(rejected IS NOT NULL AND rejected!=0 AND rejected!='') OR " .
-	    "(showentry IS NOT NULL AND showentry!='' AND showentry!=1 AND " .
-	    "showentry>CAST(NOW() AS DATE))) " .
-	    "ORDER BY id;";
-	my $sth = $this->{'dbh'}->prepare($unapproveddriverquerystr);
-	if ($sth->execute()) {
-	    my @udl = ();
-	    while (my @row = $sth->fetchrow_array) {
-		push(@udl, $row[0]);
-	    }
-	    return @udl;
-	} else {
-	    return ();
-	}
-    } else {
-	return ();
-    }
-}
-
 sub get_translation_from_sql_db {
     my ($this, $table, $pkeys, $fields) = @_;
     if ($this->{'dbh'} &&
@@ -337,8 +285,6 @@ sub get_overview_from_sql_db {
     my ($this, $cupsppds, $speedmode) = @_;
     $speedmode = 0 if !$speedmode;
     if ($this->{'dbh'}) {
-	my @upl = $this->get_unapproved_printers_from_sql_db();
-	my @udl = $this->get_unapproved_drivers_from_sql_db();
 	my $printerquerystr = "SELECT printer.id, " .
 	    "printer.make, printer.model, printer.functionality, " .
 	    "printer.unverified, printer.default_driver, " .
@@ -395,14 +341,10 @@ sub get_overview_from_sql_db {
 		  "driver_printer_assoc.driver_id;";
 	    $sthd = $this->{'dbh'}->prepare($driverquerystr);
 	    $sthd->execute();
-	    do {
-		@drow = $sthd->fetchrow_array;
-	    } while (@udl && @drow && member($drow[1], @udl));
+	    @drow = $sthd->fetchrow_array;
 	}
 	my @prow;
-	do {
-	    @prow = $sthp->fetchrow_array;
-	} while (@upl && @prow && member($prow[0], @upl));
+	@prow = $sthp->fetchrow_array;
 	my $overview = [];
 	while ( 1 ) {
 	    last if !@prow && !@drow;
@@ -475,9 +417,7 @@ sub get_overview_from_sql_db {
 		    if defined($prow[25]) && ($prow[25] ne "");
 
 		# Current row in printer list treated, advance
-		do {
-		    @prow = $sthp->fetchrow_array;
-		} while (@upl && @prow && member($prow[0], @upl));
+		@prow = $sthp->fetchrow_array;
 	    }
 
 	    # Fill make and model fields if there was no appropriate
@@ -607,9 +547,7 @@ sub get_overview_from_sql_db {
 		    }
 
 		    # Current row in printer/driver list treated, advance
-		    do {
-			@drow = $sthd->fetchrow_array;
-		    } while (@udl && @drow && member($drow[1], @udl));
+		    @drow = $sthd->fetchrow_array;
 		}
 	    } else {
 		# There is no driver for this printer. Skip this printer
@@ -632,7 +570,6 @@ sub get_driverlist_from_sql_db {
     my ($this) = @_;
     if ($this->{'dbh'}) {
 	if (!defined($this->{"names-source/driver"})) {
-	    my @udl = $this->get_unapproved_drivers_from_sql_db();
 	    # Get driver list
 	    my $driverquerystr =
 		"SELECT id " .
@@ -641,8 +578,7 @@ sub get_driverlist_from_sql_db {
 	    $sth->execute();
 	    $this->{"names-source/driver"} = [];
 	    while (my @row = $sth->fetchrow_array) {
-		push(@{$this->{"names-source/driver"}}, $row[0]) if
-		    (!@udl || !member($row[0], @udl));
+		push(@{$this->{"names-source/driver"}}, $row[0]);
 	    }
 	}
     }
@@ -653,7 +589,6 @@ sub get_printerlist_from_sql_db {
     my ($this) = @_;
     if ($this->{'dbh'}) {
 	if (!defined($this->{"names-source/printer"})) {
-	    my @upl = $this->get_unapproved_printers_from_sql_db();
 	    # Get printer list
 	    my $printerquerystr =
 		"SELECT id " .
@@ -662,8 +597,7 @@ sub get_printerlist_from_sql_db {
 	    $sth->execute();
 	    $this->{"names-source/printer"} = [];
 	    while (my @row = $sth->fetchrow_array) {
-		push(@{$this->{"names-source/printer"}}, $row[0]) if
-		    (!@upl || !member($row[0], @upl));
+		push(@{$this->{"names-source/printer"}}, $row[0]);
 	    }
 	}
     }
@@ -1092,30 +1026,10 @@ sub make_exists_in_sql_db {
     # Check whether a printer entry for this make exists in the database
     if ($this->{'dbh'}) {
 	my $printerquerystr;
-	my @upl = $this->get_unapproved_printers_from_sql_db();
-	if (@upl) {
-	    $printerquerystr =
-		"SELECT id " .
-		"FROM printer LEFT JOIN printer_approval " .
-		"ON printer.id=printer_approval.id " .
-		"WHERE printer.make=\"$make\" AND " .
-		"(printer_approval.id IS NULL OR " .
-		"(printer_approval.approved IS NOT NULL AND " .
-		"printer_approval.approved!=0 AND " .
-		"printer_approval.approved!='' AND " .
-		"(printer_approval.rejected IS NULL OR " .
-		"printer_approval.rejected=0 OR " .
-		"printer_approval.rejected='') AND " .
-		"(printer_approval.showentry IS NULL OR " .
-		"printer_approval.showentry='' OR " .
-		"printer_approval.showentry=1 OR " .
-		"printer_approval.showentry<=CAST(NOW() AS DATE))));";
-	} else {
-	    $printerquerystr =
-		"SELECT id " .
-		"FROM printer " .
-		"WHERE make=\"$make\";";
-	}
+	$printerquerystr =
+	    "SELECT id " .
+	    "FROM printer " .
+	    "WHERE make=\"$make\";";
 	my $sth = $this->{'dbh'}->prepare($printerquerystr);
 	$sth->execute();
 	my @prow = $sth->fetchrow_array;
@@ -1171,7 +1085,6 @@ sub get_printers_for_driver_from_sql_db {
     my @printerlist = ();
     if ($this->{'dbh'}) {
 	return () if !$this->driver_approved_in_sql_db($drv);
-	my @upl = $this->get_unapproved_printers_from_sql_db();
 	# Get printer IDs of printer/driver combos with the given driver
 	my $querystr =
 	    "SELECT printer_id " .
@@ -1180,8 +1093,7 @@ sub get_printers_for_driver_from_sql_db {
 	my $sth = $this->{'dbh'}->prepare($querystr);
 	$sth->execute();
 	while (my @row = $sth->fetchrow_array) {
-	    push(@printerlist, $row[0]) if
-		(!@upl || !member($row[0], @upl));
+	    push(@printerlist, $row[0]);
 	}
     }
     return @printerlist;
@@ -1192,7 +1104,6 @@ sub get_drivers_for_printer_from_sql_db {
     my @driverlist = ();
     if ($this->{'dbh'}) {
 	return () if !$this->printer_approved_in_sql_db($poid);
-	my @udl = $this->get_unapproved_drivers_from_sql_db();
 	# Get drivers of printer/driver combos with the given printer ID
 	my $querystr =
 	    "SELECT driver_id " .
@@ -1202,8 +1113,7 @@ sub get_drivers_for_printer_from_sql_db {
 	$sth->execute();
 	
 	while (my @row = $sth->fetchrow_array) {
-	    push(@driverlist, $row[0]) if
-		(!@udl || !member($row[0], @udl));
+	    push(@driverlist, $row[0]);
 	}
     }
     return @driverlist;
@@ -1556,28 +1466,8 @@ sub get_makes_from_sql_db {
     if ($this->{'dbh'}) {
 	# Get list of manufacturers
 	my $querystr;
-	my @upl = $this->get_unapproved_printers_from_sql_db();
-	if (@upl) {
-	    $querystr =
-		"SELECT make " .
-		"FROM printer LEFT JOIN printer_approval " .
-		"ON printer.id=printer_approval.id " .
-		"WHERE (printer_approval.id IS NULL OR " .
-		"(printer_approval.approved IS NOT NULL AND " .
-		"printer_approval.approved!=0 AND " .
-		"printer_approval.approved!='' AND " .
-		"(printer_approval.rejected IS NULL OR " .
-		"printer_approval.rejected=0 OR " .
-		"printer_approval.rejected='') AND " .
-		"(printer_approval.showentry IS NULL OR " .
-		"printer_approval.showentry='' OR " .
-		"printer_approval.showentry=1 OR " .
-		"printer_approval.showentry<=CAST(NOW() AS DATE)))) " .
-		"GROUP BY make ORDER BY make;";
-	} else {
-	    $querystr =
-		"SELECT make FROM printer GROUP BY make ORDER BY make;";
-	}
+	$querystr =
+	    "SELECT make FROM printer GROUP BY make ORDER BY make;";
 	my $sth = $this->{'dbh'}->prepare($querystr);
 	$sth->execute();
 	while (my @row = $sth->fetchrow_array) {
@@ -1591,15 +1481,13 @@ sub get_models_by_make_from_sql_db {
     my ($this, $wantmake) = @_;
     my @models;
     if ($this->{'dbh'}) {
-	my @upl = $this->get_unapproved_printers_from_sql_db();
 	# Get list of models for a given manufacturer
 	my $querystr =
 	    "SELECT id, model FROM printer WHERE make=\"$wantmake\";";
 	my $sth = $this->{'dbh'}->prepare($querystr);
 	$sth->execute();
 	while (my @row = $sth->fetchrow_array) {
-	    push(@models, $row[1]) if
-		(!@upl || !member($row[0], @upl));
+	    push(@models, $row[1]);
 	}
     }
     return @models;

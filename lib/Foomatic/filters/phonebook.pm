@@ -466,33 +466,11 @@ my $schemaPhonebook =
   "description" text,
   CONSTRAINT "driver_support_contact_translation_ibfk_1" FOREIGN KEY ("driver_id", "url", "level") REFERENCES "driver_support_contact" ("driver_id", "url", "level") ON DELETE CASCADE
 )',
-'driver_approval' => 'CREATE TABLE "driver_approval" (
-  "id" varchar(50) NOT NULL,
-  "contributor" varchar(40) DEFAULT NULL,
-  "submitted" datetime DEFAULT NULL,
-  "showentry" datetime DEFAULT NULL,
-  "approved" datetime DEFAULT NULL,
-  "rejected" datetime DEFAULT NULL,
-  "approver" varchar(40) DEFAULT NULL,
-  "comment" text,
-  CONSTRAINT "driver_approval_ibfk_1" FOREIGN KEY ("id") REFERENCES "driver" ("id") ON DELETE CASCADE
-)',
 'driver_dependency' => 'CREATE TABLE "driver_dependency" (
   "driver_id" varchar(50) NOT NULL,
   "required_driver" varchar(50) NOT NULL,
   "version" varchar(50) DEFAULT NULL,
   CONSTRAINT "driver_dependency_ibfk_1" FOREIGN KEY ("driver_id") REFERENCES "driver" ("id") ON DELETE CASCADE
-)',
-'printer_approval' => 'CREATE TABLE "printer_approval" (
-  "id" varchar(50) NOT NULL,
-  "contributor" varchar(40) DEFAULT NULL,
-  "submitted" datetime DEFAULT NULL,
-  "showentry" datetime DEFAULT NULL,
-  "approved" datetime DEFAULT NULL,
-  "rejected" datetime DEFAULT NULL,
-  "approver" varchar(40) DEFAULT NULL,
-  "comment" text,
-  CONSTRAINT "printer_approval_ibfk_1" FOREIGN KEY ("id") REFERENCES "printer" ("id") ON DELETE CASCADE
 )',
 'driver_package' => 'CREATE TABLE "driver_package" (
   "driver_id" varchar(50) NOT NULL,
