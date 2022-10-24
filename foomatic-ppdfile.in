@@ -64,7 +64,7 @@ if ($ARGV[0] =~ /^list$/i) {
 
 exit(0);
 
-sub cupslistppds {
+sub parse_cups_foomatic_conf {
 
     # Read configuration in /etc/cups/foomatic.conf
     my $conffilename;
@@ -96,6 +96,14 @@ sub cupslistppds {
 	}
 	close CONF;
     }
+
+    return ($onlyrecommended, $listreadymadeppds);
+
+}
+
+sub cupslistppds {
+
+    my ($onlyrecommended, $listreadymadeppds) = parse_cups_foomatic_conf();
 
     my $db = Foomatic::DB->new();
     $db->get_overview(1, 1 + $listreadymadeppds);
