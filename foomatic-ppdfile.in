@@ -37,14 +37,20 @@ my $onlyrecommended = 0;
 # /etc/cups/foomatic.conf
 my $listreadymadeppds = 0;
 help() if !@ARGV;
-#my ($opt_h, $opt_d, $opt_p, $opt_A, $opt_P, $opt_w);
-getopts("AP:d:p:hwt:");
+#my ($opt_h, $opt_d, $opt_p, $opt_N, $opt_A, $opt_P, $opt_w);
+getopts("AP:d:p:N:hwt:");
 help() if $opt_h;
 my $drv = $opt_d;
 my $poid   = $opt_p;
 my $showall   = $opt_A;
 my $showmatch   = $opt_P;
-help() if ($#ARGV > 1) && !($poid);
+help() if ($#ARGV > 1) && !($poid) && !($ARGV[0] =~ /^export$/i);
+
+# We need the MCE module only if the '-N' option is used
+if ($opt_N) {
+    require MCE;
+    MCE->import;
+}
 
 if ($ARGV[0] =~ /^list$/i) {
     # List all available PPD files (format for cups-driverd)
@@ -52,6 +58,9 @@ if ($ARGV[0] =~ /^list$/i) {
 } elsif ($ARGV[0] =~ /^cat$/i) {
     # Generate and return the selected PPD file (cups-driverd command line)
     generateppd($ARGV[1]);
+} elsif ($ARGV[0] =~ /^export$/i) {
+    # Generate and save all PPD files
+    exportppds($showmatch);
 } elsif ($showall or $showmatch) {
     # List all PPD files or files matching regexp (manual operation)
     foomaticlistppds($showmatch);
@@ -288,6 +297,73 @@ sub generateppd {
 
 }
 
+sub export_ppds_for_printer {
+
+    my ($db, $onlyrecommended, $match, $printer) = @_;
+
+    my $poid = $printer->{'id'};
+    my $model = $printer->{'model'};
+    my $pr = $printer->{'make'};
+    my $recdriver = $printer->{'driver'};
+
+    # we skip unmatching printers here to simplify
+    # the for-loop code in the calling function
+    return  if ($match and not ("$pr $model" =~ m{$match}o));
+
+    my @drivers = ();
+    if (!$onlyrecommended) {
+        push (@drivers, @{$printer->{'drivers'}});
+    } elsif (Foomatic::DB::member($recdriver, @{$printer->{'drivers'}})) {
+        push (@drivers, $recdriver);
+    } # else: no (valid) recommended driver => empty driver list => no output for this printer
+
+    foreach my $driver (@drivers) {
+
+        @data = ppd_text_from_poid_and_driver($db, $poid, $driver);
+
+        # If there is some trouble with the ppd file,
+        # `ppd_text_from_poid_and_driver` will print a warning,
+        # so we can just skip the entry and continue.
+        next  if (!@data);
+
+        # create "make" directory
+        my $filename = $pr =~ s/[^a-zA-z0-9_.-]+//gr;
+        mkdir $filename;
+        # create "model" subdirectory
+        $filename .= "/";
+        $filename .= $model =~ s/[^a-zA-z0-9_.-]+//gr;
+        mkdir $filename;
+        # prepare filename
+        $filename .= "/$poid-$driver.ppd";
+
+        # write target file
+        open(filehandle, '>', "$filename")  or  die "error: $filename: failed to open target ppd file\n";
+        print filehandle @data;
+        close(filehandle);
+        print STDOUT "$pr\t$model\t$poid\t$driver\t$filename\n";
+
+    }
+
+}
+
+sub exportppds {
+
+    my ($match) = @_;
+
+    my ($onlyrecommended, $listreadymadeppds) = parse_cups_foomatic_conf();
+    my $db = Foomatic::DB->new();
+    $db->get_overview(1, 1 + $listreadymadeppds);
+
+    if ($opt_N) {
+        my $mce = MCE->new(max_workers => int($opt_N));
+        $mce->foreach($db->{'overview'}, sub { export_ppds_for_printer($db, $onlyrecommended, $match, $_); } );
+        die  if ($mce->status);
+    } else {
+        export_ppds_for_printer($db,$onlyrecommended, $match, $_)  foreach (@{$db->{'overview'}});
+    }
+
+}
+
 sub help {
     print <<HELP;
 
@@ -296,10 +372,12 @@ $progname -P <regexpr>
 $progname -p <printerid> [-d <driver>] [-w]
 $progname list
 $progname cat <CUPS PPD URI> [-w]
+$progname [-N <proc-count>] [-w] export
+$progname [-N <proc-count>] [-w] -P <regexpr> export
 $progname -h
 
  -A             : show all Printer ID's and compatible drivers
- -P <regexpr>   : show all Printer ID's whose names and model
+ -P <regexpr>   : show/export all Printer ID's whose names and model
                   matched by the RE.  For example:
                    -P HP will match all names with HP in them
  -p <printerid> : Printer ID
@@ -311,6 +389,11 @@ $progname -h
  cat <CUPS PPD URI> : Generate PPD file appropriate to the <CUPS PPD URI>.
                   Available CUPS PPD URIs are listed by 
                   "$progname list".
+ export         : Export all possible PPDs into make/model subdirectories
+                  (make/model names will be reduced to subset of aciss
+                  characters to avoid filesystem troubles)
+ -N <proc-count> : Parallelize PPD export by spawning the given
+                   number of processes (requires perl 'MCE' module)
  -w             : Generate PPD which is compatible with the CUPS PostScript
                   driver for Windows (GUI strings are limited to 39 
                   characters).
