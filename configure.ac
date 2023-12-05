@@ -68,10 +68,10 @@ fi
 AC_PATH_PROG(CAT,cat,CAT_NOT_FOUND,$BSB)
 AC_PATH_PROG(GS,gs,GHOSTSCRIPT_NOT_FOUND,$BSB)
 AC_PATH_PROG(A2PS,a2ps,A2PS_NOT_FOUND,$BSB)
-AC_PATH_PROG(WGET,wget,$BSB)
-AC_PATH_PROG(CURL,curl,$BSB)
-if test -z "$CURL" -a -z "$CURL" ; then
-	AC_MSG_ERROR("cannot find wget and curl.  You need to install at least one");
+AC_PATH_PROG(WGET,wget,,$BSB)
+AC_PATH_PROG(CURL,curl,,$BSB)
+if test -z "$WGET" -a -z "$CURL" ; then
+	AC_MSG_ERROR("cannot find wget or curl.  You need to install at least one");
 fi
 AC_PATH_PROG(PRINTF,printf,$BSB)dnl
 
