@@ -4547,11 +4547,13 @@ sub deviceIDfromDBEntry {
     my $pnpmake;
     $pnpmake = $ieeemake or $pnpmake = $dat->{'general_mfg'} or 
 	$pnpmake = $dat->{'pnp_mfg'} or $pnpmake = $dat->{'par_mfg'} or
-	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = "";
+	$pnpmake = $dat->{'usb_mfg'} or $pnpmake = $dat->{'make'} or
+	$pnpmake = "";
     my $pnpmodel;
     $pnpmodel = $ieeemodel or $pnpmodel = $dat->{'general_mdl'} or
 	$pnpmodel = $dat->{'pnp_mdl'} or $pnpmodel = $dat->{'par_mdl'} or
-	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = "";
+	$pnpmodel = $dat->{'usb_mdl'} or $pnpmodel = $dat->{'model'} or
+	$pnpmodel = "";
     my $pnpcmd;
     $pnpcmd = $ieeecmd or $pnpcmd = $dat->{'general_cmd'} or 
 	$pnpcmd = $dat->{'pnp_cmd'} or $pnpcmd = $dat->{'par_cmd'} or
