@@ -63,7 +63,7 @@ for $printer (@{$db->{'overview'}}) {
 # Translation table to convert old numerical printer IDs to new
 # clear-text ones
 my $file = "$libdir/db/oldprinterids";
-open FILE, "> $file" ||
+open (FILE, '>', $file) or
     die "File $file cannot be written!\n";
 print FILE join('', @translationtable);
 close FILE;
@@ -71,7 +71,7 @@ print "   Wrote $file.\n";
 
 # List of old printer files to be removed from CVS
 $file = "oldprinterfiles";
-open FILE, "> $file" ||
+open (FILE, '>', $file) or
     die "File $file cannot be written!\n";
 print FILE join('', @oldidlist);
 close FILE;
@@ -79,7 +79,7 @@ print "   Wrote $file.\n";
 
 # List of files to be added to the CVS
 $file = "newprinterfiles";
-open FILE, "> $file" ||
+open (FILE, '>', $file) or
     die "File $file cannot be written!\n";
 print FILE join('', @newidlist);
 close FILE;
@@ -88,19 +88,19 @@ print "   Wrote $file.\n";
 # Scan through all files of the database and replace all references to
 # numerical printer IDs to the appriopriate new IDs
 my @xmlfiles;
-opendir DIR, "$libdir/db/source/printer" ||
+opendir (DIR, "$libdir/db/source/printer") or
     die "Cannot open printer XML directory!\n";
 while ($file = readdir(DIR)) {
     push(@xmlfiles, "printer/$file") if $file =~ /^[^\.].*\.xml$/;
 }
 closedir DIR;
-opendir DIR, "$libdir/db/source/driver" ||
+opendir (DIR, "$libdir/db/source/driver") or
     die "Cannot open driver XML directory!\n";
 while ($file = readdir(DIR)) {
     push(@xmlfiles, "driver/$file") if $file =~ /^[^\.].*\.xml$/;
 }
 closedir DIR;
-opendir DIR, "$libdir/db/source/opt" ||
+opendir (DIR, "$libdir/db/source/opt") or
     die "Cannot open option XML directory!\n";
 while ($file = readdir(DIR)) {
     push(@xmlfiles, "opt/$file") if $file =~ /^[^\.].*\.xml$/;
@@ -112,7 +112,7 @@ my $chfiles = 0;
 my @chfilelist;
 for $file (@xmlfiles) {
     print "Processing $file";
-    open FILE, "< $libdir/db/source/$file" ||
+    open (FILE, '<', "$libdir/db/source/$file") or
 	die "Database entry $file cannot be read!\n";
     my @lines = <FILE>;
     close FILE;
@@ -128,7 +128,7 @@ for $file (@xmlfiles) {
     }
     print "\n";
     next if !$ch;
-    open FILE, "> $libdir/db/source/$file" ||
+    open (FILE, '>', "$libdir/db/source/$file") or
 	die "Database entry $file cannot be written!\n";
     print FILE join('', @lines);
     close FILE;
@@ -139,7 +139,7 @@ for $file (@xmlfiles) {
 
 # List of files changed in CVS
 $file = "changedfiles";
-open FILE, "> $file" ||
+open (FILE, '>', $file) or
     die "File $file cannot be written!\n";
 print FILE join('', @oldidlist, @chfilelist);
 close FILE;

@@ -168,7 +168,7 @@ sub spawn_child {
 			  (!$db->{'dat'}{'ppdfile'})));
 		@data = $db->getppd();
 	    }
-	    open OUTPUT, "> $filename" ||
+	    open (OUTPUT, '>', $filename) or
 		die "Cannot write $filename!";
 	    print OUTPUT join('', @data);
 	    close OUTPUT;

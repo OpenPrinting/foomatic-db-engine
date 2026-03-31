@@ -20,11 +20,11 @@ $0 =~ m!/([^/]+)\s*$!;
 $progname = $1;
 
 # Read the directory with the driver's XML entries
-opendir DRIVERDIR, "$libdir/db/source/driver" ||
+opendir (DRIVERDIR, "$libdir/db/source/driver") or
     die "Cannot open driver XML directory!\n";
 my $driver;
 while ($driver = readdir(DRIVERDIR)) {
-    open DRIVERENTRY, "< $libdir/db/source/driver/$driver" || die "   Database entry for the driver $driver cannot be read!\n";
+    open (DRIVERENTRY, '<', "$libdir/db/source/driver/$driver") or die "   Database entry for the driver $driver cannot be read!\n";
     my @driverentryfield = <DRIVERENTRY>;
     close DRIVERENTRY;
     my $driverentry = join ('', @driverentryfield);
