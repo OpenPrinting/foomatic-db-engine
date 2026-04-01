@@ -164,7 +164,7 @@ sub pdq_options {
 sub _tag {
     my ($t, @v) = @_;
 
-    return '' if !defined(@v);
+    return '' if !@v;
 
     if (0) {
 	$v =~ s!\&!\&amp\;!g;
