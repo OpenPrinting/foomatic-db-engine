@@ -25,7 +25,7 @@ sub new {
     for $l (<PPD>) {
 	
 	# skip comments
-	next if ($l =~ m!^*%!);
+	next if ($l =~ m!^\*%!);
 	
 	# skip blank lines
 	next if ($l =~ m!^\s*$!);
