@@ -38,7 +38,7 @@ $rightpattern = $opt_r if defined($opt_r);
 my %idhash;
 my $idtable = "$libdir/db/oldprinterids";
 $idtable = $opt_t if $opt_t;
-open IDTABLE, "< $idtable" ||
+open (IDTABLE, '<', $idtable) or
     die "File $idtable cannot be read!\n";
 while (<IDTABLE>) {
     if (/^\s*(\S+)\s+(\S+)\s*$/) {
@@ -52,7 +52,7 @@ my $chfiles = 0;
 my @chfilelist;
 while (my $file = shift @ARGV) {
     print "Processing $file";
-    open FILE, "< $file" ||
+    open (FILE, '<', $file) or
 	die "File $file cannot be read!\n";
     my @lines = <FILE>;
     close FILE;
@@ -68,7 +68,7 @@ while (my $file = shift @ARGV) {
     }
     print "\n";
     next if !$ch;
-    open FILE, "> $file" ||
+    open (FILE, '>', $file) or
 	die "File $file cannot be written!\n";
     print FILE join('', @lines);
     close FILE;
@@ -79,7 +79,7 @@ while (my $file = shift @ARGV) {
 
 # List of files changed
 $file = "modifiedfiles";
-open FILE, "> $file" ||
+open (FILE, '>', $file) or
     die "File $file cannot be written!\n";
 print FILE join('', @oldidlist, @chfilelist);
 close FILE;

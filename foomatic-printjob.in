@@ -121,14 +121,14 @@ if (!defined($in_config->{'spooler'})) {
 if (defined($opt_S)) {
     if ($> == 0) { # Program invoked as "root"?
 	# Set system default spooler
-	open DEFAULTFILE, "> $sysdeps->{'foo-etc'}/defaultspooler" ||
+	open (DEFAULTFILE, '>', "$sysdeps->{'foo-etc'}/defaultspooler") or
 	    die "Cannot write $sysdeps->{'foo-etc'}/defaultspooler!\n";
 	print DEFAULTFILE "$in_config->{'spooler'}\n";
 	close DEFAULTFILE;
 	exit 0;
     } else {
 	# Set personal default spooler
-	open DEFAULTFILE, "> $ENV{'HOME'}/.defaultspooler" ||
+	open (DEFAULTFILE, '>', "$ENV{'HOME'}/.defaultspooler") or
 	    die "Cannot write $ENV{'HOME'}/.defaultspooler!\n";
 	print DEFAULTFILE "$in_config->{'spooler'}\n";
 	close DEFAULTFILE;
@@ -315,7 +315,7 @@ sub query_lprng {
     if (defined($config->{'queue'})) {
 	$queue = " -P $config->{'queue'}";
     }
-    open LPQOUTPUT, "$sysdeps->{'lpd-lpq'}$queue @ARGV |" || return 1;
+    open (LPQOUTPUT, "$sysdeps->{'lpd-lpq'}$queue @ARGV |") or return 1;
     my @lpqoutput = <LPQOUTPUT>;
     close LPQOUTPUT;
     # Filter the output
@@ -643,7 +643,7 @@ sub print_pdq {
 	    my @job_contents = <STDIN>;
 	    my $i;
 	    for ($i = 0; $i < $num_copies; $i++) {
-		open PIPE, "| $commandline" || 
+		open (PIPE, "| $commandline") or
 		    die "Could not launch printing command!\n";
 		print PIPE @job_contents;
 		close PIPE;
@@ -721,7 +721,7 @@ sub query_pdq {
 
     # Read in the names of all job status files in ~/.printjobs/
     my @jobnumbers = ();
-    opendir PJDIR, "$ENV{'HOME'}/.printjobs" || 
+    opendir (PJDIR, "$ENV{'HOME'}/.printjobs") or
 	return 0;  # No ~/.printjobs/ directory ==> no jobs
     while ($filename = readdir(PJDIR)) {
 	if ($filename =~ m!^([0-9][0-9][0-9]).status$!) {
@@ -877,7 +877,7 @@ sub remove_pdq {
 
     # Read in the names of all job status files in ~/.printjobs/
     my @jobnumbers = ();
-    opendir PJDIR, "$ENV{'HOME'}/.printjobs" || 
+    opendir (PJDIR, "$ENV{'HOME'}/.printjobs") or
 	return 0;  # No ~/.printjobs/ directory ==> no jobs
     while ($filename = readdir(PJDIR)) {
 	if ($filename =~ m!^([0-9][0-9][0-9]).status$!) {

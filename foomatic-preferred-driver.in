@@ -59,7 +59,7 @@ for $printer (@{$db->{'overview'}}) {
 	print ": @sorted --> $sorted[0]\n";
 	$printer->{'driver'} = $sorted[0];
     }
-    open PRINTERENTRY, "< $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be read!\n";
+    open (PRINTERENTRY, '<', "$libdir/db/source/printer/$printer->{'id'}.xml") or die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be read!\n";
     my  @printerentryfield = <PRINTERENTRY>;
     close PRINTERENTRY;
 	
@@ -80,7 +80,7 @@ for $printer (@{$db->{'overview'}}) {
 	$printerentry =~
 	  s!</model>!</model>\n  <driver>$printer->{'driver'}</driver>!sg;
     }
-    open PRINTERENTRY, "> $libdir/db/source/printer/$printer->{'id'}.xml" || die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be written!\n";
+    open (PRINTERENTRY, '>', "$libdir/db/source/printer/$printer->{'id'}.xml") or die "   Database entry for the printer $printer->{'make'} $printer->{'model'} ($printer->{'id'}) cannot be written!\n";
     print PRINTERENTRY $printerentry;
     close PRINTERENTRY;
 }
