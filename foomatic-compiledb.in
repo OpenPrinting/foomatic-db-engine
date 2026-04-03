@@ -100,7 +100,7 @@ for( $n = 0; $n < $opt_j; ++$n ){
     $pid = fork();
     if( ! defined( $pid ) ){
 	warn( "cannot fork child process" );
-	break;
+	last;
     } elsif( ! $pid ){
 	    # Child, go on immediately
 	@rcombos = @{$rcombos->[$n]};
